@@ -14,8 +14,11 @@ import (
 
 type SubCompilerProtobuf struct{}
 
-func (self *SubCompilerProtobuf) CompileFile(ctx context.Context, r exc.Reporter, file idl.File) (*idl.Module, error) {
+func (self *SubCompilerProtobuf) CompileFile(ctx context.Context, r exc.Reporter, file idl.File, dumpTokens bool) (*idl.Module, error) {
 	b, err := file.Body(ctx)
+	if dumpTokens {
+		return nil, errors.New("token stream dumping isn't implemented for protobuf, sorry")
+	}
 	if err != nil {
 		return nil, r.Report(exc.WrapUnknown(exc.Location{URI: file.Path(ctx)}, err))
 	}

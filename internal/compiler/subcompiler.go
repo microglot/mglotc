@@ -8,7 +8,7 @@ import (
 )
 
 type SubCompiler interface {
-	CompileFile(ctx context.Context, r exc.Reporter, file idl.File) (*idl.Module, error)
+	CompileFile(ctx context.Context, r exc.Reporter, file idl.File, dumpTokens bool) (*idl.Module, error)
 }
 
 func DefaultSubCompilers() map[idl.FileKind]SubCompiler {

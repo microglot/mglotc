@@ -15,8 +15,9 @@ import (
 )
 
 type opts struct {
-	Roots  []string
-	Output string
+	Roots      []string
+	Output     string
+	DumpTokens bool
 }
 
 func main() {
@@ -27,6 +28,7 @@ func main() {
 	flags := pflag.NewFlagSet("microglotc", pflag.PanicOnError)
 	flags.StringSliceVar(&op.Roots, "root", []string{"."}, "Root search paths for imports.")
 	flags.StringVar(&op.Output, "output", ".", "Output directory or - for STDOUT.")
+	flags.BoolVar(&op.DumpTokens, "dump-tokens", false, "Output the token stream as it is processed")
 	_ = flags.Parse(os.Args[1:])
 	targets := flags.Args()
 
@@ -63,7 +65,8 @@ func main() {
 	}
 
 	out, err := c.Compile(ctx, &idl.CompileRequest{
-		Files: targets,
+		Files:      targets,
+		DumpTokens: op.DumpTokens,
 	})
 	if err != nil {
 		var me compiler.MultiException
