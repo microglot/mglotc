@@ -41,5 +41,5 @@ func (self *SubCompilerMicroglot) CompileFile(ctx context.Context, r exc.Reporte
 	if dumpTree {
 		fmt.Println(mod)
 	}
-	return mod, nil
+	return nil, nil
 }
