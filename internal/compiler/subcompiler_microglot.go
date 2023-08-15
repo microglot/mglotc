@@ -11,7 +11,7 @@ import (
 
 type SubCompilerMicroglot struct{}
 
-func (self *SubCompilerMicroglot) CompileFile(ctx context.Context, r exc.Reporter, file idl.File, dumpTokens bool) (*idl.Module, error) {
+func (self *SubCompilerMicroglot) CompileFile(ctx context.Context, r exc.Reporter, file idl.File, dumpTokens bool, dumpTree bool) (*idl.Module, error) {
 	lexer := NewLexerMicroglot(r)
 	parser := NewParserMicroglot(r)
 	lf, err := lexer.Lex(ctx, file)
@@ -37,6 +37,9 @@ func (self *SubCompilerMicroglot) CompileFile(ctx context.Context, r exc.Reporte
 	mod, err := parser.Parse(ctx, lf)
 	if err != nil {
 		return nil, err
+	}
+	if dumpTree {
+		fmt.Println(mod)
 	}
 	return mod, nil
 }

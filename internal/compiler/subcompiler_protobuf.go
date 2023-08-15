@@ -3,6 +3,7 @@ package compiler
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 
 	"github.com/bufbuild/protocompile/parser"
@@ -14,7 +15,7 @@ import (
 
 type SubCompilerProtobuf struct{}
 
-func (self *SubCompilerProtobuf) CompileFile(ctx context.Context, r exc.Reporter, file idl.File, dumpTokens bool) (*idl.Module, error) {
+func (self *SubCompilerProtobuf) CompileFile(ctx context.Context, r exc.Reporter, file idl.File, dumpTokens bool, dumpTree bool) (*idl.Module, error) {
 	b, err := file.Body(ctx)
 	if dumpTokens {
 		return nil, errors.New("token stream dumping isn't implemented for protobuf, sorry")
@@ -27,6 +28,10 @@ func (self *SubCompilerProtobuf) CompileFile(ctx context.Context, r exc.Reporter
 	node, err := parser.Parse(file.Path(ctx), &fileBodyIO{ctx: ctx, body: b}, h)
 	if err != nil {
 		return nil, err
+	}
+	if dumpTree {
+		// TODO 2023.08.14: no stringer implementation for the protoc AST; this output is not useful.
+		fmt.Println(node)
 	}
 	result, err := parser.ResultFromAST(node, true, h)
 	if err != nil {

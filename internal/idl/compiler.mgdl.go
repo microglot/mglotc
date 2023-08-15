@@ -87,6 +87,7 @@ type Compiler interface {
 type CompileRequest struct {
 	Files      []string
 	DumpTokens bool
+	DumpTree   bool
 }
 
 type CompileResponse struct {
