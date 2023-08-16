@@ -17,20 +17,63 @@ func TestParser(t *testing.T) {
 	testCases := []struct {
 		name     string
 		input    string
-		expected *astStatementSyntax
+		expected *ast
 	}{
 		{
 			name:  "valid syntax statement",
 			input: "syntax = \"microglot0\"",
-			expected: &astStatementSyntax{
-				syntax: astTextLit{
-					text: "microglot0",
+			expected: &ast{
+				statements: []statement{
+					&astStatementSyntax{
+						syntax: astTextLit{
+							value: "microglot0",
+						},
+					},
 				},
 			},
 		},
 		{
 			name:     "invalid syntax statement",
 			input:    "syntax lemon",
+			expected: nil,
+		},
+		{
+			name:  "simple versioned module statement",
+			input: "module = @123",
+			expected: &ast{
+				statements: []statement{
+					&astStatementModuleMeta{
+						uid: astIntLit{
+							value: 123,
+						},
+					},
+				},
+			},
+		},
+		{
+			name:  "module with comment block",
+			input: "module = @123\n//comment\n//another\n",
+			expected: &ast{
+				statements: []statement{
+					&astStatementModuleMeta{
+						uid: astIntLit{
+							value: 123,
+						},
+						comments: []*astComment{
+							&astComment{
+								value: "comment",
+							},
+							&astComment{
+								value: "another",
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:     "invalid module statement",
+			input:    "module lemon",
 			expected: nil,
 		},
 	}
