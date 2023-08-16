@@ -47,7 +47,7 @@ type astTextLit struct {
 
 type astIntLit struct {
 	strValue string
-	value    int64
+	value    uint64
 }
 
 type astCommentBlock struct {

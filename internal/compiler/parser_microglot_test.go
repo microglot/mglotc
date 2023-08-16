@@ -53,7 +53,8 @@ func TestParser(t *testing.T) {
 							comments: []astComment{},
 						},
 						uid: astIntLit{
-							value: 123,
+							strValue: "123",
+							value:    123,
 						},
 					},
 				},
@@ -69,7 +70,8 @@ func TestParser(t *testing.T) {
 				statements: []statement{
 					&astStatementModuleMeta{
 						uid: astIntLit{
-							value: 123,
+							strValue: "123",
+							value:    123,
 						},
 						comments: astCommentBlock{
 							comments: []astComment{

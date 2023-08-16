@@ -222,7 +222,7 @@ func (p *parserMicroglotTokens) parseIntLit() *astIntLit {
 	}
 
 	p.advance()
-	i, err := strconv.ParseInt(maybe_token.Value, 0, 64)
+	i, err := strconv.ParseUint(maybe_token.Value, 0, 64)
 	if err != nil {
 		p.reporter.Report(exc.New(exc.Location{
 			URI:      p.uri,
