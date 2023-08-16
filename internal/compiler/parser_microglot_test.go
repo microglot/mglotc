@@ -23,6 +23,9 @@ func TestParser(t *testing.T) {
 			name:  "valid syntax statement",
 			input: "syntax = \"microglot0\"",
 			expected: &ast{
+				comments: astCommentBlock{
+					comments: []astComment{},
+				},
 				statements: []statement{
 					&astStatementSyntax{
 						syntax: astTextLit{
@@ -41,8 +44,14 @@ func TestParser(t *testing.T) {
 			name:  "simple versioned module statement",
 			input: "module = @123",
 			expected: &ast{
+				comments: astCommentBlock{
+					comments: []astComment{},
+				},
 				statements: []statement{
 					&astStatementModuleMeta{
+						comments: astCommentBlock{
+							comments: []astComment{},
+						},
 						uid: astIntLit{
 							value: 123,
 						},
@@ -54,17 +63,22 @@ func TestParser(t *testing.T) {
 			name:  "module with comment block",
 			input: "module = @123\n//comment\n//another\n",
 			expected: &ast{
+				comments: astCommentBlock{
+					comments: []astComment{},
+				},
 				statements: []statement{
 					&astStatementModuleMeta{
 						uid: astIntLit{
 							value: 123,
 						},
-						comments: []*astComment{
-							&astComment{
-								value: "comment",
-							},
-							&astComment{
-								value: "another",
+						comments: astCommentBlock{
+							comments: []astComment{
+								astComment{
+									value: "comment",
+								},
+								astComment{
+									value: "another",
+								},
 							},
 						},
 					},

@@ -44,18 +44,6 @@ func (p *parserMicroglotTokens) peek() *idl.Token {
 	return maybe_token.Value()
 }
 
-// TODO 2023.08.16: does the grammar ever do anything with newlines other than ignore them? Maybe we can
-// skip emitting them from the lexer?
-func (p *parserMicroglotTokens) advanceNewlines() {
-	for {
-		maybe_token := p.peek()
-		if maybe_token == nil || maybe_token.Type != idl.TokenTypeNewline {
-			break
-		}
-		p.advance()
-	}
-}
-
 // reports an error if there is no current token, or the current token isn't of the expected type
 // advances on success
 func (p *parserMicroglotTokens) expect(expectedType idl.TokenType) *string {
@@ -78,8 +66,8 @@ func (p *parserMicroglotTokens) expect(expectedType idl.TokenType) *string {
 	return &maybe_token.Value
 }
 
-// reports an error if current token isn't one of the expected types
-// does NOT advance
+// reports an error if current token isn't one of the expected types.
+// Does NOT advance under and circumstance.
 func (p *parserMicroglotTokens) expectOneOf(expectedTypes []idl.TokenType) *idl.Token {
 	maybe_token := p.peek()
 	if maybe_token == nil {
@@ -104,8 +92,6 @@ func (p *parserMicroglotTokens) parse() *ast {
 	newAst.comments = p.parseCommentBlock()
 
 	for {
-		p.advanceNewlines()
-
 		maybe_token := p.expectOneOf([]idl.TokenType{
 			idl.TokenTypeKeywordSyntax,
 			idl.TokenTypeKeywordModule,
@@ -184,7 +170,6 @@ func (p *parserMicroglotTokens) parseStatementModuleMeta() *astStatementModuleMe
 func (p *parserMicroglotTokens) parseCommentBlock() astCommentBlock {
 	comments := []astComment{}
 	for {
-		p.advanceNewlines()
 		maybe_token := p.peek()
 		if maybe_token == nil || maybe_token.Type != idl.TokenTypeComment {
 			break
@@ -278,7 +263,19 @@ func (self *ParserMicroglot) Parse(ctx context.Context, f idl.LexerFile) (*ast, 
 	}
 	defer ft.Close(ctx)
 
-	tokens := iter.NewLookahead(ft, 8)
+	// as of right now, newlines and semicolons are ignored by the parser, but we're not 100% sure
+	// this will be true forever. If it stops being true, this will need to be removed. If it
+	// becomes certain, we should consider ignoring them in the lexer, instead.
+	filtered_tokens := iter.NewIteratorFilter(ft, idl.Filter[*idl.Token](iter.FilterFunc[*idl.Token](func(ctx context.Context, t *idl.Token) bool {
+		switch t.Type {
+		case idl.TokenTypeNewline, idl.TokenTypeSemicolon:
+			return false
+		default:
+			return true
+		}
+	})))
+
+	tokens := iter.NewLookahead(filtered_tokens, 8)
 
 	parser := parserMicroglotTokens{
 		reporter: self.reporter,
