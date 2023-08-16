@@ -107,7 +107,7 @@ func (self *compiler) Compile(ctx context.Context, req *idl.CompileRequest) (*id
 
 	for _, file := range files {
 		go func(file idl.File) {
-			image, err := self.compileFile(ctx, file, loaded)
+			image, err := self.compileFile(ctx, file, loaded, req.DumpTokens, req.DumpTree)
 			results <- fileResult{image, err}
 		}(file)
 	}
@@ -151,7 +151,7 @@ func (self *compiler) Compile(ctx context.Context, req *idl.CompileRequest) (*id
 	}, nil
 }
 
-func (self *compiler) compileFile(ctx context.Context, file idl.File, loaded *sync.Map) (*idl.Module, error) {
+func (self *compiler) compileFile(ctx context.Context, file idl.File, loaded *sync.Map, dumpTokens bool, dumpTree bool) (*idl.Module, error) {
 	self.Semaphore.Lock()
 	defer self.Semaphore.Unlock()
 	if _, ok := loaded.Load(file.Path(ctx)); ok {
@@ -163,7 +163,7 @@ func (self *compiler) compileFile(ctx context.Context, file idl.File, loaded *sy
 		e := exc.New(exc.Location{URI: file.Path(ctx)}, exc.CodeUnsupportedFileFormat, "Unsupported file format")
 		return nil, self.Reporter.Report(e)
 	}
-	return sc.CompileFile(ctx, self.Reporter, file)
+	return sc.CompileFile(ctx, self.Reporter, file, dumpTokens, dumpTree)
 }
 
 func (self *compiler) targetURI(ctx context.Context, target string) string {

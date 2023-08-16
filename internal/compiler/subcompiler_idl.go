@@ -15,7 +15,7 @@ type SubCompilerIDL struct {
 	Protobuf  SubCompiler
 }
 
-func (self *SubCompilerIDL) CompileFile(ctx context.Context, r exc.Reporter, file idl.File) (*idl.Module, error) {
+func (self *SubCompilerIDL) CompileFile(ctx context.Context, r exc.Reporter, file idl.File, dumpTokens bool, dumpTree bool) (*idl.Module, error) {
 	lex := NewLexerIDL(r)
 	lexf, err := lex.Lex(ctx, file)
 	if err != nil {
@@ -50,9 +50,9 @@ READLOOP:
 	_ = tokenLookahead.Close(ctx)
 	switch syntax {
 	case "proto2", "proto3":
-		return self.Protobuf.CompileFile(ctx, r, file)
+		return self.Protobuf.CompileFile(ctx, r, file, dumpTokens, dumpTree)
 	case "microglot0", "microglot1":
-		return self.Microglot.CompileFile(ctx, r, file)
+		return self.Microglot.CompileFile(ctx, r, file, dumpTokens, dumpTree)
 	default:
 		return nil, r.Report(exc.New(exc.Location{URI: file.Path(ctx)}, exc.CodeUnsupportedFileFormat, "missing or invalid syntax statement"))
 	}
