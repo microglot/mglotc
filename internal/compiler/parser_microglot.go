@@ -67,7 +67,7 @@ func (p *parserMicroglotTokens) expect(expectedType idl.TokenType) *string {
 }
 
 // reports an error if current token isn't one of the expected types.
-// Does NOT advance under and circumstance.
+// Does NOT advance under any circumstance.
 func (p *parserMicroglotTokens) expectOneOf(expectedTypes []idl.TokenType) *idl.Token {
 	maybe_token := p.peek()
 	if maybe_token == nil {
