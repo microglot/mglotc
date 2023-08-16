@@ -232,7 +232,8 @@ func (p *parserMicroglotTokens) parseIntLit() *astIntLit {
 	}
 
 	return &astIntLit{
-		value: i,
+		strValue: maybe_token.Value,
+		value:    i,
 	}
 }
 
