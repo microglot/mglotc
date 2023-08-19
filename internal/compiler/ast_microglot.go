@@ -2,7 +2,14 @@ package compiler
 
 import (
 	"fmt"
+
+	"gopkg.microglot.org/compiler.go/internal/idl"
 )
+
+// interface for all AST nodes
+type node interface {
+	node()
+}
 
 // interface for all statement types
 type statement interface {
@@ -11,6 +18,7 @@ type statement interface {
 
 type ast struct {
 	comments   astCommentBlock
+	syntax     astStatementSyntax
 	statements []statement
 }
 
@@ -34,26 +42,60 @@ type astStatementModuleMeta struct {
 	comments              astCommentBlock
 }
 
-func (*astStatementSyntax) statement()     {}
-func (*astStatementModuleMeta) statement() {}
-
 type astAnnotationApplication struct {
-	// TODO 2023.08.16: incomplete
+	annotationInstances []astAnnotationInstance
+}
+
+type astAnnotationInstance struct {
+	namespace_identifier *idl.Token
+	identifier           idl.Token
+	value                astValue
 }
 
 type astTextLit struct {
-	value string
+	value idl.Token
 }
 
 type astIntLit struct {
-	strValue string
-	value    uint64
+	token idl.Token
+	value uint64
 }
 
 type astCommentBlock struct {
-	comments []astComment
+	comments []idl.Token
 }
 
-type astComment struct {
-	value string
+type astValue struct {
+	//TODO
 }
+
+type astValueUnary struct {
+	//TODO
+}
+
+type astValueBinary struct {
+	//TODO
+}
+
+type astValueIdentifier struct {
+	//TODO
+}
+
+type astValueLiteral struct {
+	//TODO
+}
+
+func (*ast) node()                    {}
+func (*astStatementSyntax) node()     {}
+func (*astStatementModuleMeta) node() {}
+func (*astAnnotationInstance) node()  {}
+func (*astTextLit) node()             {}
+func (*astIntLit) node()              {}
+func (*astCommentBlock) node()        {}
+func (*astValue) node()               {}
+func (*astValueUnary) node()          {}
+func (*astValueBinary) node()         {}
+func (*astValueIdentifier) node()     {}
+func (*astValueLiteral) node()        {}
+
+func (*astStatementModuleMeta) statement() {}

@@ -34,10 +34,11 @@ func (self *SubCompilerMicroglot) CompileFile(ctx context.Context, r exc.Reporte
 		}
 		return nil, errors.New("aborting after dumping tokens, since the parser doesn't consume the token stream yet")
 	}
-	mod, err := parser.Parse(ctx, lf)
+	p, err := parser.PrepareParse(ctx, lf)
 	if err != nil {
 		return nil, err
 	}
+	mod := p.parse()
 	if dumpTree {
 		fmt.Println(mod)
 	}
