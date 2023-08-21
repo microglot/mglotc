@@ -3,6 +3,7 @@ package compiler
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strconv"
 
 	"gopkg.microglot.org/compiler.go/internal/exc"
@@ -27,7 +28,7 @@ func (self *ParserMicroglot) PrepareParse(ctx context.Context, f idl.LexerFile) 
 	// as of right now, newlines and semicolons are ignored by the parser, but we're not 100% sure
 	// this will be true forever. If it stops being true, this will need to be removed. If it
 	// becomes certain, we should consider ignoring them in the lexer, instead.
-	filtered_tokens := iter.NewIteratorFilter(ft, idl.Filter[*idl.Token](iter.FilterFunc[*idl.Token](func(ctx context.Context, t *idl.Token) bool {
+	filteredTokens := iter.NewIteratorFilter(ft, idl.Filter[*idl.Token](iter.FilterFunc[*idl.Token](func(ctx context.Context, t *idl.Token) bool {
 		switch t.Type {
 		case idl.TokenTypeNewline, idl.TokenTypeSemicolon:
 			return false
@@ -36,7 +37,7 @@ func (self *ParserMicroglot) PrepareParse(ctx context.Context, f idl.LexerFile) 
 		}
 	})))
 
-	tokens := iter.NewLookahead(filtered_tokens, 8)
+	tokens := iter.NewLookahead(filteredTokens, 8)
 
 	return &parserMicroglotTokens{
 		reporter: self.reporter,
@@ -64,19 +65,19 @@ func (p *parserMicroglotTokens) report(code string, message string) {
 }
 
 func (p *parserMicroglotTokens) advance() {
-	maybe_token := p.tokens.Lookahead(p.ctx, 0)
-	if maybe_token.IsPresent() {
-		p.loc = *maybe_token.Value().Span.End
+	maybeToken := p.tokens.Lookahead(p.ctx, 0)
+	if maybeToken.IsPresent() {
+		p.loc = *maybeToken.Value().Span.End
 	}
 	_ = p.tokens.Next(p.ctx)
 }
 
 func (p *parserMicroglotTokens) peek() *idl.Token {
-	maybe_token := p.tokens.Lookahead(p.ctx, 0)
-	if !maybe_token.IsPresent() {
+	maybeToken := p.tokens.Lookahead(p.ctx, 0)
+	if !maybeToken.IsPresent() {
 		return nil
 	}
-	return maybe_token.Value()
+	return maybeToken.Value()
 }
 
 // reports an error if there is no current token, or the current token isn't of the expected type
@@ -94,12 +95,12 @@ func (p *parserMicroglotTokens) expectSeveral(expectedType idl.TokenType) []idl.
 
 	values := []idl.Token{*first}
 	for {
-		maybe_token := p.peek()
-		if maybe_token == nil || maybe_token.Type != expectedType {
+		maybeToken := p.peek()
+		if maybeToken == nil || maybeToken.Type != expectedType {
 			break
 		}
 		p.advance()
-		values = append(values, *maybe_token)
+		values = append(values, *maybeToken)
 	}
 	return values
 }
@@ -107,56 +108,127 @@ func (p *parserMicroglotTokens) expectSeveral(expectedType idl.TokenType) []idl.
 // reports an error if current token isn't one of the given expected types.
 // advances on success
 func (p *parserMicroglotTokens) expectOneOf(expectedTypes []idl.TokenType) *idl.Token {
-	maybe_token := p.peek()
-	if maybe_token == nil {
+	maybeToken := p.peek()
+	if maybeToken == nil {
 		p.report(exc.CodeUnexpectedEOF, fmt.Sprintf("unexpected EOF (expecting %v)", expectedTypes))
 		return nil
 	}
 	for _, expectedType := range expectedTypes {
-		if maybe_token.Type == expectedType {
+		if maybeToken.Type == expectedType {
 			p.advance()
-			return maybe_token
+			return maybeToken
 		}
 	}
-	p.report(exc.CodeUnknownFatal, fmt.Sprintf("unexpected %s (expecting %v)", maybe_token.Value, expectedTypes))
+	// TODO 2023.08.21: replace CodeUnknownFatal with something meaningful
+	p.report(exc.CodeUnknownFatal, fmt.Sprintf("unexpected %s (expecting %v)", maybeToken.Value, expectedTypes))
 	return nil
+}
+
+// generic application of parsing lists of zero or more comma-separated nodes, allowing an optional trailing comma
+func applyOverCommaSeparatedList[N node](p *parserMicroglotTokens, tOpen idl.TokenType, parser func(*parserMicroglotTokens) N, tClose idl.TokenType) []N {
+	if p.expectOne(tOpen) == nil {
+		return nil
+	}
+	values := []N{}
+
+	maybeToken := p.peek()
+	if maybeToken == nil {
+		p.report(exc.CodeUnexpectedEOF, fmt.Sprintf("unexpected EOF (expecting a list of %T)", values))
+		return nil
+	}
+	if maybeToken.Type != tClose {
+		maybeValue := parser(p)
+		if reflect.ValueOf(maybeValue).IsNil() {
+			return nil
+		}
+		values = append(values, maybeValue)
+
+		for {
+			maybeToken = p.peek()
+			if maybeToken == nil {
+				p.report(exc.CodeUnexpectedEOF, fmt.Sprintf("unexpected EOF (expecting a list of %T)", values))
+				return nil
+			}
+			if maybeToken.Type == tClose {
+				break
+			}
+
+			if p.expectOne(idl.TokenTypeComma) == nil {
+				return nil
+			}
+
+			maybeToken = p.peek()
+			if maybeToken == nil {
+				p.report(exc.CodeUnexpectedEOF, fmt.Sprintf("unexpected EOF (expecting a list of %T)", values))
+				return nil
+			}
+			if maybeToken.Type == tClose {
+				break
+			}
+
+			maybeValue = parser(p)
+			if reflect.ValueOf(maybeValue).IsNil() {
+				return nil
+			}
+			values = append(values, maybeValue)
+		}
+	}
+
+	if p.expectOne(tClose) == nil {
+		return nil
+	}
+
+	return values
 }
 
 // microglot = [CommentBlock] StatementSyntax { Statement }
 func (p *parserMicroglotTokens) parse() *ast {
-	newAst := ast{}
+	this := ast{}
 
-	maybe_token := p.peek()
-	if maybe_token != nil && maybe_token.Type == idl.TokenTypeComment {
-		newAst.comments = *p.parseCommentBlock()
+	maybeToken := p.peek()
+	if maybeToken != nil && maybeToken.Type == idl.TokenTypeComment {
+		this.comments = *p.parseCommentBlock()
 	}
 
 	syntax := p.parseStatementSyntax()
 	if syntax == nil {
 		return nil
 	}
-	newAst.syntax = *syntax
+	this.syntax = *syntax
 
 	for {
-		maybe_token := p.peek()
-		if maybe_token == nil {
+		maybeToken := p.peek()
+		if maybeToken == nil {
 			break
 		}
 
-		switch maybe_token.Type {
+		switch maybeToken.Type {
 		case idl.TokenTypeKeywordModule:
-			maybe_statement := p.parseStatementModuleMeta()
-			if maybe_statement == nil {
+			maybeStatement := p.parseStatementModuleMeta()
+			if maybeStatement == nil {
 				return nil
 			}
-			newAst.statements = append(newAst.statements, maybe_statement)
+			this.statements = append(this.statements, maybeStatement)
+		case idl.TokenTypeKeywordImport:
+			maybeStatement := p.parseStatementImport()
+			if maybeStatement == nil {
+				return nil
+			}
+			this.statements = append(this.statements, maybeStatement)
+		case idl.TokenTypeKeywordAnnotation:
+			maybeStatement := p.parseStatementAnnotation()
+			if maybeStatement == nil {
+				return nil
+			}
+			this.statements = append(this.statements, maybeStatement)
 		default:
-			p.report(exc.CodeUnknownFatal, fmt.Sprintf("unexpected %s (expecting a statement)", maybe_token.Value))
+			// TODO 2023.08.21: replace CodeUnknownFatal with something meaningful
+			p.report(exc.CodeUnknownFatal, fmt.Sprintf("unexpected %s (expecting a statement)", maybeToken.Value))
 			return nil
 		}
 	}
 
-	return &newAst
+	return &this
 }
 
 // StatementSyntax = "syntax" "=" text_lit
@@ -167,7 +239,7 @@ func (p *parserMicroglotTokens) parseStatementSyntax() *astStatementSyntax {
 	if p.expectOne(idl.TokenTypeEqual) == nil {
 		return nil
 	}
-	textNode := p.parseTextLit()
+	textNode := p.parseValueLiteralText()
 	if textNode == nil {
 		return nil
 	}
@@ -191,8 +263,8 @@ func (p *parserMicroglotTokens) parseStatementModuleMeta() *astStatementModuleMe
 	}
 	this.uid = *uidNode
 
-	maybe_token := p.peek()
-	if maybe_token != nil && maybe_token.Type == idl.TokenTypeDollar {
+	maybeToken := p.peek()
+	if maybeToken != nil && maybeToken.Type == idl.TokenTypeDollar {
 		annotationApplicationNode := p.parseAnnotationApplication()
 		if annotationApplicationNode == nil {
 			return nil
@@ -201,11 +273,87 @@ func (p *parserMicroglotTokens) parseStatementModuleMeta() *astStatementModuleMe
 		this.annotationApplication = *annotationApplicationNode
 	}
 
-	maybe_token = p.peek()
-	if maybe_token != nil && maybe_token.Type == idl.TokenTypeComment {
+	maybeToken = p.peek()
+	if maybeToken != nil && maybeToken.Type == idl.TokenTypeComment {
 		this.comments = *p.parseCommentBlock()
 	}
 
+	return &this
+}
+
+// StatementImport = import ImportURI as ModuleName [CommentBlock] .
+func (p *parserMicroglotTokens) parseStatementImport() *astStatementImport {
+	if p.expectOne(idl.TokenTypeKeywordImport) == nil {
+		return nil
+	}
+	maybeUri := p.parseValueLiteralText()
+	if maybeUri == nil {
+		return nil
+	}
+	if p.expectOne(idl.TokenTypeKeywordAs) == nil {
+		return nil
+	}
+	maybeName := p.expectOneOf([]idl.TokenType{
+		idl.TokenTypeIdentifier,
+		idl.TokenTypeDot,
+	})
+	if maybeName == nil {
+		return nil
+	}
+
+	this := astStatementImport{
+		uri:  *maybeUri,
+		name: *maybeName,
+	}
+
+	maybeToken := p.peek()
+	if maybeToken != nil && maybeToken.Type == idl.TokenTypeComment {
+		this.comments = *p.parseCommentBlock()
+	}
+	return &this
+}
+
+// StatementAnnotation = annotation identifier paren_open AnnotationScope {comma AnnotationScope} [comma] paren_close TypeSpecifier [UID] [CommentBlock] .
+func (p *parserMicroglotTokens) parseStatementAnnotation() *astStatementAnnotation {
+	if p.expectOne(idl.TokenTypeKeywordAnnotation) == nil {
+		return nil
+	}
+	maybeIdentifier := p.expectOne(idl.TokenTypeIdentifier)
+	if maybeIdentifier == nil {
+		return nil
+	}
+	annotationScopes := applyOverCommaSeparatedList(p,
+		idl.TokenTypeParenOpen,
+		(*parserMicroglotTokens).parseAnnotationScope,
+		idl.TokenTypeParenClose)
+	if annotationScopes == nil {
+		return nil
+	}
+
+	maybeTypeSpecifier := p.parseTypeSpecifier()
+	if maybeTypeSpecifier == nil {
+		return nil
+	}
+
+	this := astStatementAnnotation{
+		identifier:       *maybeIdentifier,
+		annotationScopes: *annotationScopes,
+		typeSpecifier:    *maybeTypeSpecifier,
+	}
+
+	maybeToken := p.peek()
+	if maybeToken != nil && maybeToken.Type == idl.TokenTypeAt {
+		maybeUid := p.parseUID()
+		if maybeUid == nil {
+			return nil
+		}
+		this.uid = maybeUid
+	}
+
+	maybeToken = p.peek()
+	if maybeToken != nil && maybeToken.Type == idl.TokenTypeComment {
+		this.comments = *p.parseCommentBlock()
+	}
 	return &this
 }
 
@@ -224,61 +372,47 @@ func (p *parserMicroglotTokens) parseAnnotationApplication() *astAnnotationAppli
 	if p.expectOne(idl.TokenTypeDollar) == nil {
 		return nil
 	}
-	if p.expectOne(idl.TokenTypeParenOpen) == nil {
-		return nil
-	}
 
-	for {
-		maybe_token := p.peek()
-		if maybe_token == nil || maybe_token.Type != idl.TokenTypeIdentifier {
-			break
-		}
-		annotationInstance := p.parseAnnotationInstance()
-		if annotationInstance == nil {
-			return nil
-		}
-
-		maybe_token = p.peek()
-		if maybe_token == nil || maybe_token.Type != idl.TokenTypeComma {
-			break
-		}
-	}
-
-	if p.expectOne(idl.TokenTypeParenClose) == nil {
+	annotationInstances := applyOverCommaSeparatedList(p,
+		idl.TokenTypeParenOpen,
+		(*parserMicroglotTokens).parseAnnotationInstance,
+		idl.TokenTypeParenClose)
+	if annotationInstances == nil {
 		return nil
 	}
 
 	return &astAnnotationApplication{
-		// TODO 2023.08.16: incomplete
+		annotationInstances,
 	}
 }
 
+// TODO 2023.08.21: should this use QualifiedIdentifier instead of `identifier [dot identifier]`?
 // AnnotationInstance = identifier [dot identifier] paren_open Value paren_close
 func (p *parserMicroglotTokens) parseAnnotationInstance() *astAnnotationInstance {
 	// TODO 2023.08.16: is "namespace" the right nomenclature?
-	var namespace_identifier *idl.Token = nil
+	var namespaceIdentifier *idl.Token = nil
 	identifier := p.expectOne(idl.TokenTypeIdentifier)
 	if identifier == nil {
 		return nil
 	}
 
-	maybe_token := p.expectOneOf([]idl.TokenType{
+	maybeToken := p.expectOneOf([]idl.TokenType{
 		idl.TokenTypeDot,
 		idl.TokenTypeParenOpen,
 	})
-	if maybe_token == nil {
+	if maybeToken == nil {
 		return nil
 	}
 
-	if maybe_token.Type == idl.TokenTypeDot {
-		namespace_identifier = identifier
+	if maybeToken.Type == idl.TokenTypeDot {
+		namespaceIdentifier = identifier
 		identifier = p.expectOne(idl.TokenTypeIdentifier)
 		if identifier == nil {
 			return nil
 		}
 
-		maybe_token = p.expectOne(idl.TokenTypeParenOpen)
-		if maybe_token == nil {
+		maybeToken = p.expectOne(idl.TokenTypeParenOpen)
+		if maybeToken == nil {
 			return nil
 		}
 	}
@@ -293,58 +427,76 @@ func (p *parserMicroglotTokens) parseAnnotationInstance() *astAnnotationInstance
 	}
 
 	return &astAnnotationInstance{
-		namespace_identifier: namespace_identifier,
-		identifier:           *identifier,
-		value:                *value,
+		namespaceIdentifier: namespaceIdentifier,
+		identifier:          *identifier,
+		value:               value,
 	}
 }
 
 // UID = at int_lit
-func (p *parserMicroglotTokens) parseUID() *astIntLit {
+func (p *parserMicroglotTokens) parseUID() *astValueLiteralInt {
 	if p.expectOne(idl.TokenTypeAt) == nil {
 		return nil
 	}
-	return p.parseIntLit()
+	return p.parseValueLiteralInt()
 }
 
 // Value = ValueUnary | ValueBinary | ValueLiteral | ValueIdentifier
-func (p *parserMicroglotTokens) parseValue() *astValue {
-	maybe_token := p.peek()
-	if maybe_token == nil {
+func (p *parserMicroglotTokens) parseValue() expression {
+	maybeToken := p.peek()
+	if maybeToken == nil {
 		p.report(exc.CodeUnexpectedEOF, fmt.Sprint(exc.CodeUnexpectedEOF, "unexpected EOF (expecting a value)"))
 		return nil
 	}
 
-	switch maybe_token.Type {
+	switch maybeToken.Type {
 	case idl.TokenTypePlus, idl.TokenTypeMinus, idl.TokenTypeExclamation:
-		_ = p.parseValueUnary()
+		return p.parseValueUnary()
 	case idl.TokenTypeParenOpen:
-		_ = p.parseValueBinary()
-	case idl.TokenTypeKeywordTrue, idl.TokenTypeKeywordFalse, idl.TokenTypeIntegerDecimal, idl.TokenTypeIntegerHex, idl.TokenTypeIntegerOctal, idl.TokenTypeIntegerBinary, idl.TokenTypeFloatDecimal, idl.TokenTypeFloatHex, idl.TokenTypeData, idl.TokenTypeSquareOpen, idl.TokenTypeCurlyOpen:
-		_ = p.parseValueLiteral()
+		return p.parseValueBinary()
+	case idl.TokenTypeKeywordTrue, idl.TokenTypeKeywordFalse:
+		return p.parseValueLiteralBool()
+	case idl.TokenTypeIntegerDecimal, idl.TokenTypeIntegerHex, idl.TokenTypeIntegerOctal, idl.TokenTypeIntegerBinary:
+		return p.parseValueLiteralInt()
+	case idl.TokenTypeFloatDecimal, idl.TokenTypeFloatHex:
+		return p.parseValueLiteralFloat()
+	case idl.TokenTypeText:
+		return p.parseValueLiteralText()
+	case idl.TokenTypeData:
+		return p.parseValueLiteralData()
+	case idl.TokenTypeSquareOpen:
+		return p.parseValueLiteralList()
+	case idl.TokenTypeCurlyOpen:
+		return p.parseValueLiteralStruct()
 	case idl.TokenTypeIdentifier:
-		_ = p.parseValueIdentifier()
+		return p.parseValueIdentifier()
 	default:
-		p.report(exc.CodeUnknownFatal, fmt.Sprintf("unexpected %s (expecting a value)", maybe_token.Value))
+		// TODO 2023.08.21: replace CodeUnknownFatal with something meaningful
+		p.report(exc.CodeUnknownFatal, fmt.Sprintf("unexpected %s (expecting an expression)", maybeToken.Value))
+		return nil
 	}
-
-	// TODO 2023.08.17: incomplete
-	p.advance()
-	return &astValue{}
 }
 
 // ValueUnary = (plus | minus | bang ) Value
 func (p *parserMicroglotTokens) parseValueUnary() *astValueUnary {
-	maybe_token := p.expectOneOf([]idl.TokenType{
+	maybeOperator := p.expectOneOf([]idl.TokenType{
 		idl.TokenTypePlus,
 		idl.TokenTypeMinus,
 		idl.TokenTypeExclamation,
 	})
-	if maybe_token == nil {
+	if maybeOperator == nil {
 		return nil
 	}
-	//TODO
-	return nil
+
+	maybeOperand := p.parseValue()
+	if maybeOperand == nil {
+		return nil
+	}
+
+	return &astValueUnary{
+		operator: *maybeOperator,
+		operand:  maybeOperand,
+	}
 }
 
 // ValueBinary = paren_open Value ( equal_compare | equal_not | equal_lesser |
@@ -352,76 +504,217 @@ func (p *parserMicroglotTokens) parseValueUnary() *astValueUnary {
 //	equal_greater | bool_and | bool_or | bin_and | bin_or | bin_xor | shift_left |
 //	shift_right | plus | slash | star | mod ) Value paren_close
 func (p *parserMicroglotTokens) parseValueBinary() *astValueBinary {
-	maybe_token := p.expectOne(idl.TokenTypeParenOpen)
-	if maybe_token == nil {
+	if p.expectOne(idl.TokenTypeParenOpen) == nil {
 		return nil
 	}
-	//TODO
-	return nil
+
+	maybeLeftOperand := p.parseValue()
+	if maybeLeftOperand == nil {
+		return nil
+	}
+	maybeOperator := p.expectOneOf([]idl.TokenType{
+		idl.TokenTypeComparison,
+		idl.TokenTypeNotComparison,
+		idl.TokenTypeLesserEqual,
+		idl.TokenTypeGreaterEqual,
+		idl.TokenTypeAmpersand,
+		idl.TokenTypePipe,
+		idl.TokenTypeBinAnd,
+		idl.TokenTypeBinOr,
+		idl.TokenTypeCaret,
+		// TODO 2023.08.21: these don't seem to be lexed, currently?
+		// idl.TokenTypeShiftLeft,
+		// idl.TokenTypeShiftRight,
+		idl.TokenTypePlus,
+		idl.TokenTypeMinus,
+		idl.TokenTypeSlash,
+		idl.TokenTypeStar,
+		idl.TokenTypePercent,
+	})
+	if maybeOperator == nil {
+		return nil
+	}
+	maybeRightOperand := p.parseValue()
+	if maybeRightOperand == nil {
+		return nil
+	}
+
+	if p.expectOne(idl.TokenTypeParenClose) == nil {
+		return nil
+	}
+
+	return &astValueBinary{
+		leftOperand:  maybeLeftOperand,
+		operator:     *maybeOperator,
+		rightOperand: maybeRightOperand,
+	}
 }
 
-// ValueLiteral =  ValueLiteralBool | ValueLiteralInt | ValueLiteralFloat | ValueLiteralText | ValueLiteralData | ValueLiteralList | ValueLiteralStruct
-func (p *parserMicroglotTokens) parseValueLiteral() *astValueLiteral {
-	maybe_token := p.expectOneOf([]idl.TokenType{
+func (p *parserMicroglotTokens) parseValueLiteralBool() *astValueLiteralBool {
+	maybeToken := p.expectOneOf([]idl.TokenType{
 		idl.TokenTypeKeywordTrue,
 		idl.TokenTypeKeywordFalse,
-		idl.TokenTypeIntegerDecimal,
-		idl.TokenTypeIntegerHex,
-		idl.TokenTypeIntegerOctal,
-		idl.TokenTypeIntegerBinary,
-		idl.TokenTypeFloatDecimal,
-		idl.TokenTypeFloatHex,
-		idl.TokenTypeData,
-		idl.TokenTypeSquareOpen,
-		idl.TokenTypeCurlyOpen,
 	})
-	if maybe_token == nil {
+	if maybeToken == nil {
 		return nil
 	}
-	// TODO
-	return nil
-}
 
-// ValueIdentifier = ValueIdentifier = QualifiedIdentifier .
-func (p *parserMicroglotTokens) parseValueIdentifier() *astValueIdentifier {
-	maybe_token := p.expectOne(idl.TokenTypeIdentifier)
-	if maybe_token == nil {
-		return nil
+	var value bool
+	if maybeToken.Type == idl.TokenTypeKeywordTrue {
+		value = true
+	} else {
+		value = false
 	}
-	// TODO
-	return nil
+	return &astValueLiteralBool{
+		value,
+	}
 }
 
-// int_lit = decimal_lit | binary_lit | octal_lit | hex_lit
-func (p *parserMicroglotTokens) parseIntLit() *astIntLit {
-	maybe_token := p.expectOneOf([]idl.TokenType{
+// ValueLiteralInt = decimal_lit | binary_lit | octal_lit | hex_lit
+func (p *parserMicroglotTokens) parseValueLiteralInt() *astValueLiteralInt {
+	maybeToken := p.expectOneOf([]idl.TokenType{
 		idl.TokenTypeIntegerDecimal,
 		idl.TokenTypeIntegerHex,
 		idl.TokenTypeIntegerOctal,
 		idl.TokenTypeIntegerBinary,
 	})
-	if maybe_token == nil {
+	if maybeToken == nil {
 		return nil
 	}
 
-	i, err := strconv.ParseUint(maybe_token.Value, 0, 64)
+	i, err := strconv.ParseUint(maybeToken.Value, 0, 64)
 	if err != nil {
-		p.report(exc.CodeUnknownFatal, fmt.Sprintf("invalid integer literal %s", maybe_token.Value))
+		// TODO 2023.08.21: replace CodeUnknownFatal with something meaningful
+		p.report(exc.CodeUnknownFatal, fmt.Sprintf("invalid integer literal %s", maybeToken.Value))
 		return nil
 	}
 
-	return &astIntLit{
-		token: *maybe_token,
+	return &astValueLiteralInt{
+		token: *maybeToken,
 		value: i,
 	}
 }
 
-func (p *parserMicroglotTokens) parseTextLit() *astTextLit {
-	t := p.expectOne(idl.TokenTypeText)
-	if t == nil {
+func (p *parserMicroglotTokens) parseValueLiteralFloat() *astValueLiteralFloat {
+	maybeToken := p.expectOneOf([]idl.TokenType{
+		idl.TokenTypeFloatDecimal,
+		idl.TokenTypeFloatHex,
+	})
+	if maybeToken == nil {
 		return nil
 	}
-	return &astTextLit{
-		value: *t,
+
+	f, err := strconv.ParseFloat(maybeToken.Value, 64)
+	if err != nil {
+		// TODO 2023.08.21: replace CodeUnknownFatal with something meaningful
+		p.report(exc.CodeUnknownFatal, fmt.Sprintf("invalid floating-point literal %s", maybeToken.Value))
+		return nil
+	}
+
+	return &astValueLiteralFloat{
+		token: *maybeToken,
+		value: f,
+	}
+}
+
+func (p *parserMicroglotTokens) parseValueLiteralText() *astValueLiteralText {
+	maybeToken := p.expectOne(idl.TokenTypeText)
+	if maybeToken == nil {
+		return nil
+	}
+	return &astValueLiteralText{
+		value: *maybeToken,
+	}
+}
+
+func (p *parserMicroglotTokens) parseValueLiteralData() *astValueLiteralData {
+	maybeToken := p.expectOne(idl.TokenTypeData)
+	if maybeToken == nil {
+		return nil
+	}
+	return &astValueLiteralData{
+		value: *maybeToken,
+	}
+}
+
+// ValueLiteralList    = square_open [Value {comma Value} {comma}] square_close .
+func (p *parserMicroglotTokens) parseValueLiteralList() *astValueLiteralList {
+	values := applyOverCommaSeparatedList(p,
+		idl.TokenTypeSquareOpen,
+		(*parserMicroglotTokens).parseValue,
+		idl.TokenTypeSquareClose,
+	)
+	if values == nil {
+		return nil
+	}
+
+	return &astValueLiteralList{
+		values,
+	}
+}
+
+// ValueLiteralStruct         = brace_open [LiteralStructPair {comma LiteralStructPair} {comma}] brace_close
+func (p *parserMicroglotTokens) parseValueLiteralStruct() *astValueLiteralStruct {
+	values := applyOverCommaSeparatedList(p,
+		idl.TokenTypeCurlyOpen,
+		(*parserMicroglotTokens).parseLiteralStructPair,
+		idl.TokenTypeCurlyClose)
+	if values == nil {
+		return nil
+	}
+
+	return &astValueLiteralStruct{
+		values,
+	}
+}
+
+// LiteralStructPair    = identifier colon Value .
+func (p *parserMicroglotTokens) parseLiteralStructPair() *astLiteralStructPair {
+	maybeIdentifier := p.parseValueIdentifier()
+	if maybeIdentifier == nil {
+		return nil
+	}
+
+	if p.expectOne(idl.TokenTypeColon) == nil {
+		return nil
+	}
+
+	maybeValue := p.parseValue()
+	if maybeValue == nil {
+		return nil
+	}
+
+	return &astLiteralStructPair{
+		identifier: *maybeIdentifier,
+		value:      maybeValue,
+	}
+}
+
+// ValueIdentifier = QualifiedIdentifier
+// QualifiedIdentifier = identifier { dot identifier } .
+func (p *parserMicroglotTokens) parseValueIdentifier() *astValueIdentifier {
+	identifier := p.expectOne(idl.TokenTypeIdentifier)
+	if identifier == nil {
+		return nil
+	}
+
+	components := []idl.Token{*identifier}
+	for {
+		maybeToken := p.peek()
+		if maybeToken == nil || maybeToken.Type != idl.TokenTypeDot {
+			break
+		}
+		if p.expectOne(idl.TokenTypeDot) == nil {
+			return nil
+		}
+		identifier := p.expectOne(idl.TokenTypeIdentifier)
+		if identifier == nil {
+			return nil
+		}
+		components = append(components, *identifier)
+	}
+
+	return &astValueIdentifier{
+		qualifiedIdentifier: components,
 	}
 }
