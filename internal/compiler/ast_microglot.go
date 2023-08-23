@@ -23,6 +23,12 @@ type expression interface {
 	expression()
 }
 
+// interface for all struct element types
+type structelement interface {
+	node
+	structelement()
+}
+
 type ast struct {
 	comments   astCommentBlock
 	syntax     astStatementSyntax
@@ -43,9 +49,15 @@ type astStatementSyntax struct {
 	syntax astValueLiteralText
 }
 
+type meta struct {
+	uid                   *astValueLiteralInt
+	annotationApplication *astAnnotationApplication
+	comments              astCommentBlock
+}
+
 type astStatementModuleMeta struct {
 	uid                   astValueLiteralInt
-	annotationApplication astAnnotationApplication
+	annotationApplication *astAnnotationApplication
 	comments              astCommentBlock
 }
 
@@ -57,10 +69,102 @@ type astStatementImport struct {
 
 type astStatementAnnotation struct {
 	identifier       idl.Token
-	annotationScopes []astAnnotationScope
+	annotationScopes []*astAnnotationScope
 	typeSpecifier    astTypeSpecifier
 	uid              *astValueLiteralInt
 	comments         astCommentBlock
+}
+
+type astStatementConst struct {
+	identifier    idl.Token
+	typeSpecifier astTypeSpecifier
+	value         expression
+	meta          astMetadata
+}
+
+type astStatementEnum struct {
+	identifier    idl.Token
+	innerComments astCommentBlock
+	enumerants    []*astEnumerant
+	meta          astMetadata
+}
+
+type astStatementStruct struct {
+	typeName      astTypeName
+	innerComments astCommentBlock
+	elements      []structelement
+	meta          astMetadata
+}
+
+type astStatementAPI struct {
+	typeName      astTypeName
+	extends       *astExtension
+	innerComments astCommentBlock
+	methods       []*astAPIMethod
+	meta          astMetadata
+}
+
+type astStatementSDK struct {
+	typeName      astTypeName
+	extends       *astExtension
+	innerComments astCommentBlock
+	methods       []*astSDKMethod
+	meta          astMetadata
+}
+
+type astSDKMethod struct {
+	identifier          idl.Token
+	parameters          []*astSDKMethodParameter
+	returnTypeSpecifier astTypeSpecifier
+	nothrows            bool
+	meta                astMetadata
+}
+
+type astSDKMethodParameter struct {
+	identifier    idl.Token
+	typeSpecifier astTypeSpecifier
+}
+
+type astExtension struct {
+	extensions []*astTypeSpecifier
+}
+
+type astAPIMethod struct {
+	identifier          idl.Token
+	inputTypeSpecifier  *astTypeSpecifier
+	returnTypeSpecifier *astTypeSpecifier
+	meta                astMetadata
+}
+
+type astUnion struct {
+	identifier    *idl.Token
+	innerComments astCommentBlock
+	fields        []*astUnionField
+	meta          astMetadata
+}
+
+type astUnionField struct {
+	identifier    idl.Token
+	typeSpecifier astTypeSpecifier
+	meta          astMetadata
+}
+
+type astField struct {
+	identifier    idl.Token
+	typeSpecifier astTypeSpecifier
+	value         expression
+	meta          astMetadata
+}
+
+type astEnumerant struct {
+	identifier idl.Token
+	meta       astMetadata
+}
+
+type astMetadata struct {
+	uid                   *astValueLiteralInt
+	annotationApplication *astAnnotationApplication
+	comments              astCommentBlock
 }
 
 type astAnnotationApplication struct {
@@ -71,6 +175,20 @@ type astAnnotationInstance struct {
 	namespaceIdentifier *idl.Token
 	identifier          idl.Token
 	value               expression
+}
+
+type astAnnotationScope struct {
+	scope idl.Token
+}
+
+type astTypeSpecifier struct {
+	qualifier *idl.Token
+	typeName  astTypeName
+}
+
+type astTypeName struct {
+	identifier idl.Token
+	parameters []*astTypeSpecifier
 }
 
 type astCommentBlock struct {
@@ -127,11 +245,25 @@ type astValueIdentifier struct {
 	qualifiedIdentifier []idl.Token
 }
 
+type astCommentedBlock[N node] struct {
+	innerComments astCommentBlock
+	values        []N
+}
+
 func (*ast) node()                    {}
 func (*astStatementSyntax) node()     {}
 func (*astStatementModuleMeta) node() {}
 func (*astStatementImport) node()     {}
 func (*astStatementAnnotation) node() {}
+func (*astStatementConst) node()      {}
+func (*astStatementEnum) node()       {}
+func (*astStatementStruct) node()     {}
+func (*astStatementAPI) node()        {}
+func (*astStatementSDK) node()        {}
+func (*astSDKMethod) node()           {}
+func (*astSDKMethodParameter) node()  {}
+func (*astAPIMethod) node()           {}
+func (*astEnumerant) node()           {}
 func (*astAnnotationInstance) node()  {}
 func (*astValueLiteralText) node()    {}
 func (*astCommentBlock) node()        {}
@@ -145,10 +277,21 @@ func (*astValueLiteralList) node()    {}
 func (*astValueLiteralStruct) node()  {}
 func (*astValueIdentifier) node()     {}
 func (*astLiteralStructPair) node()   {}
+func (*astAnnotationScope) node()     {}
+func (*astTypeSpecifier) node()       {}
+func (*astTypeName) node()            {}
+func (*astUnion) node()               {}
+func (*astUnionField) node()          {}
+func (*astField) node()               {}
 
 func (*astStatementModuleMeta) statement() {}
 func (*astStatementImport) statement()     {}
 func (*astStatementAnnotation) statement() {}
+func (*astStatementConst) statement()      {}
+func (*astStatementEnum) statement()       {}
+func (*astStatementStruct) statement()     {}
+func (*astStatementAPI) statement()        {}
+func (*astStatementSDK) statement()        {}
 
 func (*astValueUnary) expression()         {}
 func (*astValueBinary) expression()        {}
@@ -160,3 +303,6 @@ func (*astValueLiteralData) expression()   {}
 func (*astValueLiteralList) expression()   {}
 func (*astValueLiteralStruct) expression() {}
 func (*astValueIdentifier) expression()    {}
+
+func (*astUnion) structelement() {}
+func (*astField) structelement() {}
