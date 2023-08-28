@@ -40,9 +40,6 @@ func TestParser(t *testing.T) {
 			input:  "module = @123",
 			parser: func(p *parserMicroglotTokens) node { return p.parseStatementModuleMeta() },
 			expected: &astStatementModuleMeta{
-				comments: astCommentBlock{
-					comments: nil,
-				},
 				uid: astValueLiteralInt{
 					token: *newTokenLineSpan(1, 13, 12, 3, idl.TokenTypeIntegerDecimal, "123"),
 					value: 123,
@@ -58,7 +55,7 @@ func TestParser(t *testing.T) {
 					token: *newTokenLineSpan(1, 13, 12, 3, idl.TokenTypeIntegerDecimal, "123"),
 					value: 123,
 				},
-				comments: astCommentBlock{
+				comments: &astCommentBlock{
 					comments: []idl.Token{
 						*newTokenLineSpan(2, 9, 23, 7, idl.TokenTypeComment, "comment"),
 						*newTokenLineSpan(3, 9, 34, 7, idl.TokenTypeComment, "another"),
@@ -75,9 +72,6 @@ func TestParser(t *testing.T) {
 					value: *newTokenLineSpan(1, 12, 11, 3, idl.TokenTypeText, "foo"),
 				},
 				name: *newTokenLineSpan(1, 17, 17, 1, idl.TokenTypeDot, "."),
-				comments: astCommentBlock{
-					comments: nil,
-				},
 			},
 		},
 		{
@@ -105,7 +99,7 @@ func TestParser(t *testing.T) {
 					token: *newTokenLineSpan(1, 37, 36, 4, idl.TokenTypeIntegerDecimal, "1234"),
 					value: 1234,
 				},
-				comments: astCommentBlock{
+				comments: &astCommentBlock{
 					comments: []idl.Token{
 						*newTokenLineSpan(2, 9, 47, 7, idl.TokenTypeComment, "comment"),
 					},
@@ -146,7 +140,7 @@ func TestParser(t *testing.T) {
 							},
 						},
 					},
-					comments: astCommentBlock{
+					comments: &astCommentBlock{
 						comments: []idl.Token{
 							*newTokenLineSpan(2, 9, 44, 7, idl.TokenTypeComment, "comment"),
 						},
@@ -160,7 +154,7 @@ func TestParser(t *testing.T) {
 			parser: func(p *parserMicroglotTokens) node { return p.parseStatementEnum() },
 			expected: &astStatementEnum{
 				identifier: *newTokenLineSpan(1, 8, 7, 3, idl.TokenTypeIdentifier, "foo"),
-				innerComments: astCommentBlock{
+				innerComments: &astCommentBlock{
 					comments: []idl.Token{
 						*newTokenLineSpan(2, 9, 20, 7, idl.TokenTypeComment, "comment"),
 					},

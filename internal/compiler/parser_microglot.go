@@ -208,7 +208,7 @@ func applyOverCommentedBlock[N interface {
 		if maybeCommentBlock == nil {
 			return nil
 		}
-		this.innerComments = *maybeCommentBlock
+		this.innerComments = maybeCommentBlock
 	}
 
 	for {
@@ -241,7 +241,7 @@ func (p *parserMicroglotTokens) parse() *ast {
 		if maybeCommentBlock == nil {
 			return nil
 		}
-		this.comments = *maybeCommentBlock
+		this.comments = maybeCommentBlock
 	}
 
 	syntax := p.parseStatementSyntax()
@@ -337,7 +337,7 @@ func (p *parserMicroglotTokens) parseStatementModuleMeta() *astStatementModuleMe
 		if maybeCommentBlock == nil {
 			return nil
 		}
-		this.comments = *maybeCommentBlock
+		this.comments = maybeCommentBlock
 	}
 
 	return &this
@@ -374,7 +374,7 @@ func (p *parserMicroglotTokens) parseStatementImport() *astStatementImport {
 		if maybeCommentBlock == nil {
 			return nil
 		}
-		this.comments = *maybeCommentBlock
+		this.comments = maybeCommentBlock
 	}
 	return &this
 }
@@ -422,7 +422,7 @@ func (p *parserMicroglotTokens) parseStatementAnnotation() *astStatementAnnotati
 		if maybeCommentBlock == nil {
 			return nil
 		}
-		this.comments = *maybeCommentBlock
+		this.comments = maybeCommentBlock
 	}
 	return &this
 }
@@ -880,7 +880,7 @@ func (p *parserMicroglotTokens) parseMetadata() *astMetadata {
 		if maybeCommentBlock == nil {
 			return nil
 		}
-		this.comments = *maybeCommentBlock
+		this.comments = maybeCommentBlock
 	}
 
 	return &this

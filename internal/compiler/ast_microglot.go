@@ -30,7 +30,7 @@ type structelement interface {
 }
 
 type ast struct {
-	comments   astCommentBlock
+	comments   *astCommentBlock
 	syntax     astStatementSyntax
 	statements []statement
 }
@@ -52,19 +52,19 @@ type astStatementSyntax struct {
 type meta struct {
 	uid                   *astValueLiteralInt
 	annotationApplication *astAnnotationApplication
-	comments              astCommentBlock
+	comments              *astCommentBlock
 }
 
 type astStatementModuleMeta struct {
 	uid                   astValueLiteralInt
 	annotationApplication *astAnnotationApplication
-	comments              astCommentBlock
+	comments              *astCommentBlock
 }
 
 type astStatementImport struct {
 	uri      astValueLiteralText
 	name     idl.Token
-	comments astCommentBlock
+	comments *astCommentBlock
 }
 
 type astStatementAnnotation struct {
@@ -72,7 +72,7 @@ type astStatementAnnotation struct {
 	annotationScopes []*astAnnotationScope
 	typeSpecifier    astTypeSpecifier
 	uid              *astValueLiteralInt
-	comments         astCommentBlock
+	comments         *astCommentBlock
 }
 
 type astStatementConst struct {
@@ -84,14 +84,14 @@ type astStatementConst struct {
 
 type astStatementEnum struct {
 	identifier    idl.Token
-	innerComments astCommentBlock
+	innerComments *astCommentBlock
 	enumerants    []*astEnumerant
 	meta          astMetadata
 }
 
 type astStatementStruct struct {
 	typeName      astTypeName
-	innerComments astCommentBlock
+	innerComments *astCommentBlock
 	elements      []structelement
 	meta          astMetadata
 }
@@ -99,7 +99,7 @@ type astStatementStruct struct {
 type astStatementAPI struct {
 	typeName      astTypeName
 	extends       *astExtension
-	innerComments astCommentBlock
+	innerComments *astCommentBlock
 	methods       []*astAPIMethod
 	meta          astMetadata
 }
@@ -107,7 +107,7 @@ type astStatementAPI struct {
 type astStatementSDK struct {
 	typeName      astTypeName
 	extends       *astExtension
-	innerComments astCommentBlock
+	innerComments *astCommentBlock
 	methods       []*astSDKMethod
 	meta          astMetadata
 }
@@ -138,7 +138,7 @@ type astAPIMethod struct {
 
 type astUnion struct {
 	identifier    *idl.Token
-	innerComments astCommentBlock
+	innerComments *astCommentBlock
 	fields        []*astUnionField
 	meta          astMetadata
 }
@@ -164,7 +164,7 @@ type astEnumerant struct {
 type astMetadata struct {
 	uid                   *astValueLiteralInt
 	annotationApplication *astAnnotationApplication
-	comments              astCommentBlock
+	comments              *astCommentBlock
 }
 
 type astAnnotationApplication struct {
@@ -246,7 +246,7 @@ type astValueIdentifier struct {
 }
 
 type astCommentedBlock[N node] struct {
-	innerComments astCommentBlock
+	innerComments *astCommentBlock
 	values        []N
 }
 
