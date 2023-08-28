@@ -204,7 +204,11 @@ func applyOverCommentedBlock[N interface {
 
 	maybeToken := p.peek()
 	if maybeToken != nil && maybeToken.Type == idl.TokenTypeComment {
-		this.innerComments = *p.parseCommentBlock()
+		maybeCommentBlock := p.parseCommentBlock()
+		if maybeCommentBlock == nil {
+			return nil
+		}
+		this.innerComments = *maybeCommentBlock
 	}
 
 	for {
@@ -233,7 +237,11 @@ func (p *parserMicroglotTokens) parse() *ast {
 
 	maybeToken := p.peek()
 	if maybeToken != nil && maybeToken.Type == idl.TokenTypeComment {
-		this.comments = *p.parseCommentBlock()
+		maybeCommentBlock := p.parseCommentBlock()
+		if maybeCommentBlock == nil {
+			return nil
+		}
+		this.comments = *maybeCommentBlock
 	}
 
 	syntax := p.parseStatementSyntax()
@@ -325,7 +333,11 @@ func (p *parserMicroglotTokens) parseStatementModuleMeta() *astStatementModuleMe
 
 	maybeToken = p.peek()
 	if maybeToken != nil && maybeToken.Type == idl.TokenTypeComment {
-		this.comments = *p.parseCommentBlock()
+		maybeCommentBlock := p.parseCommentBlock()
+		if maybeCommentBlock == nil {
+			return nil
+		}
+		this.comments = *maybeCommentBlock
 	}
 
 	return &this
@@ -358,7 +370,11 @@ func (p *parserMicroglotTokens) parseStatementImport() *astStatementImport {
 
 	maybeToken := p.peek()
 	if maybeToken != nil && maybeToken.Type == idl.TokenTypeComment {
-		this.comments = *p.parseCommentBlock()
+		maybeCommentBlock := p.parseCommentBlock()
+		if maybeCommentBlock == nil {
+			return nil
+		}
+		this.comments = *maybeCommentBlock
 	}
 	return &this
 }
@@ -402,7 +418,11 @@ func (p *parserMicroglotTokens) parseStatementAnnotation() *astStatementAnnotati
 
 	maybeToken = p.peek()
 	if maybeToken != nil && maybeToken.Type == idl.TokenTypeComment {
-		this.comments = *p.parseCommentBlock()
+		maybeCommentBlock := p.parseCommentBlock()
+		if maybeCommentBlock == nil {
+			return nil
+		}
+		this.comments = *maybeCommentBlock
 	}
 	return &this
 }
@@ -856,7 +876,11 @@ func (p *parserMicroglotTokens) parseMetadata() *astMetadata {
 
 	maybeToken = p.peek()
 	if maybeToken != nil && maybeToken.Type == idl.TokenTypeComment {
-		this.comments = *p.parseCommentBlock()
+		maybeCommentBlock := p.parseCommentBlock()
+		if maybeCommentBlock == nil {
+			return nil
+		}
+		this.comments = *maybeCommentBlock
 	}
 
 	return &this
