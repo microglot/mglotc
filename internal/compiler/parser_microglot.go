@@ -1187,12 +1187,7 @@ func (p *parserMicroglotTokens) parseValueLiteralBool() *astValueLiteralBool {
 		return nil
 	}
 
-	var value bool
-	if maybeToken.Type == idl.TokenTypeKeywordTrue {
-		value = true
-	} else {
-		value = false
-	}
+	value := maybeToken.Type == idl.TokenTypeKeywordTrue
 	return &astValueLiteralBool{
 		value,
 	}
