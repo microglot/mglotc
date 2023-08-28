@@ -80,11 +80,11 @@ func TestParser(t *testing.T) {
 			parser: func(p *parserMicroglotTokens) node { return p.parseStatementAnnotation() },
 			expected: &astStatementAnnotation{
 				identifier: *newTokenLineSpan(1, 14, 13, 3, idl.TokenTypeIdentifier, "foo"),
-				annotationScopes: []*astAnnotationScope{
-					&astAnnotationScope{
+				annotationScopes: []astAnnotationScope{
+					astAnnotationScope{
 						scope: *newTokenLineSpan(1, 19, 18, 3, idl.TokenTypeKeywordAPI, "api"),
 					},
-					&astAnnotationScope{
+					astAnnotationScope{
 						scope: *newTokenLineSpan(1, 24, 23, 3, idl.TokenTypeKeywordSDK, "sdk"),
 					},
 				},
@@ -129,8 +129,8 @@ func TestParser(t *testing.T) {
 						value: 1234,
 					},
 					annotationApplication: &astAnnotationApplication{
-						annotationInstances: []*astAnnotationInstance{
-							&astAnnotationInstance{
+						annotationInstances: []astAnnotationInstance{
+							astAnnotationInstance{
 								namespaceIdentifier: nil,
 								identifier:          *newTokenLineSpan(1, 30, 29, 3, idl.TokenTypeIdentifier, "baz"),
 								value: (expression)(&astValueLiteralInt{
@@ -159,11 +159,11 @@ func TestParser(t *testing.T) {
 						*newTokenLineSpan(2, 9, 20, 7, idl.TokenTypeComment, "comment"),
 					},
 				},
-				enumerants: []*astEnumerant{
-					&astEnumerant{
+				enumerants: []astEnumerant{
+					astEnumerant{
 						identifier: *newTokenLineSpan(3, 3, 25, 3, idl.TokenTypeIdentifier, "bar"),
 					},
-					&astEnumerant{
+					astEnumerant{
 						identifier: *newTokenLineSpan(3, 7, 29, 3, idl.TokenTypeIdentifier, "baz"),
 					},
 				},
@@ -204,16 +204,16 @@ func TestParser(t *testing.T) {
 					identifier: *newTokenLineSpan(1, 7, 6, 3, idl.TokenTypeIdentifier, "foo"),
 				},
 				extends: &astExtension{
-					extensions: []*astTypeSpecifier{
-						&astTypeSpecifier{
+					extensions: []astTypeSpecifier{
+						astTypeSpecifier{
 							typeName: astTypeName{
 								identifier: *newTokenLineSpan(1, 21, 20, 3, idl.TokenTypeIdentifier, "bar"),
 							},
 						},
 					},
 				},
-				methods: []*astAPIMethod{
-					&astAPIMethod{
+				methods: []astAPIMethod{
+					astAPIMethod{
 						identifier: *newTokenLineSpan(1, 29, 28, 3, idl.TokenTypeIdentifier, "baz"),
 						inputTypeSpecifier: &astTypeSpecifier{
 							typeName: astTypeName{
@@ -237,11 +237,11 @@ func TestParser(t *testing.T) {
 				typeName: astTypeName{
 					identifier: *newTokenLineSpan(1, 7, 6, 3, idl.TokenTypeIdentifier, "foo"),
 				},
-				methods: []*astSDKMethod{
-					&astSDKMethod{
+				methods: []astSDKMethod{
+					astSDKMethod{
 						identifier: *newTokenLineSpan(1, 13, 12, 3, idl.TokenTypeIdentifier, "baz"),
-						parameters: []*astSDKMethodParameter{
-							&astSDKMethodParameter{
+						parameters: []astSDKMethodParameter{
+							astSDKMethodParameter{
 								identifier: *newTokenLineSpan(1, 15, 14, 1, idl.TokenTypeIdentifier, "x"),
 								typeSpecifier: astTypeSpecifier{
 									typeName: astTypeName{
@@ -369,8 +369,8 @@ func TestParser(t *testing.T) {
 			input:  "{ a: 2, }",
 			parser: func(p *parserMicroglotTokens) node { return p.parseValueLiteralStruct() },
 			expected: &astValueLiteralStruct{
-				values: []*astLiteralStructPair{
-					&astLiteralStructPair{
+				values: []astLiteralStructPair{
+					astLiteralStructPair{
 						identifier: astValueIdentifier{
 							qualifiedIdentifier: []idl.Token{
 								*newTokenLineSpan(1, 3, 2, 1, idl.TokenTypeIdentifier, "a"),

@@ -128,12 +128,7 @@ func (p *parserMicroglotTokens) expectOneOf(expectedTypes []idl.TokenType) *idl.
 }
 
 // generic application of parsing lists of zero or more comma-separated nodes, allowing an optional trailing comma
-func applyOverCommaSeparatedList[N interface {
-	node
-	comparable
-}](p *parserMicroglotTokens, tOpen idl.TokenType, parser func() N, tClose idl.TokenType) []N {
-	var zeroValue N
-
+func applyOverCommaSeparatedList[N node](p *parserMicroglotTokens, tOpen idl.TokenType, parser func() *N, tClose idl.TokenType) []N {
 	if p.expectOne(tOpen) == nil {
 		return nil
 	}
@@ -146,10 +141,10 @@ func applyOverCommaSeparatedList[N interface {
 	}
 	if maybeToken.Type != tClose {
 		maybeValue := parser()
-		if maybeValue == zeroValue {
+		if maybeValue == nil {
 			return nil
 		}
-		values = append(values, maybeValue)
+		values = append(values, *maybeValue)
 
 		for {
 			maybeToken = p.peek()
@@ -175,10 +170,10 @@ func applyOverCommaSeparatedList[N interface {
 			}
 
 			maybeValue = parser()
-			if maybeValue == zeroValue {
+			if maybeValue == nil {
 				return nil
 			}
-			values = append(values, maybeValue)
+			values = append(values, *maybeValue)
 		}
 	}
 
@@ -189,11 +184,7 @@ func applyOverCommaSeparatedList[N interface {
 	return values
 }
 
-func applyOverCommentedBlock[N interface {
-	node
-	comparable
-}](p *parserMicroglotTokens, parser func() N) *astCommentedBlock[N] {
-	var zeroValue N
+func applyOverCommentedBlock[N node](p *parserMicroglotTokens, parser func() *N) *astCommentedBlock[N] {
 	if p.expectOne(idl.TokenTypeCurlyOpen) == nil {
 		return nil
 	}
@@ -216,10 +207,10 @@ func applyOverCommentedBlock[N interface {
 		}
 
 		maybeValue := parser()
-		if maybeValue == zeroValue {
+		if maybeValue == nil {
 			return nil
 		}
-		this.values = append(this.values, maybeValue)
+		this.values = append(this.values, *maybeValue)
 	}
 
 	if p.expectOne(idl.TokenTypeCurlyClose) == nil {
@@ -458,7 +449,7 @@ func (p *parserMicroglotTokens) parseStatementConst() *astStatementConst {
 	return &astStatementConst{
 		identifier:    *maybeIdentifier,
 		typeSpecifier: *maybeTypeSpecifier,
-		value:         maybeValue,
+		value:         *maybeValue,
 		meta:          *maybeMeta,
 	}
 }
@@ -745,13 +736,15 @@ func (p *parserMicroglotTokens) parseAPIMethod() *astAPIMethod {
 }
 
 // StructElement = Field | Union .
-func (p *parserMicroglotTokens) parseStructElement() structelement {
+func (p *parserMicroglotTokens) parseStructElement() *structelement {
 	maybeToken := p.peek()
+	var value structelement
 	if maybeToken != nil && maybeToken.Type == idl.TokenTypeKeywordUnion {
-		return p.parseUnion()
+		value = p.parseUnion()
 	} else {
-		return p.parseField()
+		value = p.parseField()
 	}
+	return &value
 }
 
 // Union = union [identifier] brace_open [CommentBlock] { UnionField } brace_close Metadata .
@@ -836,7 +829,7 @@ func (p *parserMicroglotTokens) parseField() *astField {
 		if maybeValue == nil {
 			return nil
 		}
-		this.value = maybeValue
+		this.value = *maybeValue
 	}
 
 	maybeMeta := p.parseMetadata()
@@ -1039,7 +1032,7 @@ func (p *parserMicroglotTokens) parseAnnotationInstance() *astAnnotationInstance
 	return &astAnnotationInstance{
 		namespaceIdentifier: namespaceIdentifier,
 		identifier:          *identifier,
-		value:               value,
+		value:               *value,
 	}
 }
 
@@ -1070,39 +1063,42 @@ func (p *parserMicroglotTokens) parseEnumerant() *astEnumerant {
 }
 
 // Value = ValueUnary | ValueBinary | ValueLiteral | ValueIdentifier
-func (p *parserMicroglotTokens) parseValue() expression {
+func (p *parserMicroglotTokens) parseValue() *expression {
 	maybeToken := p.peek()
 	if maybeToken == nil {
 		p.report(exc.CodeUnexpectedEOF, fmt.Sprint(exc.CodeUnexpectedEOF, "unexpected EOF (expecting a value)"))
 		return nil
 	}
 
+	var value expression
 	switch maybeToken.Type {
 	case idl.TokenTypePlus, idl.TokenTypeMinus, idl.TokenTypeExclamation:
-		return p.parseValueUnary()
+		value = p.parseValueUnary()
 	case idl.TokenTypeParenOpen:
-		return p.parseValueBinary()
+		value = p.parseValueBinary()
 	case idl.TokenTypeKeywordTrue, idl.TokenTypeKeywordFalse:
-		return p.parseValueLiteralBool()
+		value = p.parseValueLiteralBool()
 	case idl.TokenTypeIntegerDecimal, idl.TokenTypeIntegerHex, idl.TokenTypeIntegerOctal, idl.TokenTypeIntegerBinary:
-		return p.parseValueLiteralInt()
+		value = p.parseValueLiteralInt()
 	case idl.TokenTypeFloatDecimal, idl.TokenTypeFloatHex:
-		return p.parseValueLiteralFloat()
+		value = p.parseValueLiteralFloat()
 	case idl.TokenTypeText:
-		return p.parseValueLiteralText()
+		value = p.parseValueLiteralText()
 	case idl.TokenTypeData:
-		return p.parseValueLiteralData()
+		value = p.parseValueLiteralData()
 	case idl.TokenTypeSquareOpen:
-		return p.parseValueLiteralList()
+		value = p.parseValueLiteralList()
 	case idl.TokenTypeCurlyOpen:
-		return p.parseValueLiteralStruct()
+		value = p.parseValueLiteralStruct()
 	case idl.TokenTypeIdentifier:
-		return p.parseValueIdentifier()
+		value = p.parseValueIdentifier()
 	default:
 		// TODO 2023.08.21: replace CodeUnknownFatal with something meaningful
 		p.report(exc.CodeUnknownFatal, fmt.Sprintf("unexpected %s (expecting an expression)", maybeToken.Value))
 		return nil
 	}
+
+	return &value
 }
 
 // ValueUnary = (plus | minus | bang ) Value
@@ -1123,7 +1119,7 @@ func (p *parserMicroglotTokens) parseValueUnary() *astValueUnary {
 
 	return &astValueUnary{
 		operator: *maybeOperator,
-		operand:  maybeOperand,
+		operand:  *maybeOperand,
 	}
 }
 
@@ -1172,9 +1168,9 @@ func (p *parserMicroglotTokens) parseValueBinary() *astValueBinary {
 	}
 
 	return &astValueBinary{
-		leftOperand:  maybeLeftOperand,
+		leftOperand:  *maybeLeftOperand,
 		operator:     *maybeOperator,
-		rightOperand: maybeRightOperand,
+		rightOperand: *maybeRightOperand,
 	}
 }
 
@@ -1309,7 +1305,7 @@ func (p *parserMicroglotTokens) parseLiteralStructPair() *astLiteralStructPair {
 
 	return &astLiteralStructPair{
 		identifier: *maybeIdentifier,
-		value:      maybeValue,
+		value:      *maybeValue,
 	}
 }
 
