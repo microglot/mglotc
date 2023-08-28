@@ -198,9 +198,7 @@ func applyOverCommentedBlock[N interface {
 		return nil
 	}
 
-	this := astCommentedBlock[N]{
-		values: []N{},
-	}
+	this := astCommentedBlock[N]{}
 
 	maybeToken := p.peek()
 	if maybeToken != nil && maybeToken.Type == idl.TokenTypeComment {
