@@ -131,7 +131,7 @@ func (p *parserMicroglotTokens) expectOneOf(expectedTypes []idl.TokenType) *idl.
 func applyOverCommaSeparatedList[N interface {
 	node
 	comparable
-}](p *parserMicroglotTokens, tOpen idl.TokenType, parser func(*parserMicroglotTokens) N, tClose idl.TokenType) []N {
+}](p *parserMicroglotTokens, tOpen idl.TokenType, parser func() N, tClose idl.TokenType) []N {
 	var zeroValue N
 
 	if p.expectOne(tOpen) == nil {
@@ -145,7 +145,7 @@ func applyOverCommaSeparatedList[N interface {
 		return nil
 	}
 	if maybeToken.Type != tClose {
-		maybeValue := parser(p)
+		maybeValue := parser()
 		if maybeValue == zeroValue {
 			return nil
 		}
@@ -174,7 +174,7 @@ func applyOverCommaSeparatedList[N interface {
 				break
 			}
 
-			maybeValue = parser(p)
+			maybeValue = parser()
 			if maybeValue == zeroValue {
 				return nil
 			}
@@ -192,7 +192,7 @@ func applyOverCommaSeparatedList[N interface {
 func applyOverCommentedBlock[N interface {
 	node
 	comparable
-}](p *parserMicroglotTokens, parser func(*parserMicroglotTokens) N) *astCommentedBlock[N] {
+}](p *parserMicroglotTokens, parser func() N) *astCommentedBlock[N] {
 	var zeroValue N
 	if p.expectOne(idl.TokenTypeCurlyOpen) == nil {
 		return nil
@@ -213,7 +213,7 @@ func applyOverCommentedBlock[N interface {
 			break
 		}
 
-		maybeValue := parser(p)
+		maybeValue := parser()
 		if maybeValue == zeroValue {
 			return nil
 		}
@@ -374,7 +374,7 @@ func (p *parserMicroglotTokens) parseStatementAnnotation() *astStatementAnnotati
 	}
 	annotationScopes := applyOverCommaSeparatedList(p,
 		idl.TokenTypeParenOpen,
-		(*parserMicroglotTokens).parseAnnotationScope,
+		p.parseAnnotationScope,
 		idl.TokenTypeParenClose)
 	if annotationScopes == nil {
 		return nil
@@ -456,7 +456,7 @@ func (p *parserMicroglotTokens) parseStatementEnum() *astStatementEnum {
 		return nil
 	}
 
-	commentedBlock := applyOverCommentedBlock(p, (*parserMicroglotTokens).parseEnumerant)
+	commentedBlock := applyOverCommentedBlock(p, p.parseEnumerant)
 	if commentedBlock == nil {
 		return nil
 	}
@@ -485,7 +485,7 @@ func (p *parserMicroglotTokens) parseStatementStruct() *astStatementStruct {
 		return nil
 	}
 
-	commentedBlock := applyOverCommentedBlock(p, (*parserMicroglotTokens).parseStructElement)
+	commentedBlock := applyOverCommentedBlock(p, p.parseStructElement)
 	if commentedBlock == nil {
 		return nil
 	}
@@ -527,7 +527,7 @@ func (p *parserMicroglotTokens) parseStatementAPI() *astStatementAPI {
 		this.extends = maybeExtends
 	}
 
-	commentedBlock := applyOverCommentedBlock(p, (*parserMicroglotTokens).parseAPIMethod)
+	commentedBlock := applyOverCommentedBlock(p, p.parseAPIMethod)
 	if commentedBlock == nil {
 		return nil
 	}
@@ -567,7 +567,7 @@ func (p *parserMicroglotTokens) parseStatementSDK() *astStatementSDK {
 		this.extends = maybeExtends
 	}
 
-	commentedBlock := applyOverCommentedBlock(p, (*parserMicroglotTokens).parseSDKMethod)
+	commentedBlock := applyOverCommentedBlock(p, p.parseSDKMethod)
 	if commentedBlock == nil {
 		return nil
 	}
@@ -592,7 +592,7 @@ func (p *parserMicroglotTokens) parseSDKMethod() *astSDKMethod {
 
 	parameters := applyOverCommaSeparatedList(p,
 		idl.TokenTypeParenOpen,
-		(*parserMicroglotTokens).parseSDKMethodParameter,
+		p.parseSDKMethodParameter,
 		idl.TokenTypeParenClose)
 	if parameters == nil {
 		return nil
@@ -660,7 +660,7 @@ func (p *parserMicroglotTokens) parseExtension() *astExtension {
 
 	extensions := applyOverCommaSeparatedList(p,
 		idl.TokenTypeParenOpen,
-		(*parserMicroglotTokens).parseTypeSpecifier,
+		p.parseTypeSpecifier,
 		idl.TokenTypeParenClose)
 	if extensions == nil {
 		return nil
@@ -753,7 +753,7 @@ func (p *parserMicroglotTokens) parseUnion() *astUnion {
 		this.identifier = maybeIdentifier
 	}
 
-	commentedBlock := applyOverCommentedBlock(p, (*parserMicroglotTokens).parseUnionField)
+	commentedBlock := applyOverCommentedBlock(p, p.parseUnionField)
 	if commentedBlock == nil {
 		return nil
 	}
@@ -934,7 +934,7 @@ func (p *parserMicroglotTokens) parseTypeName() *astTypeName {
 	if maybeToken != nil && maybeToken.Type == idl.TokenTypeAngleOpen {
 		parameters := applyOverCommaSeparatedList(p,
 			idl.TokenTypeAngleOpen,
-			(*parserMicroglotTokens).parseTypeSpecifier,
+			p.parseTypeSpecifier,
 			idl.TokenTypeAngleClose)
 		if parameters == nil {
 			return nil
@@ -963,7 +963,7 @@ func (p *parserMicroglotTokens) parseAnnotationApplication() *astAnnotationAppli
 
 	annotationInstances := applyOverCommaSeparatedList(p,
 		idl.TokenTypeParenOpen,
-		(*parserMicroglotTokens).parseAnnotationInstance,
+		p.parseAnnotationInstance,
 		idl.TokenTypeParenClose)
 	if annotationInstances == nil {
 		return nil
@@ -1247,7 +1247,7 @@ func (p *parserMicroglotTokens) parseValueLiteralData() *astValueLiteralData {
 func (p *parserMicroglotTokens) parseValueLiteralList() *astValueLiteralList {
 	values := applyOverCommaSeparatedList(p,
 		idl.TokenTypeSquareOpen,
-		(*parserMicroglotTokens).parseValue,
+		p.parseValue,
 		idl.TokenTypeSquareClose,
 	)
 	if values == nil {
@@ -1263,7 +1263,7 @@ func (p *parserMicroglotTokens) parseValueLiteralList() *astValueLiteralList {
 func (p *parserMicroglotTokens) parseValueLiteralStruct() *astValueLiteralStruct {
 	values := applyOverCommaSeparatedList(p,
 		idl.TokenTypeCurlyOpen,
-		(*parserMicroglotTokens).parseLiteralStructPair,
+		p.parseLiteralStructPair,
 		idl.TokenTypeCurlyClose)
 	if values == nil {
 		return nil
