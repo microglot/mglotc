@@ -3,7 +3,6 @@ package compiler
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"strconv"
 
 	"gopkg.microglot.org/compiler.go/internal/exc"
@@ -129,7 +128,12 @@ func (p *parserMicroglotTokens) expectOneOf(expectedTypes []idl.TokenType) *idl.
 }
 
 // generic application of parsing lists of zero or more comma-separated nodes, allowing an optional trailing comma
-func applyOverCommaSeparatedList[N node](p *parserMicroglotTokens, tOpen idl.TokenType, parser func(*parserMicroglotTokens) N, tClose idl.TokenType) []N {
+func applyOverCommaSeparatedList[N interface {
+	node
+	comparable
+}](p *parserMicroglotTokens, tOpen idl.TokenType, parser func(*parserMicroglotTokens) N, tClose idl.TokenType) []N {
+	var zeroValue N
+
 	if p.expectOne(tOpen) == nil {
 		return nil
 	}
@@ -142,7 +146,7 @@ func applyOverCommaSeparatedList[N node](p *parserMicroglotTokens, tOpen idl.Tok
 	}
 	if maybeToken.Type != tClose {
 		maybeValue := parser(p)
-		if reflect.ValueOf(maybeValue).IsNil() {
+		if maybeValue == zeroValue {
 			return nil
 		}
 		values = append(values, maybeValue)
@@ -171,7 +175,7 @@ func applyOverCommaSeparatedList[N node](p *parserMicroglotTokens, tOpen idl.Tok
 			}
 
 			maybeValue = parser(p)
-			if reflect.ValueOf(maybeValue).IsNil() {
+			if maybeValue == zeroValue {
 				return nil
 			}
 			values = append(values, maybeValue)
@@ -185,7 +189,11 @@ func applyOverCommaSeparatedList[N node](p *parserMicroglotTokens, tOpen idl.Tok
 	return values
 }
 
-func applyOverCommentedBlock[N node](p *parserMicroglotTokens, parser func(*parserMicroglotTokens) N) *astCommentedBlock[N] {
+func applyOverCommentedBlock[N interface {
+	node
+	comparable
+}](p *parserMicroglotTokens, parser func(*parserMicroglotTokens) N) *astCommentedBlock[N] {
+	var zeroValue N
 	if p.expectOne(idl.TokenTypeCurlyOpen) == nil {
 		return nil
 	}
@@ -206,7 +214,7 @@ func applyOverCommentedBlock[N node](p *parserMicroglotTokens, parser func(*pars
 		}
 
 		maybeValue := parser(p)
-		if reflect.ValueOf(maybeValue).IsNil() {
+		if maybeValue == zeroValue {
 			return nil
 		}
 		this.values = append(this.values, maybeValue)
