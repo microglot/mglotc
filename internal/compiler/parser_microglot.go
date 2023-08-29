@@ -184,12 +184,12 @@ func applyOverCommaSeparatedList[N node](p *parserMicroglotTokens, tOpen idl.Tok
 	return values
 }
 
-func applyOverCommentedBlock[N node](p *parserMicroglotTokens, parser func() *N) *astCommentedBlock[N] {
+func applyOverCommentedBlockWithPrefix[N node, P node](p *parserMicroglotTokens, prefixToken idl.TokenType, prefixParser func() *P, valueParser func() *N) *astCommentedBlock[N, P] {
 	if p.expectOne(idl.TokenTypeCurlyOpen) == nil {
 		return nil
 	}
 
-	this := astCommentedBlock[N]{}
+	this := astCommentedBlock[N, P]{}
 
 	maybeToken := p.peek()
 	if maybeToken != nil && maybeToken.Type == idl.TokenTypeComment {
@@ -200,13 +200,24 @@ func applyOverCommentedBlock[N node](p *parserMicroglotTokens, parser func() *N)
 		this.innerComments = maybeCommentBlock
 	}
 
+	if prefixParser != nil {
+		maybeToken := p.peek()
+		if maybeToken != nil && maybeToken.Type == prefixToken {
+			maybePrefix := prefixParser()
+			if maybePrefix == nil {
+				return nil
+			}
+			this.prefix = maybePrefix
+		}
+	}
+
 	for {
 		maybeToken := p.peek()
 		if maybeToken != nil && maybeToken.Type == idl.TokenTypeCurlyClose {
 			break
 		}
 
-		maybeValue := parser()
+		maybeValue := valueParser()
 		if maybeValue == nil {
 			return nil
 		}
@@ -218,6 +229,10 @@ func applyOverCommentedBlock[N node](p *parserMicroglotTokens, parser func() *N)
 	}
 
 	return &this
+}
+
+func applyOverCommentedBlock[N node](p *parserMicroglotTokens, parser func() *N) *astCommentedBlock[N, node] {
+	return applyOverCommentedBlockWithPrefix[N, node](p, idl.TokenTypeNewline, nil, parser)
 }
 
 // microglot = [CommentBlock] StatementSyntax { Statement }
@@ -263,6 +278,8 @@ func (p *parserMicroglotTokens) parse() *ast {
 			maybeStatement = p.parseStatementAPI()
 		case idl.TokenTypeKeywordSDK:
 			maybeStatement = p.parseStatementSDK()
+		case idl.TokenTypeKeywordImpl:
+			maybeStatement = p.parseStatementImpl()
 		default:
 			// TODO 2023.08.21: replace CodeUnknownFatal with something meaningful
 			p.report(exc.CodeUnknownFatal, fmt.Sprintf("unexpected %s (expecting a statement)", maybeToken.Value))
@@ -587,7 +604,119 @@ func (p *parserMicroglotTokens) parseStatementSDK() *astStatementSDK {
 	if maybeMeta == nil {
 		return nil
 	}
+	this.meta = *maybeMeta
+
 	return &this
+}
+
+// StatementImpl = impl TypeName ImplAs brace_open [CommentBlock] [ImplRequires] { ImplMethod } brace_close Metadata .
+func (p *parserMicroglotTokens) parseStatementImpl() *astStatementImpl {
+	if p.expectOne(idl.TokenTypeKeywordImpl) == nil {
+		return nil
+	}
+
+	maybeTypeName := p.parseTypeName()
+	if maybeTypeName == nil {
+		return nil
+	}
+
+	maybeImplAs := p.parseImplAs()
+	if maybeImplAs == nil {
+		return nil
+	}
+
+	this := astStatementImpl{
+		typeName: *maybeTypeName,
+		as:       *maybeImplAs,
+	}
+
+	commentedBlock := applyOverCommentedBlockWithPrefix(p, idl.TokenTypeKeywordRequires, p.parseImplRequires, p.parseImplMethod)
+	if commentedBlock == nil {
+		return nil
+	}
+	this.innerComments = commentedBlock.innerComments
+	this.requires = commentedBlock.prefix
+	this.methods = commentedBlock.values
+
+	maybeMeta := p.parseMetadata()
+	if maybeMeta == nil {
+		return nil
+	}
+	this.meta = *maybeMeta
+
+	return &this
+}
+
+// ( ImplAPIMethod | ImplSDKMethod )
+func (p *parserMicroglotTokens) parseImplMethod() *implmethod {
+	// TODO 2023.08.29: AFAICT it's not possible to reliably differentiate between an ImplAPIMethod and an ImplSDKMethod...
+	return nil
+}
+
+// ImplRequirement = identifier TypeSpecifier [CommentBlock] .
+func (p *parserMicroglotTokens) parseImplRequirement() *astImplRequirement {
+	maybeIdentifier := p.expectOne(idl.TokenTypeIdentifier)
+	if maybeIdentifier == nil {
+		return nil
+	}
+
+	maybeTypeSpecifier := p.parseTypeSpecifier()
+	if maybeTypeSpecifier == nil {
+		return nil
+	}
+
+	this := astImplRequirement{
+		identifier:    *maybeIdentifier,
+		typeSpecifier: *maybeTypeSpecifier,
+	}
+
+	maybeToken := p.peek()
+	if maybeToken != nil && maybeToken.Type == idl.TokenTypeComment {
+		maybeCommentBlock := p.parseCommentBlock()
+		if maybeCommentBlock == nil {
+			return nil
+		}
+		this.comments = maybeCommentBlock
+	}
+
+	return &this
+}
+
+// ImplRequires = requires curly_open { ImplRequirement } curl_close .
+// TODO 2023.08.29: actually = requires brace_open [CommentBlock] { ImplRequirement } brace_close; is that okay?
+func (p *parserMicroglotTokens) parseImplRequires() *astImplRequires {
+	if p.expectOne(idl.TokenTypeKeywordRequires) == nil {
+		return nil
+	}
+
+	commentedBlock := applyOverCommentedBlock(p, p.parseImplRequirement)
+	if commentedBlock == nil {
+		return nil
+	}
+
+	return &astImplRequires{
+		innerComments: commentedBlock.innerComments,
+		requirements:  commentedBlock.values,
+	}
+}
+
+// ImplAs = as paren_open TypeSpecifier { comma TypeSpecifier } [comma] paren_close .
+func (p *parserMicroglotTokens) parseImplAs() *astImplAs {
+	if p.expectOne(idl.TokenTypeKeywordAs) == nil {
+		return nil
+	}
+
+	types := applyOverCommaSeparatedList(p,
+		idl.TokenTypeParenOpen,
+		p.parseTypeSpecifier,
+		idl.TokenTypeParenClose)
+	if types == nil {
+		return nil
+	}
+
+	return &astImplAs{
+		types,
+	}
 }
 
 // SDKMethod = identifier SDKMethodInput [SDKMethodReturns] [nothrows] Metadata .
@@ -836,7 +965,6 @@ func (p *parserMicroglotTokens) parseField() *astField {
 	if maybeMeta == nil {
 		return nil
 	}
-
 	this.meta = *maybeMeta
 
 	return &this

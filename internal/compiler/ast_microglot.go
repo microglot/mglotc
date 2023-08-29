@@ -29,6 +29,12 @@ type structelement interface {
 	structelement()
 }
 
+// interface for all implementation method types
+type implmethod interface {
+	node
+	implmethod()
+}
+
 type ast struct {
 	comments   *astCommentBlock
 	syntax     astStatementSyntax
@@ -110,6 +116,30 @@ type astStatementSDK struct {
 	innerComments *astCommentBlock
 	methods       []astSDKMethod
 	meta          astMetadata
+}
+
+type astStatementImpl struct {
+	typeName      astTypeName
+	as            astImplAs
+	innerComments *astCommentBlock
+	requires      *astImplRequires
+	methods       []implmethod
+	meta          astMetadata
+}
+
+type astImplRequirement struct {
+	identifier    idl.Token
+	typeSpecifier astTypeSpecifier
+	comments      *astCommentBlock
+}
+
+type astImplRequires struct {
+	innerComments *astCommentBlock
+	requirements  []astImplRequirement
+}
+
+type astImplAs struct {
+	types []astTypeSpecifier
 }
 
 type astSDKMethod struct {
@@ -245,8 +275,9 @@ type astValueIdentifier struct {
 	qualifiedIdentifier []idl.Token
 }
 
-type astCommentedBlock[N node] struct {
+type astCommentedBlock[N node, P node] struct {
 	innerComments *astCommentBlock
+	prefix        *P
 	values        []N
 }
 
@@ -260,6 +291,9 @@ func (astStatementEnum) node()       {}
 func (astStatementStruct) node()     {}
 func (astStatementAPI) node()        {}
 func (astStatementSDK) node()        {}
+func (astStatementImpl) node()       {}
+func (astImplRequirement) node()     {}
+func (astImplRequires) node()        {}
 func (astSDKMethod) node()           {}
 func (astSDKMethodParameter) node()  {}
 func (astAPIMethod) node()           {}
@@ -292,6 +326,7 @@ func (astStatementEnum) statement()       {}
 func (astStatementStruct) statement()     {}
 func (astStatementAPI) statement()        {}
 func (astStatementSDK) statement()        {}
+func (astStatementImpl) statement()       {}
 
 func (astValueUnary) expression()         {}
 func (astValueBinary) expression()        {}

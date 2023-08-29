@@ -260,6 +260,37 @@ func TestParser(t *testing.T) {
 			},
 		},
 		{
+			name:   "impl",
+			input:  "impl foo as(:bar,) { requires { x: y } }",
+			parser: func(p *parserMicroglotTokens) node { return p.parseStatementImpl() },
+			expected: &astStatementImpl{
+				typeName: astTypeName{
+					identifier: *newTokenLineSpan(1, 8, 7, 3, idl.TokenTypeIdentifier, "foo"),
+				},
+				as: astImplAs{
+					types: []astTypeSpecifier{
+						astTypeSpecifier{
+							typeName: astTypeName{
+								identifier: *newTokenLineSpan(1, 16, 15, 3, idl.TokenTypeIdentifier, "bar"),
+							},
+						},
+					},
+				},
+				requires: &astImplRequires{
+					requirements: []astImplRequirement{
+						astImplRequirement{
+							identifier: *newTokenLineSpan(1, 33, 32, 1, idl.TokenTypeIdentifier, "x"),
+							typeSpecifier: astTypeSpecifier{
+								typeName: astTypeName{
+									identifier: *newTokenLineSpan(1, 36, 35, 1, idl.TokenTypeIdentifier, "y"),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			name:   "non-namespaced annotation instance",
 			input:  "foo(1)",
 			parser: func(p *parserMicroglotTokens) node { return p.parseAnnotationInstance() },
