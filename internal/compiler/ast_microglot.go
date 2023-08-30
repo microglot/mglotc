@@ -23,6 +23,18 @@ type expression interface {
 	expression()
 }
 
+// interface for "valueorinvocation"
+type valueorinvocation interface {
+	node
+	valueorinvocation()
+}
+
+// interface for switch element types
+type switchelement interface {
+	node
+	switchelement()
+}
+
 // interface for all struct element types
 type structelement interface {
 	node
@@ -33,6 +45,12 @@ type structelement interface {
 type implmethod interface {
 	node
 	implmethod()
+}
+
+// interface for all step types
+type step interface {
+	node
+	step()
 }
 
 type ast struct {
@@ -127,6 +145,28 @@ type astStatementImpl struct {
 	meta          astMetadata
 }
 
+type astImplBlock struct {
+	innerComments *astCommentBlock
+	steps         []step
+}
+
+type astImplSDKMethod struct {
+	identifier    idl.Token
+	methodInput   astSDKMethodInput
+	methodReturns *astSDKMethodReturns
+	nothrows      bool
+	block         astImplBlock
+	meta          astMetadata
+}
+
+type astImplAPIMethod struct {
+	identifier    idl.Token
+	methodInput   astAPIMethodInput
+	methodReturns astAPIMethodReturns
+	block         astImplBlock
+	meta          astMetadata
+}
+
 type astImplRequirement struct {
 	identifier    idl.Token
 	typeSpecifier astTypeSpecifier
@@ -142,12 +182,20 @@ type astImplAs struct {
 	types []astTypeSpecifier
 }
 
+type astSDKMethodInput struct {
+	parameters []astSDKMethodParameter
+}
+
+type astSDKMethodReturns struct {
+	typeSpecifier astTypeSpecifier
+}
+
 type astSDKMethod struct {
-	identifier          idl.Token
-	parameters          []astSDKMethodParameter
-	returnTypeSpecifier astTypeSpecifier
-	nothrows            bool
-	meta                astMetadata
+	identifier    idl.Token
+	methodInput   astSDKMethodInput
+	methodReturns *astSDKMethodReturns
+	nothrows      bool
+	meta          astMetadata
 }
 
 type astSDKMethodParameter struct {
@@ -159,11 +207,19 @@ type astExtension struct {
 	extensions []astTypeSpecifier
 }
 
+type astAPIMethodInput struct {
+	typeSpecifier astTypeSpecifier
+}
+
+type astAPIMethodReturns struct {
+	typeSpecifier astTypeSpecifier
+}
+
 type astAPIMethod struct {
-	identifier          idl.Token
-	inputTypeSpecifier  *astTypeSpecifier
-	returnTypeSpecifier *astTypeSpecifier
-	meta                astMetadata
+	identifier    idl.Token
+	methodInput   astAPIMethodInput
+	methodReturns astAPIMethodReturns
+	meta          astMetadata
 }
 
 type astUnion struct {
@@ -275,6 +331,70 @@ type astValueIdentifier struct {
 	qualifiedIdentifier []idl.Token
 }
 
+type astInvocation struct {
+}
+
+type astStepProse struct {
+	prose idl.Token
+}
+
+type astStepVar struct {
+	identifier idl.Token
+	value      valueorinvocation
+}
+
+type astStepSet struct {
+	identifier astValueIdentifier
+	value      valueorinvocation
+}
+
+type astConditionBlock struct {
+	condition astValueBinary
+	block     astImplBlock
+}
+
+type astStepIf struct {
+	conditions []astConditionBlock
+	elseBlock  *astImplBlock
+}
+
+type astSwitchCase struct {
+	values []expression
+	block  astImplBlock
+}
+
+type astSwitchDefault struct {
+	block astImplBlock
+}
+
+type astStepSwitch struct {
+	innerComments *astCommentBlock
+	cases         []switchelement
+}
+
+type astStepWhile struct {
+	conditionBlock astConditionBlock
+}
+
+type astStepFor struct {
+	keyName   idl.Token
+	valueName idl.Token
+	value     expression
+	block     astImplBlock
+}
+
+type astStepReturn struct {
+	value *expression
+}
+
+type astStepThrow struct {
+	value expression
+}
+
+type astStepExec struct {
+	invocation astInvocation
+}
+
 type astCommentedBlock[N node, P node] struct {
 	innerComments *astCommentBlock
 	prefix        *P
@@ -292,6 +412,9 @@ func (astStatementStruct) node()     {}
 func (astStatementAPI) node()        {}
 func (astStatementSDK) node()        {}
 func (astStatementImpl) node()       {}
+func (astImplBlock) node()           {}
+func (astImplSDKMethod) node()       {}
+func (astImplAPIMethod) node()       {}
 func (astImplRequirement) node()     {}
 func (astImplRequires) node()        {}
 func (astSDKMethod) node()           {}
@@ -317,6 +440,18 @@ func (astTypeName) node()            {}
 func (astUnion) node()               {}
 func (astUnionField) node()          {}
 func (astField) node()               {}
+func (astStepProse) node()           {}
+func (astStepVar) node()             {}
+func (astStepSet) node()             {}
+func (astStepIf) node()              {}
+func (astSwitchCase) node()          {}
+func (astSwitchDefault) node()       {}
+func (astStepSwitch) node()          {}
+func (astStepWhile) node()           {}
+func (astStepFor) node()             {}
+func (astStepReturn) node()          {}
+func (astStepThrow) node()           {}
+func (astStepExec) node()            {}
 
 func (astStatementModuleMeta) statement() {}
 func (astStatementImport) statement()     {}
@@ -339,5 +474,33 @@ func (astValueLiteralList) expression()   {}
 func (astValueLiteralStruct) expression() {}
 func (astValueIdentifier) expression()    {}
 
+func (astValueUnary) valueorinvocation()         {}
+func (astValueBinary) valueorinvocation()        {}
+func (astValueLiteralBool) valueorinvocation()   {}
+func (astValueLiteralInt) valueorinvocation()    {}
+func (astValueLiteralFloat) valueorinvocation()  {}
+func (astValueLiteralText) valueorinvocation()   {}
+func (astValueLiteralData) valueorinvocation()   {}
+func (astValueLiteralList) valueorinvocation()   {}
+func (astValueLiteralStruct) valueorinvocation() {}
+func (astValueIdentifier) valueorinvocation()    {}
+
 func (astUnion) structelement() {}
 func (astField) structelement() {}
+
+func (astImplSDKMethod) implmethod() {}
+func (astImplAPIMethod) implmethod() {}
+
+func (astStepProse) step()  {}
+func (astStepVar) step()    {}
+func (astStepSet) step()    {}
+func (astStepIf) step()     {}
+func (astStepSwitch) step() {}
+func (astStepWhile) step()  {}
+func (astStepFor) step()    {}
+func (astStepReturn) step() {}
+func (astStepThrow) step()  {}
+func (astStepExec) step()   {}
+
+func (astSwitchCase) switchelement()    {}
+func (astSwitchDefault) switchelement() {}

@@ -215,14 +215,18 @@ func TestParser(t *testing.T) {
 				methods: []astAPIMethod{
 					astAPIMethod{
 						identifier: *newTokenLineSpan(1, 29, 28, 3, idl.TokenTypeIdentifier, "baz"),
-						inputTypeSpecifier: &astTypeSpecifier{
-							typeName: astTypeName{
-								identifier: *newTokenLineSpan(1, 34, 33, 3, idl.TokenTypeIdentifier, "int"),
+						methodInput: astAPIMethodInput{
+							typeSpecifier: astTypeSpecifier{
+								typeName: astTypeName{
+									identifier: *newTokenLineSpan(1, 34, 33, 3, idl.TokenTypeIdentifier, "int"),
+								},
 							},
 						},
-						returnTypeSpecifier: &astTypeSpecifier{
-							typeName: astTypeName{
-								identifier: *newTokenLineSpan(1, 50, 49, 4, idl.TokenTypeIdentifier, "bool"),
+						methodReturns: astAPIMethodReturns{
+							typeSpecifier: astTypeSpecifier{
+								typeName: astTypeName{
+									identifier: *newTokenLineSpan(1, 50, 49, 4, idl.TokenTypeIdentifier, "bool"),
+								},
 							},
 						},
 					},
@@ -240,19 +244,23 @@ func TestParser(t *testing.T) {
 				methods: []astSDKMethod{
 					astSDKMethod{
 						identifier: *newTokenLineSpan(1, 13, 12, 3, idl.TokenTypeIdentifier, "baz"),
-						parameters: []astSDKMethodParameter{
-							astSDKMethodParameter{
-								identifier: *newTokenLineSpan(1, 15, 14, 1, idl.TokenTypeIdentifier, "x"),
-								typeSpecifier: astTypeSpecifier{
-									typeName: astTypeName{
-										identifier: *newTokenLineSpan(1, 20, 19, 3, idl.TokenTypeIdentifier, "int"),
+						methodInput: astSDKMethodInput{
+							parameters: []astSDKMethodParameter{
+								astSDKMethodParameter{
+									identifier: *newTokenLineSpan(1, 15, 14, 1, idl.TokenTypeIdentifier, "x"),
+									typeSpecifier: astTypeSpecifier{
+										typeName: astTypeName{
+											identifier: *newTokenLineSpan(1, 20, 19, 3, idl.TokenTypeIdentifier, "int"),
+										},
 									},
 								},
 							},
 						},
-						returnTypeSpecifier: astTypeSpecifier{
-							typeName: astTypeName{
-								identifier: *newTokenLineSpan(1, 36, 35, 4, idl.TokenTypeIdentifier, "bool"),
+						methodReturns: &astSDKMethodReturns{
+							typeSpecifier: astTypeSpecifier{
+								typeName: astTypeName{
+									identifier: *newTokenLineSpan(1, 36, 35, 4, idl.TokenTypeIdentifier, "bool"),
+								},
 							},
 						},
 					},
@@ -261,7 +269,7 @@ func TestParser(t *testing.T) {
 		},
 		{
 			name:   "impl",
-			input:  "impl foo as(:bar,) { requires { x: y } }",
+			input:  "impl foo as(:bar,) { requires { x: y } baz(x :int) {} barney(:int) returns (:int) {}}",
 			parser: func(p *parserMicroglotTokens) node { return p.parseStatementImpl() },
 			expected: &astStatementImpl{
 				typeName: astTypeName{
@@ -283,6 +291,41 @@ func TestParser(t *testing.T) {
 							typeSpecifier: astTypeSpecifier{
 								typeName: astTypeName{
 									identifier: *newTokenLineSpan(1, 36, 35, 1, idl.TokenTypeIdentifier, "y"),
+								},
+							},
+						},
+					},
+				},
+				methods: []implmethod{
+					astImplSDKMethod{
+						identifier: *newTokenLineSpan(1, 42, 41, 3, idl.TokenTypeIdentifier, "baz"),
+						methodInput: astSDKMethodInput{
+							parameters: []astSDKMethodParameter{
+								astSDKMethodParameter{
+									identifier: *newTokenLineSpan(1, 44, 43, 1, idl.TokenTypeIdentifier, "x"),
+									typeSpecifier: astTypeSpecifier{
+										typeName: astTypeName{
+											identifier: *newTokenLineSpan(1, 46, 46, 3, idl.TokenTypeIdentifier, "int"),
+										},
+									},
+								},
+							},
+						},
+						block: astImplBlock{},
+					},
+					astImplAPIMethod{
+						identifier: *newTokenLineSpan(1, 60, 59, 6, idl.TokenTypeIdentifier, "barney"),
+						methodInput: astAPIMethodInput{
+							typeSpecifier: astTypeSpecifier{
+								typeName: astTypeName{
+									identifier: *newTokenLineSpan(1, 65, 64, 3, idl.TokenTypeIdentifier, "int"),
+								},
+							},
+						},
+						methodReturns: astAPIMethodReturns{
+							typeSpecifier: astTypeSpecifier{
+								typeName: astTypeName{
+									identifier: *newTokenLineSpan(1, 80, 79, 3, idl.TokenTypeIdentifier, "int"),
 								},
 							},
 						},

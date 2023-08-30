@@ -3,6 +3,7 @@ package compiler
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
 
 	"gopkg.microglot.org/compiler.go/internal/exc"
@@ -647,10 +648,509 @@ func (p *parserMicroglotTokens) parseStatementImpl() *astStatementImpl {
 	return &this
 }
 
-// ( ImplAPIMethod | ImplSDKMethod )
-func (p *parserMicroglotTokens) parseImplMethod() *implmethod {
-	// TODO 2023.08.29: AFAICT it's not possible to reliably differentiate between an ImplAPIMethod and an ImplSDKMethod...
+// StepProse = prose .
+func (p *parserMicroglotTokens) parseStepProse() *astStepProse {
+	maybeProse := p.expectOne(idl.TokenTypeProse)
+	if maybeProse == nil {
+		return nil
+	}
+	return &astStepProse{
+		prose: *maybeProse,
+	}
+}
+
+func (p *parserMicroglotTokens) parseValueOrInvocation() *valueorinvocation {
+	// TODO 2023.09.30: relies on parseInvocation(), which is missing from the EBNF!
 	return nil
+}
+
+// StepVar = var identifier TypeSpecifier [equal ValueOrInvocation] .
+func (p *parserMicroglotTokens) parseStepVar() *astStepVar {
+	if p.expectOne(idl.TokenTypeKeywordVar) == nil {
+		return nil
+	}
+
+	maybeIdentifier := p.expectOne(idl.TokenTypeIdentifier)
+	if maybeIdentifier == nil {
+		return nil
+	}
+
+	this := astStepVar{
+		identifier: *maybeIdentifier,
+	}
+
+	maybeToken := p.peek()
+	if maybeToken != nil && maybeToken.Type == idl.TokenTypeEqual {
+		p.advance()
+
+		maybeValue := p.parseValueOrInvocation()
+		if maybeValue == nil {
+			return nil
+		}
+		this.value = *maybeValue
+	}
+
+	return &this
+}
+
+// StepSet = set QualifiedIdentifier equal ValueOrInvocation .
+func (p *parserMicroglotTokens) parseStepSet() *astStepSet {
+	if p.expectOne(idl.TokenTypeKeywordSet) == nil {
+		return nil
+	}
+
+	maybeIdentifier := p.parseValueIdentifier()
+	if maybeIdentifier == nil {
+		return nil
+	}
+
+	if p.expectOne(idl.TokenTypeEqual) == nil {
+		return nil
+	}
+
+	maybeValue := p.parseValueOrInvocation()
+	if maybeValue == nil {
+		return nil
+	}
+
+	return &astStepSet{
+		identifier: *maybeIdentifier,
+		value:      *maybeValue,
+	}
+}
+
+// ConditionBlock = ValueBinary ImplBlock
+func (p *parserMicroglotTokens) parseConditionBlock() *astConditionBlock {
+	maybeCondition := p.parseValueBinary()
+	if maybeCondition == nil {
+		return nil
+	}
+
+	maybeBlock := p.parseImplBlock()
+	if maybeBlock == nil {
+		return nil
+	}
+
+	return &astConditionBlock{
+		condition: *maybeCondition,
+		block:     *maybeBlock,
+	}
+}
+
+// StepIf = if ConditionBlock { else if ConditionBlock } [ else ImplBlock ] .
+func (p *parserMicroglotTokens) parseStepIf() *astStepIf {
+	if p.expectOne(idl.TokenTypeKeywordIf) == nil {
+		return nil
+	}
+
+	first := p.parseConditionBlock()
+	if first == nil {
+		return nil
+	}
+
+	conditions := []astConditionBlock{*first}
+	for {
+		maybeToken := p.peek()
+		if maybeToken == nil || maybeToken.Type != idl.TokenTypeKeywordElse {
+			break
+		}
+		maybeToken = p.peekN(1)
+		if maybeToken == nil || maybeToken.Type != idl.TokenTypeKeywordIf {
+			break
+		}
+
+		p.advance()
+		p.advance()
+		maybeConditionBlock := p.parseConditionBlock()
+		if maybeConditionBlock == nil {
+			return nil
+		}
+		conditions = append(conditions, *maybeConditionBlock)
+	}
+
+	this := astStepIf{
+		conditions: conditions,
+	}
+
+	maybeToken := p.peek()
+	if maybeToken != nil && maybeToken.Type == idl.TokenTypeKeywordElse {
+		maybeElseBlock := p.parseImplBlock()
+		if maybeElseBlock == nil {
+			return nil
+		}
+
+		this.elseBlock = maybeElseBlock
+	}
+
+	return &this
+}
+
+// SwitchCase = case Value {comma Value} ImplBlock .
+func (p *parserMicroglotTokens) parseSwitchCase() *astSwitchCase {
+	if p.expectOne(idl.TokenTypeKeywordCase) == nil {
+		return nil
+	}
+
+	first := p.parseValue()
+	if first == nil {
+		return nil
+	}
+	values := []expression{*first}
+
+	for {
+		maybeToken := p.peek()
+		if maybeToken == nil || maybeToken.Type != idl.TokenTypeComma {
+			break
+		}
+
+		maybeValue := p.parseValue()
+		if maybeValue == nil {
+			return nil
+		}
+
+		values = append(values, *maybeValue)
+	}
+
+	maybeBlock := p.parseImplBlock()
+	if maybeBlock == nil {
+		return nil
+	}
+
+	return &astSwitchCase{
+		values: values,
+		block:  *maybeBlock,
+	}
+}
+
+// SwitchDefault = default ImplBlock .
+func (p *parserMicroglotTokens) parseSwitchDefault() *astSwitchDefault {
+	if p.expectOne(idl.TokenTypeKeywordDefault) == nil {
+		return nil
+	}
+
+	maybeBlock := p.parseImplBlock()
+	if maybeBlock == nil {
+		return nil
+	}
+
+	return &astSwitchDefault{
+		block: *maybeBlock,
+	}
+}
+
+func (p *parserMicroglotTokens) parseSwitchElement() *switchelement {
+	var value switchelement
+	maybeToken := p.peek()
+	if maybeToken != nil && maybeToken.Type == idl.TokenTypeKeywordCase {
+		switchCase := p.parseSwitchCase()
+		if switchCase == nil {
+			return nil
+		}
+		value = *switchCase
+	} else {
+		switchDefault := p.parseSwitchDefault()
+		if switchDefault == nil {
+			return nil
+		}
+		value = *switchDefault
+	}
+	return &value
+}
+
+// StepSwitch = switch Value curly_open {SwitchElement} curl_close .
+func (p *parserMicroglotTokens) parseStepSwitch() *astStepSwitch {
+	if p.expectOne(idl.TokenTypeKeywordSwitch) == nil {
+		return nil
+	}
+
+	maybeValue := p.parseValue()
+	if maybeValue == nil {
+		return nil
+	}
+
+	commentedBlock := applyOverCommentedBlock(p, p.parseSwitchElement)
+	if commentedBlock == nil {
+		return nil
+	}
+
+	return &astStepSwitch{
+		innerComments: commentedBlock.innerComments,
+		cases:         commentedBlock.values,
+	}
+}
+
+// StepWhile = while ConditionBlock .
+func (p *parserMicroglotTokens) parseStepWhile() *astStepWhile {
+	if p.expectOne(idl.TokenTypeKeywordWhile) == nil {
+		return nil
+	}
+
+	maybeConditionBlock := p.parseConditionBlock()
+	if maybeConditionBlock == nil {
+		return nil
+	}
+
+	return &astStepWhile{
+		conditionBlock: *maybeConditionBlock,
+	}
+}
+
+// StepFor = for ForKeyName comma ForValueName in Value ImplBlock .
+func (p *parserMicroglotTokens) parseStepFor() *astStepFor {
+	if p.expectOne(idl.TokenTypeKeywordFor) == nil {
+		return nil
+	}
+
+	maybeKeyName := p.expectOne(idl.TokenTypeIdentifier)
+	if maybeKeyName == nil {
+		return nil
+	}
+
+	if p.expectOne(idl.TokenTypeComma) == nil {
+		return nil
+	}
+
+	maybeValueName := p.expectOne(idl.TokenTypeIdentifier)
+	if maybeValueName == nil {
+		return nil
+	}
+
+	if p.expectOne(idl.TokenTypeKeywordIn) == nil {
+		return nil
+	}
+
+	maybeValue := p.parseValue()
+	if maybeValue == nil {
+		return nil
+	}
+
+	maybeBlock := p.parseImplBlock()
+	if maybeBlock == nil {
+		return nil
+	}
+
+	return &astStepFor{
+		keyName:   *maybeKeyName,
+		valueName: *maybeValueName,
+		value:     *maybeValue,
+		block:     *maybeBlock,
+	}
+}
+
+// StepReturn = return [Value] .
+func (p *parserMicroglotTokens) parseStepReturn() *astStepReturn {
+	if p.expectOne(idl.TokenTypeKeywordReturn) == nil {
+		return nil
+	}
+
+	this := astStepReturn{}
+
+	maybeToken := p.peek()
+	if maybeToken != nil && slices.Contains([]idl.TokenType{
+		idl.TokenTypePlus, idl.TokenTypeMinus, idl.TokenTypeExclamation, idl.TokenTypeParenOpen, idl.TokenTypeKeywordTrue, idl.TokenTypeKeywordFalse, idl.TokenTypeIntegerDecimal, idl.TokenTypeIntegerHex, idl.TokenTypeIntegerOctal, idl.TokenTypeIntegerBinary, idl.TokenTypeFloatDecimal, idl.TokenTypeFloatHex, idl.TokenTypeText, idl.TokenTypeData, idl.TokenTypeSquareOpen, idl.TokenTypeCurlyOpen, idl.TokenTypeIdentifier,
+	}, maybeToken.Type) {
+		maybeValue := p.parseValue()
+		if maybeValue == nil {
+			return nil
+		}
+		this.value = maybeValue
+	}
+
+	return &this
+}
+
+// StepThrow = throw Value .
+func (p *parserMicroglotTokens) parseStepThrow() *astStepThrow {
+	if p.expectOne(idl.TokenTypeKeywordThrow) == nil {
+		return nil
+	}
+
+	maybeValue := p.parseValue()
+	if maybeValue == nil {
+		return nil
+	}
+
+	return &astStepThrow{
+		value: *maybeValue,
+	}
+}
+
+func (p *parserMicroglotTokens) parseInvocation() *astInvocation {
+	// TODO 2023.09.30: missing from EBNF!
+	return nil
+}
+
+// StepExec = exec Invocation .
+func (p *parserMicroglotTokens) parseStepExec() *astStepExec {
+	if p.expectOne(idl.TokenTypeKeywordExec) == nil {
+		return nil
+	}
+
+	maybeInvocation := p.parseInvocation()
+	if maybeInvocation == nil {
+		return nil
+	}
+
+	return &astStepExec{
+		invocation: *maybeInvocation,
+	}
+}
+
+// ImplBlockStep = StepProse | StepVar | StepSet | StepIf | StepSwitch | StepWhile | StepFor | StepReturn | StepThrow | StepExec .
+func (p *parserMicroglotTokens) parseImplBlockStep() *step {
+	maybeToken := p.peek()
+	if maybeToken == nil {
+		p.report(exc.CodeUnexpectedEOF, fmt.Sprint(exc.CodeUnexpectedEOF, "unexpected EOF (expecting an implementation step"))
+		return nil
+	}
+
+	var value step
+	switch maybeToken.Type {
+	case idl.TokenTypeProse:
+		value = p.parseStepProse()
+	case idl.TokenTypeKeywordVar:
+		value = p.parseStepVar()
+	case idl.TokenTypeKeywordSet:
+		value = p.parseStepSet()
+	case idl.TokenTypeKeywordIf:
+		value = p.parseStepIf()
+	case idl.TokenTypeKeywordSwitch:
+		value = p.parseStepSwitch()
+	case idl.TokenTypeKeywordWhile:
+		value = p.parseStepWhile()
+	case idl.TokenTypeKeywordFor:
+		value = p.parseStepFor()
+	case idl.TokenTypeKeywordReturn:
+		value = p.parseStepReturn()
+	case idl.TokenTypeKeywordThrow:
+		value = p.parseStepThrow()
+	case idl.TokenTypeKeywordExec:
+		value = p.parseStepExec()
+	default:
+		// TODO 2023.08.21: replace CodeUnknownFatal with something meaningful
+		p.report(exc.CodeUnknownFatal, fmt.Sprintf("unexpected %s (expecting an implementation step)", maybeToken.Value))
+		return nil
+	}
+
+	return &value
+
+	return &value
+}
+
+// ImplBlock = curly_open { ImplBlockStep } curl_close .
+func (p *parserMicroglotTokens) parseImplBlock() *astImplBlock {
+	commentedBlock := applyOverCommentedBlock(p, p.parseImplBlockStep)
+	if commentedBlock == nil {
+		return nil
+	}
+
+	return &astImplBlock{
+		innerComments: commentedBlock.innerComments,
+		steps:         commentedBlock.values,
+	}
+}
+
+// ImplAPIMethod = identifier APIMethodInput APIMethodReturns ImplBlock Metadata .
+func (p *parserMicroglotTokens) parseImplAPIMethod() *astImplAPIMethod {
+	maybeIdentifier := p.expectOne(idl.TokenTypeIdentifier)
+	if maybeIdentifier == nil {
+		return nil
+	}
+
+	maybeMethodInput := p.parseAPIMethodInput()
+	if maybeMethodInput == nil {
+		return nil
+	}
+
+	maybeMethodReturns := p.parseAPIMethodReturns()
+	if maybeMethodReturns == nil {
+		return nil
+	}
+
+	maybeBlock := p.parseImplBlock()
+	if maybeBlock == nil {
+		return nil
+	}
+
+	maybeMeta := p.parseMetadata()
+	if maybeMeta == nil {
+		return nil
+	}
+
+	return &astImplAPIMethod{
+		identifier:    *maybeIdentifier,
+		methodInput:   *maybeMethodInput,
+		methodReturns: *maybeMethodReturns,
+		block:         *maybeBlock,
+		meta:          *maybeMeta,
+	}
+}
+
+// ImplSDKMethod = identifier SDKMethodInput [SDKMethodReturns] [nothrows] ImplBlock Metadata .
+func (p *parserMicroglotTokens) parseImplSDKMethod() *astImplSDKMethod {
+	maybeIdentifier := p.expectOne(idl.TokenTypeIdentifier)
+	if maybeIdentifier == nil {
+		return nil
+	}
+
+	maybeMethodInput := p.parseSDKMethodInput()
+	if maybeMethodInput == nil {
+		return nil
+	}
+
+	this := astImplSDKMethod{
+		identifier:  *maybeIdentifier,
+		methodInput: *maybeMethodInput,
+		nothrows:    false,
+	}
+
+	maybeToken := p.peek()
+	if maybeToken != nil && maybeToken.Type == idl.TokenTypeKeywordReturns {
+		maybeMethodReturns := p.parseSDKMethodReturns()
+		if maybeMethodReturns == nil {
+			return nil
+		}
+		this.methodReturns = maybeMethodReturns
+	}
+	maybeToken = p.peek()
+	if maybeToken != nil && maybeToken.Type == idl.TokenTypeKeywordNothrows {
+		p.advance()
+		this.nothrows = true
+	}
+
+	maybeBlock := p.parseImplBlock()
+	if maybeBlock == nil {
+		return nil
+	}
+	this.block = *maybeBlock
+
+	maybeMeta := p.parseMetadata()
+	if maybeMeta == nil {
+		return nil
+	}
+	this.meta = *maybeMeta
+
+	return &this
+}
+
+// ImplMethod = ( ImplAPIMethod | ImplSDKMethod ) .
+func (p *parserMicroglotTokens) parseImplMethod() *implmethod {
+	var value implmethod
+	maybeToken := p.peekN(2)
+	if maybeToken != nil && maybeToken.Type == idl.TokenTypeColon {
+		apiMethod := p.parseImplAPIMethod()
+		if apiMethod == nil {
+			return nil
+		}
+		value = *apiMethod
+	} else {
+		sdkMethod := p.parseImplSDKMethod()
+		if sdkMethod == nil {
+			return nil
+		}
+		value = *sdkMethod
+	}
+	return &value
 }
 
 // ImplRequirement = identifier TypeSpecifier [CommentBlock] .
@@ -682,8 +1182,7 @@ func (p *parserMicroglotTokens) parseImplRequirement() *astImplRequirement {
 	return &this
 }
 
-// ImplRequires = requires curly_open { ImplRequirement } curl_close .
-// TODO 2023.08.29: actually = requires brace_open [CommentBlock] { ImplRequirement } brace_close; is that okay?
+// ImplRequires = requires brace_open [CommentBlock] { ImplRequirement } brace_close
 func (p *parserMicroglotTokens) parseImplRequires() *astImplRequires {
 	if p.expectOne(idl.TokenTypeKeywordRequires) == nil {
 		return nil
@@ -719,15 +1218,8 @@ func (p *parserMicroglotTokens) parseImplAs() *astImplAs {
 	}
 }
 
-// SDKMethod = identifier SDKMethodInput [SDKMethodReturns] [nothrows] Metadata .
-// SDKMethodInput      = paren_open [SDKMethodParameter {comma SDKMethodParameter} [comma]] paren_close .
-// SDKMethodReturns    = returns paren_open TypeSpecifier paren_close .
-func (p *parserMicroglotTokens) parseSDKMethod() *astSDKMethod {
-	maybeIdentifier := p.expectOne(idl.TokenTypeIdentifier)
-	if maybeIdentifier == nil {
-		return nil
-	}
-
+// SDKMethodInput = paren_open [SDKMethodParameter {comma SDKMethodParameter} [comma]] paren_close .
+func (p *parserMicroglotTokens) parseSDKMethodInput() *astSDKMethodInput {
 	parameters := applyOverCommaSeparatedList(p,
 		idl.TokenTypeParenOpen,
 		p.parseSDKMethodParameter,
@@ -736,6 +1228,13 @@ func (p *parserMicroglotTokens) parseSDKMethod() *astSDKMethod {
 		return nil
 	}
 
+	return &astSDKMethodInput{
+		parameters,
+	}
+}
+
+// SDKMethodReturns = returns paren_open TypeSpecifier paren_close .
+func (p *parserMicroglotTokens) parseSDKMethodReturns() *astSDKMethodReturns {
 	if p.expectOne(idl.TokenTypeKeywordReturns) == nil {
 		return nil
 	}
@@ -749,15 +1248,39 @@ func (p *parserMicroglotTokens) parseSDKMethod() *astSDKMethod {
 	if p.expectOne(idl.TokenTypeParenClose) == nil {
 		return nil
 	}
+	return &astSDKMethodReturns{
+		typeSpecifier: *maybeTypeSpecifier,
+	}
+}
+
+// SDKMethod = identifier SDKMethodInput [SDKMethodReturns] [nothrows] Metadata .
+func (p *parserMicroglotTokens) parseSDKMethod() *astSDKMethod {
+	maybeIdentifier := p.expectOne(idl.TokenTypeIdentifier)
+	if maybeIdentifier == nil {
+		return nil
+	}
+
+	maybeMethodInput := p.parseSDKMethodInput()
+	if maybeMethodInput == nil {
+		return nil
+	}
 
 	this := astSDKMethod{
-		identifier:          *maybeIdentifier,
-		parameters:          parameters,
-		returnTypeSpecifier: *maybeTypeSpecifier,
-		nothrows:            false,
+		identifier:  *maybeIdentifier,
+		methodInput: *maybeMethodInput,
+		nothrows:    false,
 	}
 
 	maybeToken := p.peek()
+	if maybeToken != nil && maybeToken.Type == idl.TokenTypeKeywordReturns {
+		maybeMethodReturns := p.parseSDKMethodReturns()
+		if maybeMethodReturns == nil {
+			return nil
+		}
+		this.methodReturns = maybeMethodReturns
+	}
+
+	maybeToken = p.peek()
 	if maybeToken != nil && maybeToken.Type == idl.TokenTypeKeywordNothrows {
 		p.advance()
 		this.nothrows = true
@@ -809,49 +1332,58 @@ func (p *parserMicroglotTokens) parseExtension() *astExtension {
 	}
 }
 
-// APIMethod         = identifier APIMethodInput APIMethodReturns Metadata .
-// APIMethodInput    = paren_open [TypeSpecifier] paren_close .
-// APIMethodReturns  = returns paren_open [TypeSpecifier] paren_close .
-func (p *parserMicroglotTokens) parseAPIMethod() *astAPIMethod {
-	maybeIdentifier := p.expectOne(idl.TokenTypeIdentifier)
-	if maybeIdentifier == nil {
-		return nil
-	}
-
-	this := astAPIMethod{
-		identifier: *maybeIdentifier,
-	}
-
+// APIMethodInput = paren_open TypeSpecifier paren_close .
+func (p *parserMicroglotTokens) parseAPIMethodInput() *astAPIMethodInput {
 	if p.expectOne(idl.TokenTypeParenOpen) == nil {
 		return nil
 	}
-	maybeToken := p.peek()
-	if maybeToken != nil && maybeToken.Type == idl.TokenTypeColon {
-		maybeTypeSpecifier := p.parseTypeSpecifier()
-		if maybeTypeSpecifier == nil {
-			return nil
-		}
-		this.inputTypeSpecifier = maybeTypeSpecifier
+	maybeTypeSpecifier := p.parseTypeSpecifier()
+	if maybeTypeSpecifier == nil {
+		return nil
 	}
 	if p.expectOne(idl.TokenTypeParenClose) == nil {
 		return nil
 	}
 
+	return &astAPIMethodInput{
+		typeSpecifier: *maybeTypeSpecifier,
+	}
+}
+
+// APIMethodReturns = returns paren_open TypeSpecifier paren_close .
+func (p *parserMicroglotTokens) parseAPIMethodReturns() *astAPIMethodReturns {
 	if p.expectOne(idl.TokenTypeKeywordReturns) == nil {
 		return nil
 	}
 	if p.expectOne(idl.TokenTypeParenOpen) == nil {
 		return nil
 	}
-	maybeToken = p.peek()
-	if maybeToken != nil && maybeToken.Type == idl.TokenTypeColon {
-		maybeTypeSpecifier := p.parseTypeSpecifier()
-		if maybeTypeSpecifier == nil {
-			return nil
-		}
-		this.returnTypeSpecifier = maybeTypeSpecifier
+	maybeTypeSpecifier := p.parseTypeSpecifier()
+	if maybeTypeSpecifier == nil {
+		return nil
 	}
 	if p.expectOne(idl.TokenTypeParenClose) == nil {
+		return nil
+	}
+	return &astAPIMethodReturns{
+		typeSpecifier: *maybeTypeSpecifier,
+	}
+}
+
+// APIMethod = identifier APIMethodInput APIMethodReturns Metadata .
+func (p *parserMicroglotTokens) parseAPIMethod() *astAPIMethod {
+	maybeIdentifier := p.expectOne(idl.TokenTypeIdentifier)
+	if maybeIdentifier == nil {
+		return nil
+	}
+
+	maybeMethodInput := p.parseAPIMethodInput()
+	if maybeMethodInput == nil {
+		return nil
+	}
+
+	maybeMethodReturns := p.parseAPIMethodReturns()
+	if maybeMethodReturns == nil {
 		return nil
 	}
 
@@ -859,15 +1391,19 @@ func (p *parserMicroglotTokens) parseAPIMethod() *astAPIMethod {
 	if maybeMeta == nil {
 		return nil
 	}
-	this.meta = *maybeMeta
 
-	return &this
+	return &astAPIMethod{
+		identifier:    *maybeIdentifier,
+		methodInput:   *maybeMethodInput,
+		methodReturns: *maybeMethodReturns,
+		meta:          *maybeMeta,
+	}
 }
 
 // StructElement = Field | Union .
 func (p *parserMicroglotTokens) parseStructElement() *structelement {
-	maybeToken := p.peek()
 	var value structelement
+	maybeToken := p.peek()
 	if maybeToken != nil && maybeToken.Type == idl.TokenTypeKeywordUnion {
 		value = p.parseUnion()
 	} else {
@@ -970,7 +1506,7 @@ func (p *parserMicroglotTokens) parseField() *astField {
 	return &this
 }
 
-// TODO 2023.08.22: this doesn't exist in the EBNF, but it's useful for reducing duplicate parse code, so...
+// Note: this doesn't exist in the EBNF, but it's useful for reducing duplicate parse code, so...
 // Metadata: [UID] [AnnotationApplication] [CommentBlock]
 func (p *parserMicroglotTokens) parseMetadata() *astMetadata {
 	this := astMetadata{}
