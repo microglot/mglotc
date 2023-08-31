@@ -17,13 +17,19 @@ type statement interface {
 	statement()
 }
 
-// interface for all expression types
-type expression interface {
+// interface for all value types
+type value interface {
 	node
-	expression()
+	value()
 }
 
-// interface for "valueorinvocation"
+// interface for all invocation types
+type invocation interface {
+	node
+	invocation()
+}
+
+// superset of value and invocation types
 type valueorinvocation interface {
 	node
 	valueorinvocation()
@@ -102,7 +108,7 @@ type astStatementAnnotation struct {
 type astStatementConst struct {
 	identifier    idl.Token
 	typeSpecifier astTypeSpecifier
-	value         expression
+	value         astValue
 	meta          astMetadata
 }
 
@@ -238,7 +244,7 @@ type astUnionField struct {
 type astField struct {
 	identifier    idl.Token
 	typeSpecifier astTypeSpecifier
-	value         expression
+	value         astValue
 	meta          astMetadata
 }
 
@@ -260,7 +266,7 @@ type astAnnotationApplication struct {
 type astAnnotationInstance struct {
 	namespaceIdentifier *idl.Token
 	identifier          idl.Token
-	value               expression
+	value               astValue
 }
 
 type astAnnotationScope struct {
@@ -283,55 +289,86 @@ type astCommentBlock struct {
 
 type astValueUnary struct {
 	operator idl.Token
-	operand  expression
+	operand  astValue
 }
 
 type astValueBinary struct {
-	leftOperand  expression
+	leftOperand  astValue
 	operator     idl.Token
-	rightOperand expression
+	rightOperand astValue
 }
 
 type astValueLiteralBool struct {
-	value bool
+	val bool
 }
 
 type astValueLiteralInt struct {
 	token idl.Token
-	value uint64
+	val   uint64
 }
 
 type astValueLiteralFloat struct {
 	token idl.Token
-	value float64
+	val   float64
 }
 
 type astValueLiteralText struct {
-	value idl.Token
+	val idl.Token
 }
 
 type astValueLiteralData struct {
-	value idl.Token
+	val idl.Token
 }
 
 type astValueLiteralList struct {
-	values []expression
+	vals []astValue
 }
 
 type astValueLiteralStruct struct {
-	values []astLiteralStructPair
+	vals []astLiteralStructPair
 }
 
 type astLiteralStructPair struct {
-	identifier astValueIdentifier
-	value      expression
+	identifier idl.Token
+	value      astValue
 }
 
-type astValueIdentifier struct {
-	qualifiedIdentifier []idl.Token
+type astQualifiedIdentifier struct {
+	components []idl.Token
+}
+
+type astValueIdentifier astQualifiedIdentifier
+
+type astValue struct {
+	value
+}
+
+type astImplIdentifier astQualifiedIdentifier
+
+type astInvocationCatch struct {
+	identifier idl.Token
+	block      astImplBlock
+}
+
+type astInvocationAwait struct {
+	identifier idl.Token
+	catch      *astInvocationCatch
+}
+
+type astInvocationAsync struct {
+	implIdentifier astImplIdentifier
+	parameters     []astValue
+	catch          *astInvocationCatch
+}
+
+type astInvocationDirect struct {
+	implIdentifier astImplIdentifier
+	parameters     []astValue
+	catch          *astInvocationCatch
 }
 
 type astInvocation struct {
+	invocation
 }
 
 type astStepProse struct {
@@ -344,7 +381,7 @@ type astStepVar struct {
 }
 
 type astStepSet struct {
-	identifier astValueIdentifier
+	identifier astQualifiedIdentifier
 	value      valueorinvocation
 }
 
@@ -359,7 +396,7 @@ type astStepIf struct {
 }
 
 type astSwitchCase struct {
-	values []expression
+	values []astValue
 	block  astImplBlock
 }
 
@@ -379,16 +416,16 @@ type astStepWhile struct {
 type astStepFor struct {
 	keyName   idl.Token
 	valueName idl.Token
-	value     expression
+	value     astValue
 	block     astImplBlock
 }
 
 type astStepReturn struct {
-	value *expression
+	value *astValue
 }
 
 type astStepThrow struct {
-	value expression
+	value astValue
 }
 
 type astStepExec struct {
@@ -452,6 +489,10 @@ func (astStepFor) node()             {}
 func (astStepReturn) node()          {}
 func (astStepThrow) node()           {}
 func (astStepExec) node()            {}
+func (astInvocationAsync) node()     {}
+func (astInvocationDirect) node()    {}
+func (astInvocationAwait) node()     {}
+func (astInvocation) node()          {}
 
 func (astStatementModuleMeta) statement() {}
 func (astStatementImport) statement()     {}
@@ -463,27 +504,23 @@ func (astStatementAPI) statement()        {}
 func (astStatementSDK) statement()        {}
 func (astStatementImpl) statement()       {}
 
-func (astValueUnary) expression()         {}
-func (astValueBinary) expression()        {}
-func (astValueLiteralBool) expression()   {}
-func (astValueLiteralInt) expression()    {}
-func (astValueLiteralFloat) expression()  {}
-func (astValueLiteralText) expression()   {}
-func (astValueLiteralData) expression()   {}
-func (astValueLiteralList) expression()   {}
-func (astValueLiteralStruct) expression() {}
-func (astValueIdentifier) expression()    {}
+func (astValueUnary) value()         {}
+func (astValueBinary) value()        {}
+func (astValueLiteralBool) value()   {}
+func (astValueLiteralInt) value()    {}
+func (astValueLiteralFloat) value()  {}
+func (astValueLiteralText) value()   {}
+func (astValueLiteralData) value()   {}
+func (astValueLiteralList) value()   {}
+func (astValueLiteralStruct) value() {}
+func (astValueIdentifier) value()    {}
 
-func (astValueUnary) valueorinvocation()         {}
-func (astValueBinary) valueorinvocation()        {}
-func (astValueLiteralBool) valueorinvocation()   {}
-func (astValueLiteralInt) valueorinvocation()    {}
-func (astValueLiteralFloat) valueorinvocation()  {}
-func (astValueLiteralText) valueorinvocation()   {}
-func (astValueLiteralData) valueorinvocation()   {}
-func (astValueLiteralList) valueorinvocation()   {}
-func (astValueLiteralStruct) valueorinvocation() {}
-func (astValueIdentifier) valueorinvocation()    {}
+func (astInvocationAsync) invocation()  {}
+func (astInvocationDirect) invocation() {}
+func (astInvocationAwait) invocation()  {}
+
+func (astValue) valueorinvocation()      {}
+func (astInvocation) valueorinvocation() {}
 
 func (astUnion) structelement() {}
 func (astField) structelement() {}

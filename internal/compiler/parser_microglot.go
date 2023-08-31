@@ -659,9 +659,29 @@ func (p *parserMicroglotTokens) parseStepProse() *astStepProse {
 	}
 }
 
+// ValueOrInvocation = Invocation | Value .
 func (p *parserMicroglotTokens) parseValueOrInvocation() *valueorinvocation {
-	// TODO 2023.09.30: relies on parseInvocation(), which is missing from the EBNF!
-	return nil
+	var this valueorinvocation
+	maybeToken := p.peek()
+	if maybeToken != nil && slices.Contains([]idl.TokenType{
+		idl.TokenTypeKeywordAwait,
+		idl.TokenTypeKeywordAsync,
+		idl.TokenTypeDollar,
+		idl.TokenTypeIdentifier,
+	}, maybeToken.Type) {
+		maybeInvocation := p.parseInvocation()
+		if maybeInvocation == nil {
+			return nil
+		}
+		this = *maybeInvocation
+	} else {
+		maybeValue := p.parseValue()
+		if maybeValue == nil {
+			return nil
+		}
+		this = *maybeValue
+	}
+	return &this
 }
 
 // StepVar = var identifier TypeSpecifier [equal ValueOrInvocation] .
@@ -699,7 +719,7 @@ func (p *parserMicroglotTokens) parseStepSet() *astStepSet {
 		return nil
 	}
 
-	maybeIdentifier := p.parseValueIdentifier()
+	maybeIdentifier := p.parseQualifiedIdentifier()
 	if maybeIdentifier == nil {
 		return nil
 	}
@@ -795,7 +815,7 @@ func (p *parserMicroglotTokens) parseSwitchCase() *astSwitchCase {
 	if first == nil {
 		return nil
 	}
-	values := []expression{*first}
+	values := []astValue{*first}
 
 	for {
 		maybeToken := p.peek()
@@ -947,7 +967,23 @@ func (p *parserMicroglotTokens) parseStepReturn() *astStepReturn {
 
 	maybeToken := p.peek()
 	if maybeToken != nil && slices.Contains([]idl.TokenType{
-		idl.TokenTypePlus, idl.TokenTypeMinus, idl.TokenTypeExclamation, idl.TokenTypeParenOpen, idl.TokenTypeKeywordTrue, idl.TokenTypeKeywordFalse, idl.TokenTypeIntegerDecimal, idl.TokenTypeIntegerHex, idl.TokenTypeIntegerOctal, idl.TokenTypeIntegerBinary, idl.TokenTypeFloatDecimal, idl.TokenTypeFloatHex, idl.TokenTypeText, idl.TokenTypeData, idl.TokenTypeSquareOpen, idl.TokenTypeCurlyOpen, idl.TokenTypeIdentifier,
+		idl.TokenTypePlus,
+		idl.TokenTypeMinus,
+		idl.TokenTypeExclamation,
+		idl.TokenTypeParenOpen,
+		idl.TokenTypeKeywordTrue,
+		idl.TokenTypeKeywordFalse,
+		idl.TokenTypeIntegerDecimal,
+		idl.TokenTypeIntegerHex,
+		idl.TokenTypeIntegerOctal,
+		idl.TokenTypeIntegerBinary,
+		idl.TokenTypeFloatDecimal,
+		idl.TokenTypeFloatHex,
+		idl.TokenTypeText,
+		idl.TokenTypeData,
+		idl.TokenTypeSquareOpen,
+		idl.TokenTypeCurlyOpen,
+		idl.TokenTypeIdentifier,
 	}, maybeToken.Type) {
 		maybeValue := p.parseValue()
 		if maybeValue == nil {
@@ -975,9 +1011,156 @@ func (p *parserMicroglotTokens) parseStepThrow() *astStepThrow {
 	}
 }
 
+// InvocationCatch = catch identifier ImplBlock .
+func (p *parserMicroglotTokens) parseInvocationCatch() *astInvocationCatch {
+	if p.expectOne(idl.TokenTypeKeywordCatch) == nil {
+		return nil
+	}
+
+	maybeIdentifier := p.expectOne(idl.TokenTypeIdentifier)
+	if maybeIdentifier == nil {
+		return nil
+	}
+
+	maybeBlock := p.parseImplBlock()
+	if maybeBlock == nil {
+		return nil
+	}
+
+	return &astInvocationCatch{
+		identifier: *maybeIdentifier,
+		block:      *maybeBlock,
+	}
+}
+
+// InvocationAwait = await identifier [InvocationCatch] .
+func (p *parserMicroglotTokens) parseInvocationAwait() *astInvocationAwait {
+	if p.expectOne(idl.TokenTypeKeywordAwait) == nil {
+		return nil
+	}
+
+	maybeIdentifier := p.expectOne(idl.TokenTypeIdentifier)
+	if maybeIdentifier == nil {
+		return nil
+	}
+
+	this := astInvocationAwait{
+		identifier: *maybeIdentifier,
+	}
+
+	maybeToken := p.peek()
+	if maybeToken != nil && maybeToken.Type == idl.TokenTypeKeywordCatch {
+		maybeCatch := p.parseInvocationCatch()
+		if maybeCatch == nil {
+			return nil
+		}
+		this.catch = maybeCatch
+	}
+	return &this
+}
+
+// ImplIdentifier = [dollar dot] QualifiedIdentifier
+func (p *parserMicroglotTokens) parseImplIdentifier() *astImplIdentifier {
+	maybeToken := p.peek()
+	if maybeToken != nil && maybeToken.Type == idl.TokenTypeDollar {
+		p.advance()
+		if p.expectOne(idl.TokenTypeDot) == nil {
+			return nil
+		}
+	}
+
+	return (*astImplIdentifier)(p.parseQualifiedIdentifier())
+}
+
+// InvocationAsync = async ImplIdentifier paren_open [InvocationParameters] paren_close .
+func (p *parserMicroglotTokens) parseInvocationAsync() *astInvocationAsync {
+	if p.expectOne(idl.TokenTypeKeywordAsync) == nil {
+		return nil
+	}
+
+	maybeImplIdentifier := p.parseImplIdentifier()
+	if maybeImplIdentifier == nil {
+		return nil
+	}
+
+	parameters := applyOverCommaSeparatedList(p,
+		idl.TokenTypeParenOpen,
+		p.parseValue,
+		idl.TokenTypeParenClose)
+	if parameters == nil {
+		return nil
+	}
+
+	return &astInvocationAsync{
+		implIdentifier: *maybeImplIdentifier,
+		parameters:     parameters,
+	}
+}
+
+// InvocationDirect = ImplIdentifier paren_open [InvocationParameters] paren_close [InvocationCatch] .
+func (p *parserMicroglotTokens) parseInvocationDirect() *astInvocationDirect {
+	maybeImplIdentifier := p.parseImplIdentifier()
+	if maybeImplIdentifier == nil {
+		return nil
+	}
+
+	parameters := applyOverCommaSeparatedList(p,
+		idl.TokenTypeParenOpen,
+		p.parseValue,
+		idl.TokenTypeParenClose)
+	if parameters == nil {
+		return nil
+	}
+
+	this := astInvocationDirect{
+		implIdentifier: *maybeImplIdentifier,
+		parameters:     parameters,
+	}
+
+	maybeToken := p.peek()
+	if maybeToken != nil && maybeToken.Type == idl.TokenTypeKeywordCatch {
+		maybeCatch := p.parseInvocationCatch()
+		if maybeCatch == nil {
+			return nil
+		}
+		this.catch = maybeCatch
+	}
+
+	return &this
+}
+
+// Invocation = InvocationAwait | InvocationAsync | InvocationDirect .
 func (p *parserMicroglotTokens) parseInvocation() *astInvocation {
-	// TODO 2023.09.30: missing from EBNF!
-	return nil
+	maybeToken := p.peek()
+	if maybeToken == nil {
+		p.report(exc.CodeUnexpectedEOF, fmt.Sprint(exc.CodeUnexpectedEOF, "unexpected EOF (expecting an invocation)"))
+		return nil
+	}
+
+	this := astInvocation{}
+
+	switch maybeToken.Type {
+	case idl.TokenTypeKeywordAwait:
+		maybeInvocation := p.parseInvocationAwait()
+		if maybeInvocation == nil {
+			return nil
+		}
+		this.invocation = *maybeInvocation
+	case idl.TokenTypeKeywordAsync:
+		maybeInvocation := p.parseInvocationAsync()
+		if maybeInvocation == nil {
+			return nil
+		}
+		this.invocation = *maybeInvocation
+	case idl.TokenTypeDollar, idl.TokenTypeIdentifier:
+		maybeInvocation := p.parseInvocationDirect()
+		if maybeInvocation == nil {
+			return nil
+		}
+		this.invocation = *maybeInvocation
+	}
+
+	return &this
 }
 
 // StepExec = exec Invocation .
@@ -1727,42 +1910,83 @@ func (p *parserMicroglotTokens) parseEnumerant() *astEnumerant {
 }
 
 // Value = ValueUnary | ValueBinary | ValueLiteral | ValueIdentifier
-func (p *parserMicroglotTokens) parseValue() *expression {
+func (p *parserMicroglotTokens) parseValue() *astValue {
 	maybeToken := p.peek()
 	if maybeToken == nil {
 		p.report(exc.CodeUnexpectedEOF, fmt.Sprint(exc.CodeUnexpectedEOF, "unexpected EOF (expecting a value)"))
 		return nil
 	}
 
-	var value expression
+	this := astValue{}
+
 	switch maybeToken.Type {
 	case idl.TokenTypePlus, idl.TokenTypeMinus, idl.TokenTypeExclamation:
-		value = p.parseValueUnary()
+		maybeValue := p.parseValueUnary()
+		if maybeValue == nil {
+			return nil
+		}
+		this.value = *maybeValue
 	case idl.TokenTypeParenOpen:
-		value = p.parseValueBinary()
+		maybeValue := p.parseValueBinary()
+		if maybeValue == nil {
+			return nil
+		}
+		this.value = *maybeValue
 	case idl.TokenTypeKeywordTrue, idl.TokenTypeKeywordFalse:
-		value = p.parseValueLiteralBool()
+		maybeValue := p.parseValueLiteralBool()
+		if maybeValue == nil {
+			return nil
+		}
+		this.value = *maybeValue
 	case idl.TokenTypeIntegerDecimal, idl.TokenTypeIntegerHex, idl.TokenTypeIntegerOctal, idl.TokenTypeIntegerBinary:
-		value = p.parseValueLiteralInt()
+		maybeValue := p.parseValueLiteralInt()
+		if maybeValue == nil {
+			return nil
+		}
+		this.value = *maybeValue
 	case idl.TokenTypeFloatDecimal, idl.TokenTypeFloatHex:
-		value = p.parseValueLiteralFloat()
+		maybeValue := p.parseValueLiteralFloat()
+		if maybeValue == nil {
+			return nil
+		}
+		this.value = *maybeValue
 	case idl.TokenTypeText:
-		value = p.parseValueLiteralText()
+		maybeValue := p.parseValueLiteralText()
+		if maybeValue == nil {
+			return nil
+		}
+		this.value = *maybeValue
 	case idl.TokenTypeData:
-		value = p.parseValueLiteralData()
+		maybeValue := p.parseValueLiteralData()
+		if maybeValue == nil {
+			return nil
+		}
+		this.value = *maybeValue
 	case idl.TokenTypeSquareOpen:
-		value = p.parseValueLiteralList()
+		maybeValue := p.parseValueLiteralList()
+		if maybeValue == nil {
+			return nil
+		}
+		this.value = *maybeValue
 	case idl.TokenTypeCurlyOpen:
-		value = p.parseValueLiteralStruct()
+		maybeValue := p.parseValueLiteralStruct()
+		if maybeValue == nil {
+			return nil
+		}
+		this.value = *maybeValue
 	case idl.TokenTypeIdentifier:
-		value = p.parseValueIdentifier()
+		maybeValue := p.parseValueIdentifier()
+		if maybeValue == nil {
+			return nil
+		}
+		this.value = *maybeValue
 	default:
 		// TODO 2023.08.21: replace CodeUnknownFatal with something meaningful
-		p.report(exc.CodeUnknownFatal, fmt.Sprintf("unexpected %s (expecting an expression)", maybeToken.Value))
+		p.report(exc.CodeUnknownFatal, fmt.Sprintf("unexpected %s (expecting an value)", maybeToken.Value))
 		return nil
 	}
 
-	return &value
+	return &this
 }
 
 // ValueUnary = (plus | minus | bang ) Value
@@ -1874,7 +2098,7 @@ func (p *parserMicroglotTokens) parseValueLiteralInt() *astValueLiteralInt {
 
 	return &astValueLiteralInt{
 		token: *maybeToken,
-		value: i,
+		val:   i,
 	}
 }
 
@@ -1896,7 +2120,7 @@ func (p *parserMicroglotTokens) parseValueLiteralFloat() *astValueLiteralFloat {
 
 	return &astValueLiteralFloat{
 		token: *maybeToken,
-		value: f,
+		val:   f,
 	}
 }
 
@@ -1906,7 +2130,7 @@ func (p *parserMicroglotTokens) parseValueLiteralText() *astValueLiteralText {
 		return nil
 	}
 	return &astValueLiteralText{
-		value: *maybeToken,
+		val: *maybeToken,
 	}
 }
 
@@ -1916,7 +2140,7 @@ func (p *parserMicroglotTokens) parseValueLiteralData() *astValueLiteralData {
 		return nil
 	}
 	return &astValueLiteralData{
-		value: *maybeToken,
+		val: *maybeToken,
 	}
 }
 
@@ -1951,9 +2175,9 @@ func (p *parserMicroglotTokens) parseValueLiteralStruct() *astValueLiteralStruct
 	}
 }
 
-// LiteralStructPair    = identifier colon Value .
+// LiteralStructPair = identifier colon Value .
 func (p *parserMicroglotTokens) parseLiteralStructPair() *astLiteralStructPair {
-	maybeIdentifier := p.parseValueIdentifier()
+	maybeIdentifier := p.expectOne(idl.TokenTypeIdentifier)
 	if maybeIdentifier == nil {
 		return nil
 	}
@@ -1974,8 +2198,12 @@ func (p *parserMicroglotTokens) parseLiteralStructPair() *astLiteralStructPair {
 }
 
 // ValueIdentifier = QualifiedIdentifier
-// QualifiedIdentifier = identifier { dot identifier } .
 func (p *parserMicroglotTokens) parseValueIdentifier() *astValueIdentifier {
+	return (*astValueIdentifier)(p.parseQualifiedIdentifier())
+}
+
+// QualifiedIdentifier = identifier { dot identifier } .
+func (p *parserMicroglotTokens) parseQualifiedIdentifier() *astQualifiedIdentifier {
 	identifier := p.expectOne(idl.TokenTypeIdentifier)
 	if identifier == nil {
 		return nil
@@ -1997,7 +2225,7 @@ func (p *parserMicroglotTokens) parseValueIdentifier() *astValueIdentifier {
 		components = append(components, *identifier)
 	}
 
-	return &astValueIdentifier{
-		qualifiedIdentifier: components,
+	return &astQualifiedIdentifier{
+		components: components,
 	}
 }
