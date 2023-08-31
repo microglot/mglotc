@@ -305,7 +305,7 @@ func TestParser(t *testing.T) {
 									identifier: *newTokenLineSpan(1, 44, 43, 1, idl.TokenTypeIdentifier, "x"),
 									typeSpecifier: astTypeSpecifier{
 										typeName: astTypeName{
-											identifier: *newTokenLineSpan(1, 46, 46, 3, idl.TokenTypeIdentifier, "int"),
+											identifier: *newTokenLineSpan(1, 49, 48, 3, idl.TokenTypeIdentifier, "int"),
 										},
 									},
 								},
