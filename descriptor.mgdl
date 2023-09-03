@@ -1,0 +1,366 @@
+syntax = "microglot1"
+
+module = @0x01
+
+struct Image {
+    Modules :List<:Module> @1
+}
+
+struct Module {
+    URI :Text @1
+    // Usually a file path, relative to some local root. May also be a full URI
+    // including a protocol, etc., such as file:///path/to/file or
+    // https://domain/path/to/file.
+    UID :UInt64 @2
+    Imports :List<:Import>
+    Structs :List<:Struct>
+    Enums :List<:Enum>
+    APIs :List<:API>
+    SDKs :List<:SDK>
+    Constants :List<:Constant>
+    Annotations :List<:Annotation>
+    DotImports :List<:DotImport>
+}
+
+struct Import {
+    ModuleUID :UInt64
+    ImportedURI :Text
+    ImportedUID :UInt64
+    Alias :Text
+    IsDot :Bool
+    CommentBlock :CommentBlock
+    AnnotationApplications :List<:AnnotationApplication>
+}
+
+struct DotImport {
+  // DotImport describe a type that was part of a public import in a protobuf
+  // file. These become part of the module descriptor so that they can appear
+  // as types defined directly in the module using the dot import feature.
+  Name :Text
+  Reference :TypeReference
+}
+
+struct Struct {
+    Reference :TypeReference
+    Name :Text
+    Fields :List<:Field>
+    Unions :List<:Union>
+    Reserved :List<:ReservedRange>
+    CommentBlock :CommentBlock
+    AnnotationApplications :List<:AnnotationApplication>
+    IsSynthetic :Bool
+}
+struct ReservedRange {
+    Start :UInt64
+    End :UInt64
+}
+
+struct Field {
+    Reference :AttributeReference @1
+    Name :Text
+    Type :TypeSpecifier
+    DefaultValue :Value
+    UnionUID :UInt64
+    CommentBlock :CommentBlock
+    AnnotationApplications :List<:AnnotationApplication>
+}
+
+struct Union {
+    Reference :AttributeReference @1
+    Name :Text
+    CommentBlock :CommentBlock
+    AnnotationApplications :List<:AnnotationApplication>
+}
+
+struct Enum {
+    Reference :TypeReference
+    Name :Text
+    Enumerants :List<:Enumerant>
+    Reserved :List<:ReservedRange>
+    ReservedNames :List<:Text>
+    CommentBlock :CommentBlock
+    AnnotationApplications :List<:AnnotationApplication>
+}
+
+struct Enumerant {
+    Reference :AttributeReference @1
+    Name :Text
+    CommentBlock :CommentBlock
+    AnnotationApplications :List<:AnnotationApplication>
+}
+
+struct API {
+    Reference :TypeReference @1
+    Name :Text @2
+    Methods :List<:APIMethod>
+    Extends :List<:TypeReference>
+    Reserved :List<:ReservedRange>
+    ReservedNames :List<:Text>
+    CommentBlock :CommentBlock
+    AnnotationApplications :List<:AnnotationApplication>
+}
+
+struct APIMethod {
+    Reference :AttributeReference @1
+    Name :Text @2
+    Input :TypeReference
+    Output :TypeReference
+    CommentBlock :CommentBlock
+    AnnotationApplications :List<:AnnotationApplication>
+}
+
+struct SDK {
+    Reference :TypeReference
+    Name :Text
+    Methods :List<:SDKMethod>
+    Extends :List<:TypeReference>
+    Reserved :List<:ReservedRange>
+    ReservedNames :List<:Text>
+    CommentBlock :CommentBlock
+    AnnotationApplications :List<:AnnotationApplication>
+}
+
+struct SDKMethod {
+    Reference :AttributeReference
+    Name :Text
+    Input :List<:SDKMethodInput>
+    Output :TypeSpecifier
+    NoThrows :Bool
+    CommentBlock :CommentBlock
+    AnnotationApplications :List<:AnnotationApplication>
+}
+
+struct SDKMethodInput {
+    Reference :SDKInputReference
+    Name :Text
+    Type :TypeSpecifier
+    CommentBlock :CommentBlock
+}
+
+struct SDKInputReference {
+    ModuleUID :UInt64 @1
+    TypeUID :UInt64 @2
+    AttributeUID :UInt64 @3
+    InputUID :UInt64 @4
+}
+
+struct Annotation { 
+  Reference :TypeReference @1
+  Name         :Text                             @2  
+  Scopes       :List<:AnnotationScope> @3  
+  Type         :TypeSpecifier                   @4  
+  CommentBlock :DescriptorCommentBlock           @5  
+}
+
+enum AnnotationScope { 
+  Module    @1  
+  Union     @2  
+  Struct    @3  
+  Field     @4  
+  Enumerant @5  
+  Enum      @6  
+  API       @7  
+  APIMethod @8  
+  SDK       @9
+  SDKMethod @10  
+  Const     @11
+  Import    @12 
+  Star      @13
+}
+
+struct Constant {
+    Reference             :TypeReference
+    Name                  :Text
+    Type                  :TypeReference
+    // Constants can only be defined with scalar types which is why TypeReference
+    // is used here instead of TypeSpecifier.
+    Value                 :Value
+    AnnotationApplication :AnnotationApplication
+    CommentBlock          :CommentBlock
+}
+
+struct AnnotationApplication {
+    Annotation :TypeReference
+    Value :Value
+}
+
+struct Value {
+    union Kind { 
+        Bool       :ValueBool           @2  
+        Text       :ValueText           @3  
+        Data       :ValueData           @4  
+        Int8       :ValueInt8           @5  
+        Int16      :ValueInt16          @6  
+        Int32      :ValueInt32          @7  
+        Int64      :ValueInt64          @8  
+        UInt8      :ValueUInt8          @9  
+        UInt16     :ValueUInt16         @10 
+        UInt32     :ValueUInt32         @11 
+        UInt64     :ValueUInt64         @12 
+        Float32    :ValueFloat32        @13 
+        Float64    :ValueFloat64        @14 
+        List       :ValueList           @15 
+        Struct     :ValueStruct         @17
+        Enumerant  :AttributeReference  @18 
+        Identifier :ValueIdentifier     @19 
+        Unary :ValueUnary               @20
+        Binary :ValueBinary             @21
+    } @1
+}
+
+struct ValueBool { 
+  Value  :Bool @1 
+  Source :Text @2 
+}
+
+struct ValueText { 
+  Value  :Text @1 
+  Source :Text @2 
+} 
+
+struct ValueData { 
+  Value  :Data @1 
+  Source :Text @2 
+} 
+
+struct ValueInt8 { 
+  Value  :Int8 @1 
+  Source :Text @2 
+} 
+
+struct ValueInt16 { 
+  Value  :Int16 @1 
+  Source :Text  @2 
+} 
+
+struct ValueInt32 { 
+  Value  :Int32 @1 
+  Source :Text  @2 
+} 
+
+struct ValueInt64 { 
+  Value  :Int64 @1 
+  Source :Text  @2 
+} 
+
+struct ValueUInt8 { 
+  Value  :UInt8 @1 
+  Source :Text  @2 
+} 
+
+struct ValueUInt16 { 
+  Value  :UInt16 @1 
+  Source :Text   @2 
+} 
+
+struct ValueUInt32 { 
+  Value  :UInt32 @1 
+  Source :Text   @2 
+} 
+
+struct ValueUInt64 { 
+  Value  :UInt64 @1 
+  Source :Text   @2 
+} 
+
+struct ValueFloat32 { 
+  Value  :Float32 @1 
+  Source :Text    @2 
+} 
+
+struct ValueFloat64 { 
+  Value  :Float64 @1 
+  Source :Text    @2 
+} 
+
+struct ValueIdentifier { 
+  Names  :List<:Text> @2 
+} 
+
+struct ValueList { 
+  Elements :List<:Value> @1 
+}
+
+struct ValueStruct { 
+  Fields :List<:ValueStructField> @1 
+}
+
+struct ValueStructField { 
+  Name  :Text @1 
+  Value :Value @2 
+}
+
+struct ValueUnary {
+    Operation :OperationUnary @1
+    Value :Value @2
+}
+
+enum OperationUnary {
+    Positive @1
+    Negative @2
+    Not @3
+}
+
+struct ValueBinary {
+    Operation :OperationBinary @1
+    Left :Value
+    Right :Value
+}
+
+enum OperationBinary {
+    Or @1
+    And @2
+    Equal @3
+    NotEqual @4
+    LessThan @5
+    LessThanEqual @6
+    GreaterThan @7
+    GreaterThanEqual @8
+    Add @9
+    Subtract @10
+    BinOr @11
+    BinAnd @12
+    BitXor @13
+    ShiftLeft @14
+    ShiftRight @15
+    Multiply @16
+    Divide @17
+    Modulo @18
+}
+
+struct TypeReference {
+    ModuleUID :UInt64 @1
+    TypeUID :UInt64 @2
+}
+
+struct TypeSpecifier {
+  TypeReference :TypeReference
+  IsList :Bool
+  IsMap :Bool
+  HasPresence :Bool
+}
+
+const TypeBool :UInt64 = 1
+const TypeText :UInt64 = 2
+const TypeData :UInt64 = 3
+const TypeInt8 :UInt64 = 4
+const TypeInt16 :UInt64 = 5
+const TypeInt32 :UInt64 = 6
+const TypeInt64 :UInt64 = 7
+const TypeUInt8 :UInt64 = 8
+const TypeUInt16 :UInt64 = 9
+const TypeUInt32 :UInt64 = 10
+const TypeUInt64 :UInt64 = 11
+const TypeFloat32 :UInt64 = 12
+const TypeFloat64 :UInt64 = 13
+const TypeEmpty :UInt64 = 14
+
+struct AttributeReference {
+    ModuleUID :UInt64 @1
+    TypeUID :UInt64 @2
+    AttributeUID :UInt64 @3
+}
+
+struct CommentBlock { 
+  Lines :List<:Text> @1 
+}

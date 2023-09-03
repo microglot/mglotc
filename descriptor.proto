@@ -1,0 +1,349 @@
+syntax = "proto3";
+
+message Image {
+   repeated Module Modules = 1;
+}
+
+message Module {
+   string URI = 1;
+   // Usually a file path, relative to some local root. May also be a full URI
+   // including a protocol, etc., such as file:///path/to/file or
+   // https://domain/path/to/file.
+   uint64 UID = 2;
+   repeated Import Imports = 3;
+   repeated Struct Structs = 4;
+   repeated Enum Enums = 5;
+   repeated API APIs = 6;
+   repeated SDK SDKs = 7;
+   repeated Constant Constants = 8;
+   repeated Annotation Annotations = 9;
+   repeated DotImport DotImports = 10;
+}
+
+message Import {
+   uint64 ModuleUID = 1;
+   string ImportedURI = 2;
+   uint64 ImportedUID = 3;
+   string Alias = 4;
+   bool IsDot = 5;
+   CommentBlock CommentBlock = 6;
+   repeated AnnotationApplication AnnotationApplications = 7;
+}
+
+message DotImport {
+   // DotImport describe a type that was part of a public import in a protobuf
+   // file. These become part of the module descriptor so that they can appear
+   // as types defined directly in the module using the dot import feature.
+   string Name = 1;
+   TypeReference Reference = 2;
+}
+
+message Struct {
+   TypeReference Reference = 1;
+   string Name = 2;
+   repeated Field Fields = 3;
+   repeated Union Unions = 4;
+   repeated ReservedRange Reserved = 5;
+   CommentBlock CommentBlock = 6;
+   repeated AnnotationApplication AnnotationApplications = 7;
+   bool IsSynthetic = 8;
+}
+message ReservedRange {
+   uint64 Start = 1;
+   uint64 End = 2;
+}
+
+message Field {
+   AttributeReference Reference = 1;
+   string Name = 2;
+   TypeSpecifier Type = 3;
+   Value DefaultValue = 4;
+   uint64 UnionUID = 5;
+   CommentBlock CommentBlock = 6;
+   repeated AnnotationApplication AnnotationApplications = 7;
+}
+
+message Union {
+   AttributeReference Reference = 1;
+   string Name = 2;
+   CommentBlock CommentBlock = 3;
+   repeated AnnotationApplication AnnotationApplications = 4;
+}
+
+message Enum {
+   TypeReference Reference = 1;
+   string Name = 2;
+   repeated Enumerant Enumerants = 3;
+   repeated ReservedRange Reserved = 4;
+   repeated string ReservedNames = 5;
+   CommentBlock CommentBlock = 6;
+   repeated AnnotationApplication AnnotationApplications = 7;
+}
+
+message Enumerant {
+   AttributeReference Reference = 1;
+   string Name = 2;
+   CommentBlock CommentBlock = 3;
+   repeated AnnotationApplication AnnotationApplications = 4;
+}
+
+message API {
+   TypeReference Reference = 1;
+   string Name = 2;
+   repeated APIMethod Methods = 3;
+   repeated TypeReference Extends = 4;
+   repeated ReservedRange Reserved = 5;
+   repeated string ReservedNames = 6;
+   CommentBlock CommentBlock = 7;
+   repeated AnnotationApplication AnnotationApplications = 8;
+}
+
+message APIMethod {
+   AttributeReference Reference = 1;
+   string Name = 2;
+   TypeReference Input = 3;
+   TypeReference Output = 4;
+   CommentBlock CommentBlock = 5;
+   repeated AnnotationApplication AnnotationApplications = 6;
+}
+
+message SDK {
+   TypeReference Reference = 1;
+   string Name = 2;
+   repeated SDKMethod Methods = 3;
+   repeated TypeReference Extends = 4;
+   repeated ReservedRange Reserved = 5;
+   repeated string ReservedNames = 6;
+   CommentBlock CommentBlock = 7;
+   repeated AnnotationApplication AnnotationApplications = 8;
+}
+
+message SDKMethod {
+   AttributeReference Reference = 1;
+   string Name = 2;
+   repeated SDKMethodInput Input = 3;
+   TypeSpecifier Output = 4;
+   bool NoThrows = 5;
+   CommentBlock CommentBlock = 6;
+   repeated AnnotationApplication AnnotationApplications = 7;
+}
+
+message SDKMethodInput {
+   SDKInputReference Reference = 1;
+   string Name = 2;
+   TypeSpecifier Type = 3;
+   CommentBlock CommentBlock = 4;
+}
+
+message SDKInputReference {
+   uint64 ModuleUID = 1;
+   uint64 TypeUID = 2;
+   uint64 AttributeUID = 3;
+   uint64 InputUID = 4;
+}
+
+message Annotation { 
+   TypeReference Reference = 1;
+   string Name                                     = 2;
+   repeated AnnotationScope Scopes = 3;
+   TypeSpecifier Type = 4;
+   CommentBlock DescriptorCommentBlock = 5;
+}
+
+enum AnnotationScope { 
+   AnnotationScopeModule    = 0;
+   AnnotationScopeUnion     = 1;
+   AnnotationScopeStruct    = 2;
+   AnnotationScopeField     = 3;
+   AnnotationScopeEnumerant = 4;
+   AnnotationScopeEnum      = 5;
+   AnnotationScopeAPI       = 6;
+   AnnotationScopeAPIMethod = 7;
+   AnnotationScopeSDK       = 8;
+   AnnotationScopeSDKMethod = 9;
+   AnnotationScopeConst     = 10;
+   AnnotationScopeImport    = 11;
+   AnnotationScopeStar      = 12;
+}
+
+message Constant {
+   TypeReference Reference = 1;
+   string Name = 2;
+   TypeReference Type = 3;
+   // Constants can only be defined with scalar types which is why TypeReference
+   // is used here instead of TypeSpecifier.
+   Value                 Value = 4;
+   AnnotationApplication AnnotationApplication = 5;
+   CommentBlock          CommentBlock = 6;
+}
+
+message AnnotationApplication {
+   TypeReference Annotation = 1;
+   Value Value = 2;
+}
+
+message Value {
+   oneof Kind { 
+      ValueBool Bool                  = 2;
+      ValueText Text                  = 3;
+      ValueData Data                  = 4;
+      ValueInt8 Int8                  = 5;
+      ValueInt16 Int16              = 6;
+      ValueInt32 Int32               = 7;
+      ValueInt64 Int64               = 8;
+      ValueUInt8 UInt8             = 9;
+      ValueUInt16 UInt16            = 10;
+      ValueUInt32 UInt32           = 11;
+      ValueUInt64 UInt64           = 12;
+      ValueFloat32 Float32          = 13;
+      ValueFloat64 Float64          = 14;
+      ValueList List                  = 15;
+      ValueStruct Struct             = 17;
+      AttributeReference Enumerant    = 18;
+      ValueIdentifier Identifier      = 19;
+      ValueUnary Unary                = 20;
+      ValueBinary Binary             = 21;
+   }
+}
+
+message ValueBool { 
+   bool Value  = 1;
+   string Source = 2;
+}
+
+message ValueText { 
+   string Value  = 1;
+   string Source = 2;
+} 
+
+message ValueData { 
+   bytes Value  = 1;
+   string Source = 2;
+} 
+
+message ValueInt8 { 
+   int32 Value  = 1;
+   string Source = 2;
+} 
+
+message ValueInt16 { 
+   int32 Value  = 1;
+   string Source = 2;
+} 
+
+message ValueInt32 { 
+   int32 Value  = 1;
+   string Source = 2;
+} 
+
+message ValueInt64 { 
+   int64 Value  = 1;
+   string Source = 2;
+} 
+
+message ValueUInt8 { 
+   uint32 Value  = 1;
+   string Source = 2;
+} 
+
+message ValueUInt16 { 
+   uint32 Value  = 1;
+   string Source = 2;
+} 
+
+message ValueUInt32 { 
+   uint32 Value  = 1;
+   string Source  = 2;
+} 
+
+message ValueUInt64 { 
+   uint64 Value = 1;
+   string Source  = 2;
+} 
+
+message ValueFloat32 { 
+   float Value = 1;
+   string  Source  = 2;
+} 
+
+message ValueFloat64 { 
+   double Value = 1;
+   string Source   = 2;
+} 
+
+message ValueIdentifier { 
+   repeated string Names = 2;
+} 
+
+message ValueList { 
+   repeated Value Elements = 1;
+}
+
+message ValueStruct { 
+   repeated ValueStructField Fields = 1;
+}
+
+message ValueStructField { 
+   string Name  = 1;
+   Value Value = 2;
+}
+
+message ValueUnary {
+   OperationUnary Operation = 1;
+   Value Value = 2;
+}
+
+enum OperationUnary {
+   Positive = 0;
+   Negative = 1;
+   Not = 2;
+}
+
+message ValueBinary {
+   OperationBinary Operation = 1;
+   Value Left = 2;
+   Value Right = 3;
+}
+
+enum OperationBinary {
+   Or = 0;
+   And = 1;
+   Equal = 2;
+   NotEqual = 3;
+   LessThan = 4;
+   LessThanEqual = 5;
+   GreaterThan = 6;
+   GreaterThanEqual = 7;
+   Add = 8;
+   Subtract = 9;
+   BinOr = 10;
+   BinAnd = 11;
+   BitXor = 12;
+   ShiftLeft = 13;
+   ShiftRight = 14;
+   Multiply = 15;
+   Divide = 16;
+   Modulo = 17;
+}
+
+message TypeReference {
+   uint64 ModuleUID = 1;
+   uint64 TypeUID = 2;
+}
+
+message TypeSpecifier {
+   TypeReference Reference = 1;
+   bool IsList = 2;
+   bool IsMap = 3;
+   bool HasPresence = 4;
+}
+
+message AttributeReference {
+   uint64 ModuleUID = 1;
+   uint64 TypeUID = 2;
+   uint64 AttributeUID = 3;
+}
+
+message CommentBlock { 
+   repeated string Lines = 1;
+}
