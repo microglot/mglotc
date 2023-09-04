@@ -5,10 +5,10 @@ message Image {
 }
 
 message Module {
-   string URI = 1;
    // Usually a file path, relative to some local root. May also be a full URI
    // including a protocol, etc., such as file:///path/to/file or
    // https://domain/path/to/file.
+   string URI = 1;
    uint64 UID = 2;
    repeated Import Imports = 3;
    repeated Struct Structs = 4;
@@ -151,27 +151,28 @@ message Annotation {
 }
 
 enum AnnotationScope { 
-   AnnotationScopeModule    = 0;
-   AnnotationScopeUnion     = 1;
-   AnnotationScopeStruct    = 2;
-   AnnotationScopeField     = 3;
-   AnnotationScopeEnumerant = 4;
-   AnnotationScopeEnum      = 5;
-   AnnotationScopeAPI       = 6;
-   AnnotationScopeAPIMethod = 7;
-   AnnotationScopeSDK       = 8;
-   AnnotationScopeSDKMethod = 9;
-   AnnotationScopeConst     = 10;
-   AnnotationScopeImport    = 11;
-   AnnotationScopeStar      = 12;
+   AnnotationScopeZero      = 0;
+   AnnotationScopeModule    = 1;
+   AnnotationScopeUnion     = 2;
+   AnnotationScopeStruct    = 3;
+   AnnotationScopeField     = 4;
+   AnnotationScopeEnumerant = 5;
+   AnnotationScopeEnum      = 6;
+   AnnotationScopeAPI       = 7;
+   AnnotationScopeAPIMethod = 8;
+   AnnotationScopeSDK       = 9;
+   AnnotationScopeSDKMethod = 10;
+   AnnotationScopeConst     = 11;
+   AnnotationScopeImport    = 12;
+   AnnotationScopeStar      = 13;
 }
 
 message Constant {
    TypeReference Reference = 1;
    string Name = 2;
-   TypeReference Type = 3;
    // Constants can only be defined with scalar types which is why TypeReference
    // is used here instead of TypeSpecifier.
+   TypeReference Type = 3;
    Value                 Value = 4;
    AnnotationApplication AnnotationApplication = 5;
    CommentBlock          CommentBlock = 6;
@@ -294,9 +295,10 @@ message ValueUnary {
 }
 
 enum OperationUnary {
-   Positive = 0;
-   Negative = 1;
-   Not = 2;
+   OperationUnaryZero = 0;
+   OperationUnaryPositive = 1;
+   OperationUnaryNegative = 2;
+   OperationUnaryNot = 3;
 }
 
 message ValueBinary {
@@ -306,24 +308,25 @@ message ValueBinary {
 }
 
 enum OperationBinary {
-   Or = 0;
-   And = 1;
-   Equal = 2;
-   NotEqual = 3;
-   LessThan = 4;
-   LessThanEqual = 5;
-   GreaterThan = 6;
-   GreaterThanEqual = 7;
-   Add = 8;
-   Subtract = 9;
-   BinOr = 10;
-   BinAnd = 11;
-   BitXor = 12;
-   ShiftLeft = 13;
-   ShiftRight = 14;
-   Multiply = 15;
-   Divide = 16;
-   Modulo = 17;
+   OperationBinaryZero = 0;
+   OperationBinaryOr = 1;
+   OperationBinaryAnd = 2;
+   OperationBinaryEqual = 3;
+   OperationBinaryNotEqual = 4;
+   OperationBinaryLessThan = 5;
+   OperationBinaryLessThanEqual = 6;
+   OperationBinaryGreaterThan = 7;
+   OperationBinaryGreaterThanEqual = 8;
+   OperationBinaryAdd = 9;
+   OperationBinarySubtract = 10;
+   OperationBinaryBinOr = 11;
+   OperationBinaryBinAnd = 12;
+   OperationBinaryBitXor = 13;
+   OperationBinaryShiftLeft = 14;
+   OperationBinaryShiftRight = 15;
+   OperationBinaryMultiply = 16;
+   OperationBinaryDivide = 17;
+   OperationBinaryModulo = 18;
 }
 
 message TypeReference {
