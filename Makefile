@@ -29,6 +29,8 @@ $(BINDIR):
 	GOBIN=$(BINDIR) go install github.com/AlekSi/gocov-xml@v1.1.0
 	GOBIN=$(BINDIR) go install github.com/wadey/gocovmerge@latest
 	GOBIN=$(BINDIR) go install golang.org/x/tools/cmd/stringer@latest
+	GOBIN=$(BINDIR) go install github.com/bufbuild/buf/cmd/buf@v1.26.1
+	GOBIN=$(BINDIR) go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0
 
 fmt: $(BINDIR)
 	# Apply goimports to all code files. Here we intentionally
