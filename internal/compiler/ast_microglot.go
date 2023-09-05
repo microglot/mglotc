@@ -59,13 +59,13 @@ type step interface {
 	step()
 }
 
-type ast struct {
+type astModule struct {
 	comments   *astCommentBlock
 	syntax     astStatementSyntax
 	statements []statement
 }
 
-func (self ast) String() string {
+func (self astModule) String() string {
 	// TODO 2023.08.16: still hideous!
 	formatted := ""
 	formatted += fmt.Sprintf("%v\n", self.comments)
@@ -77,12 +77,6 @@ func (self ast) String() string {
 
 type astStatementSyntax struct {
 	syntax astValueLiteralText
-}
-
-type meta struct {
-	uid                   *astValueLiteralInt
-	annotationApplication *astAnnotationApplication
-	comments              *astCommentBlock
 }
 
 type astStatementModuleMeta struct {
@@ -358,7 +352,6 @@ type astInvocationAwait struct {
 type astInvocationAsync struct {
 	implIdentifier astImplIdentifier
 	parameters     []astValue
-	catch          *astInvocationCatch
 }
 
 type astInvocationDirect struct {
@@ -438,7 +431,7 @@ type astCommentedBlock[N node, P node] struct {
 	values        []N
 }
 
-func (ast) node()                    {}
+func (astModule) node()              {}
 func (astStatementSyntax) node()     {}
 func (astStatementModuleMeta) node() {}
 func (astStatementImport) node()     {}
