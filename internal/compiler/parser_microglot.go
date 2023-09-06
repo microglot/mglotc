@@ -9,6 +9,7 @@ import (
 	"gopkg.microglot.org/compiler.go/internal/exc"
 	"gopkg.microglot.org/compiler.go/internal/idl"
 	"gopkg.microglot.org/compiler.go/internal/iter"
+	"gopkg.microglot.org/compiler.go/internal/proto"
 )
 
 type ParserMicroglot struct {
@@ -58,7 +59,7 @@ type parserMicroglotTokens struct {
 }
 
 func (p *parserMicroglotTokens) report(code string, message string) {
-	p.reporter.Report(exc.New(exc.Location{
+	_ = p.reporter.Report(exc.New(exc.Location{
 		URI:      p.uri,
 		Location: p.loc,
 	}, code, message))
@@ -236,9 +237,9 @@ func applyOverCommentedBlock[N node](p *parserMicroglotTokens, parser func() *N)
 	return applyOverCommentedBlockWithPrefix[N, node](p, idl.TokenTypeNewline, nil, parser)
 }
 
-// microglot = [CommentBlock] StatementSyntax { Statement }
-func (p *parserMicroglotTokens) parse() *ast {
-	this := ast{}
+// Module = [CommentBlock] StatementSyntax { Statement }
+func (p *parserMicroglotTokens) parseModule() *astModule {
+	this := astModule{}
 
 	maybeToken := p.peek()
 	if maybeToken != nil && maybeToken.Type == idl.TokenTypeComment {
@@ -292,6 +293,9 @@ func (p *parserMicroglotTokens) parse() *ast {
 		}
 		this.statements = append(this.statements, maybeStatement)
 	}
+
+	// TODO 2023.09.04: remove me
+	fmt.Println(proto.OperationUnary_name)
 
 	return &this
 }
@@ -1214,8 +1218,6 @@ func (p *parserMicroglotTokens) parseImplBlockStep() *step {
 		p.report(exc.CodeUnknownFatal, fmt.Sprintf("unexpected %s (expecting an implementation step)", maybeToken.Value))
 		return nil
 	}
-
-	return &value
 
 	return &value
 }

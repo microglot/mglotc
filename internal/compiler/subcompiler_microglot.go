@@ -38,9 +38,20 @@ func (self *SubCompilerMicroglot) CompileFile(ctx context.Context, r exc.Reporte
 	if err != nil {
 		return nil, err
 	}
-	mod := p.parse()
-	if dumpTree {
-		fmt.Println(mod)
+	ast := p.parseModule()
+	if ast == nil {
+		return nil, errors.New("parse failure")
 	}
+	if dumpTree {
+		fmt.Println(ast)
+	}
+
+	_, err = fromModule(ast)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO 2023.09.05: proto.Module -> idl.Module
+
 	return nil, nil
 }
