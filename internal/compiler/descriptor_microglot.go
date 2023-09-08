@@ -8,7 +8,7 @@ import (
 )
 
 func mapFrom[F any, T any](in []F, f func(*F) T) []T {
-	out := make([]T, len(in))
+	out := make([]T, 0, len(in))
 
 	if in != nil {
 		for _, element := range in {
