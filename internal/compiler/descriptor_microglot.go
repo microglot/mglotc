@@ -8,9 +8,9 @@ import (
 )
 
 func mapFrom[F any, T any](in []F, f func(*F) T) []T {
-	out := make([]T, 0, len(in))
-
 	if in != nil {
+		out := make([]T, 0, len(in))
+
 		for _, element := range in {
 			out = append(out, f(&element))
 		}
@@ -75,7 +75,7 @@ func fromStatementConst(statementConst *astStatementConst) *proto.Constant {
 		// Reference:
 		Name:                   statementConst.identifier.Value,
 		Type:                   fromTypeSpecifier(&statementConst.typeSpecifier),
-		AnnotationApplications: mapFrom(statementConst.meta.annotationApplication.annotationInstances, fromAnnotationApplication),
+		AnnotationApplications: fromAnnotationApplication(statementConst.meta.annotationApplication),
 		CommentBlock:           fromCommentBlock(statementConst.meta.comments),
 	}
 }
@@ -88,7 +88,7 @@ func fromStatementEnum(statementEnum *astStatementEnum) *proto.Enum {
 		// Reserved:
 		// ReservedNames:
 		CommentBlock:           fromCommentBlock(statementEnum.meta.comments),
-		AnnotationApplications: mapFrom(statementEnum.meta.annotationApplication.annotationInstances, fromAnnotationApplication),
+		AnnotationApplications: fromAnnotationApplication(statementEnum.meta.annotationApplication),
 	}
 }
 
@@ -100,7 +100,7 @@ func fromStatementStruct(statementStruct *astStatementStruct) *proto.Struct {
 		Unions: nil,
 		// Reserved:
 		CommentBlock:           fromCommentBlock(statementStruct.meta.comments),
-		AnnotationApplications: mapFrom(statementStruct.meta.annotationApplication.annotationInstances, fromAnnotationApplication),
+		AnnotationApplications: fromAnnotationApplication(statementStruct.meta.annotationApplication),
 		// IsSynthetic:
 	}
 
@@ -117,28 +117,38 @@ func fromStatementStruct(statementStruct *astStatementStruct) *proto.Struct {
 }
 
 func fromStatementAPI(statementAPI *astStatementAPI) *proto.API {
+	var extends []*proto.TypeSpecifier
+	if statementAPI.extends != nil {
+		extends = mapFrom(statementAPI.extends.extensions, fromTypeSpecifier)
+	}
+
 	return &proto.API{
 		// Reference:
 		Name:    fromTypeName(&statementAPI.typeName),
 		Methods: mapFrom(statementAPI.methods, fromAPIMethod),
-		Extends: mapFrom(statementAPI.extends.extensions, fromTypeSpecifier),
+		Extends: extends,
 		// Reserved:
 		// ReservedNames:
 		CommentBlock:           fromCommentBlock(statementAPI.meta.comments),
-		AnnotationApplications: mapFrom(statementAPI.meta.annotationApplication.annotationInstances, fromAnnotationApplication),
+		AnnotationApplications: fromAnnotationApplication(statementAPI.meta.annotationApplication),
 	}
 }
 
 func fromStatementSDK(statementSDK *astStatementSDK) *proto.SDK {
+	var extends []*proto.TypeSpecifier
+	if statementSDK.extends != nil {
+		extends = mapFrom(statementSDK.extends.extensions, fromTypeSpecifier)
+	}
+
 	return &proto.SDK{
 		// Reference:
 		Name:    fromTypeName(&statementSDK.typeName),
 		Methods: mapFrom(statementSDK.methods, fromSDKMethod),
-		Extends: mapFrom(statementSDK.extends.extensions, fromTypeSpecifier),
+		Extends: extends,
 		// Reserved:
 		// ReservedNames:
 		CommentBlock:           fromCommentBlock(statementSDK.meta.comments),
-		AnnotationApplications: mapFrom(statementSDK.meta.annotationApplication.annotationInstances, fromAnnotationApplication),
+		AnnotationApplications: fromAnnotationApplication(statementSDK.meta.annotationApplication),
 	}
 }
 
@@ -149,7 +159,7 @@ func fromAPIMethod(apiMethod *astAPIMethod) *proto.APIMethod {
 		Input:                  fromTypeSpecifier(&apiMethod.methodInput.typeSpecifier),
 		Output:                 fromTypeSpecifier(&apiMethod.methodReturns.typeSpecifier),
 		CommentBlock:           fromCommentBlock(apiMethod.meta.comments),
-		AnnotationApplications: mapFrom(apiMethod.meta.annotationApplication.annotationInstances, fromAnnotationApplication),
+		AnnotationApplications: fromAnnotationApplication(apiMethod.meta.annotationApplication),
 	}
 }
 
@@ -161,7 +171,7 @@ func fromSDKMethod(sdkMethod *astSDKMethod) *proto.SDKMethod {
 		Output:                 fromTypeSpecifier(&sdkMethod.methodReturns.typeSpecifier),
 		NoThrows:               sdkMethod.nothrows,
 		CommentBlock:           fromCommentBlock(sdkMethod.meta.comments),
-		AnnotationApplications: mapFrom(sdkMethod.meta.annotationApplication.annotationInstances, fromAnnotationApplication),
+		AnnotationApplications: fromAnnotationApplication(sdkMethod.meta.annotationApplication),
 	}
 }
 
@@ -181,7 +191,7 @@ func fromField(field *astField) *proto.Field {
 		DefaultValue: fromValue(&field.value),
 		// UnionUID:
 		CommentBlock:           fromCommentBlock(field.meta.comments),
-		AnnotationApplications: mapFrom(field.meta.annotationApplication.annotationInstances, fromAnnotationApplication),
+		AnnotationApplications: fromAnnotationApplication(field.meta.annotationApplication),
 	}
 }
 
@@ -190,7 +200,7 @@ func fromUnion(union *astUnion) *proto.Union {
 		// Reference:
 		Name:                   union.identifier.Value,
 		CommentBlock:           fromCommentBlock(union.meta.comments),
-		AnnotationApplications: mapFrom(union.meta.annotationApplication.annotationInstances, fromAnnotationApplication),
+		AnnotationApplications: fromAnnotationApplication(union.meta.annotationApplication),
 	}
 }
 
@@ -199,20 +209,20 @@ func fromEnumerant(enumerant *astEnumerant) *proto.Enumerant {
 		// Reference:
 		Name:                   enumerant.identifier.Value,
 		CommentBlock:           fromCommentBlock(enumerant.meta.comments),
-		AnnotationApplications: mapFrom(enumerant.meta.annotationApplication.annotationInstances, fromAnnotationApplication),
+		AnnotationApplications: fromAnnotationApplication(enumerant.meta.annotationApplication),
 	}
 }
 
 func fromTypeSpecifier(typeSpecifier *astTypeSpecifier) *proto.TypeSpecifier {
-	name := ""
+	qualifier := ""
 	if typeSpecifier.qualifier != nil {
-		name += typeSpecifier.qualifier.Value + "."
+		qualifier = typeSpecifier.qualifier.Value
 	}
-	name += typeSpecifier.typeName.identifier.Value
 
 	return &proto.TypeSpecifier{
 		// Reference:
-		Name: name,
+		Qualifier: qualifier,
+		Name:      fromTypeName(&typeSpecifier.typeName),
 		// IsList:
 		// IsMap:
 		// HasPresence:
@@ -255,9 +265,10 @@ func fromAnnotationScopes(annotationScopes []astAnnotationScope) []proto.Annotat
 	return mapFrom(annotationScopes, fromAnnotationScope)
 }
 
-func fromAnnotationApplication(annotationInstance *astAnnotationInstance) *proto.AnnotationApplication {
+func fromAnnotationInstance(annotationInstance *astAnnotationInstance) *proto.AnnotationApplication {
 	return &proto.AnnotationApplication{
-		// TODO 2023.09.07: this is weird! Should AnnotationInstance be defined in terms of TypeSpecifier??
+		// This is admittedly weird, but the pseudo-type specifiers in annotation applications
+		// are grammatically slightly different from a full-blown type specifier.
 		Annotation: fromTypeSpecifier(&astTypeSpecifier{
 			qualifier: annotationInstance.namespaceIdentifier,
 			typeName: astTypeName{
@@ -273,6 +284,13 @@ func fromCommentBlock(commentBlock *astCommentBlock) *proto.CommentBlock {
 		return &proto.CommentBlock{
 			Lines: mapFrom(commentBlock.comments, func(line *idl.Token) string { return line.Value }),
 		}
+	}
+	return nil
+}
+
+func fromAnnotationApplication(annotationApplication *astAnnotationApplication) []*proto.AnnotationApplication {
+	if annotationApplication != nil {
+		return mapFrom(annotationApplication.annotationInstances, fromAnnotationInstance)
 	}
 	return nil
 }

@@ -334,10 +334,11 @@ message TypeReference {
 
 message TypeSpecifier {
    TypeReference Reference = 1;
-   string Name = 2;
-   bool IsList = 3;
-   bool IsMap = 4;
-   bool HasPresence = 5;
+   string Qualifier = 2;
+   TypeName Name = 3;
+   bool IsList = 4;
+   bool IsMap = 5;
+   bool HasPresence = 6;
 }
 
 message AttributeReference {
