@@ -29,7 +29,6 @@ message Import {
    string Alias = 4;
    bool IsDot = 5;
    CommentBlock CommentBlock = 6;
-   repeated AnnotationApplication AnnotationApplications = 7;
 }
 
 message DotImport {
@@ -42,7 +41,7 @@ message DotImport {
 
 message Struct {
    TypeReference Reference = 1;
-   string Name = 2;
+   TypeName Name = 2;
    repeated Field Fields = 3;
    repeated Union Unions = 4;
    repeated ReservedRange Reserved = 5;
@@ -91,9 +90,9 @@ message Enumerant {
 
 message API {
    TypeReference Reference = 1;
-   string Name = 2;
+   TypeName Name = 2;
    repeated APIMethod Methods = 3;
-   repeated TypeReference Extends = 4;
+   repeated TypeSpecifier Extends = 4;
    repeated ReservedRange Reserved = 5;
    repeated string ReservedNames = 6;
    CommentBlock CommentBlock = 7;
@@ -103,17 +102,17 @@ message API {
 message APIMethod {
    AttributeReference Reference = 1;
    string Name = 2;
-   TypeReference Input = 3;
-   TypeReference Output = 4;
+   TypeSpecifier Input = 3;
+   TypeSpecifier Output = 4;
    CommentBlock CommentBlock = 5;
    repeated AnnotationApplication AnnotationApplications = 6;
 }
 
 message SDK {
    TypeReference Reference = 1;
-   string Name = 2;
+   TypeName Name = 2;
    repeated SDKMethod Methods = 3;
-   repeated TypeReference Extends = 4;
+   repeated TypeSpecifier Extends = 4;
    repeated ReservedRange Reserved = 5;
    repeated string ReservedNames = 6;
    CommentBlock CommentBlock = 7;
@@ -134,7 +133,6 @@ message SDKMethodInput {
    SDKInputReference Reference = 1;
    string Name = 2;
    TypeSpecifier Type = 3;
-   CommentBlock CommentBlock = 4;
 }
 
 message SDKInputReference {
@@ -172,16 +170,14 @@ enum AnnotationScope {
 message Constant {
    TypeReference Reference = 1;
    string Name = 2;
-   // Constants can only be defined with scalar types which is why TypeReference
-   // is used here instead of TypeSpecifier.
-   TypeReference Type = 3;
+   TypeSpecifier Type = 3;
    Value                 Value = 4;
-   AnnotationApplication AnnotationApplication = 5;
+   repeated AnnotationApplication AnnotationApplications = 5;
    CommentBlock          CommentBlock = 6;
 }
 
 message AnnotationApplication {
-   TypeReference Annotation = 1;
+   TypeSpecifier Annotation = 1;
    Value Value = 2;
 }
 
@@ -338,9 +334,11 @@ message TypeReference {
 
 message TypeSpecifier {
    TypeReference Reference = 1;
-   bool IsList = 2;
-   bool IsMap = 3;
-   bool HasPresence = 4;
+   string Qualifier = 2;
+   TypeName Name = 3;
+   bool IsList = 4;
+   bool IsMap = 5;
+   bool HasPresence = 6;
 }
 
 message AttributeReference {
@@ -351,4 +349,9 @@ message AttributeReference {
 
 message CommentBlock { 
    repeated string Lines = 1;
+}
+
+message TypeName {
+   string Name = 1;
+   repeated TypeSpecifier Parameters = 2;
 }
