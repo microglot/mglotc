@@ -20,7 +20,9 @@ func mapFrom[F any, T any](in []F, f func(*F) T) []T {
 }
 
 func fromModule(module *astModule) (*proto.Module, error) {
-	this := proto.Module{}
+	this := proto.Module{
+		URI: module.URI,
+	}
 
 	for _, statement := range module.statements {
 		switch s := statement.(type) {

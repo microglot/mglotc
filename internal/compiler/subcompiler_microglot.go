@@ -46,10 +46,12 @@ func (self *SubCompilerMicroglot) CompileFile(ctx context.Context, r exc.Reporte
 		fmt.Println(ast)
 	}
 
-	_, err = fromModule(ast)
+	module, err := fromModule(ast)
 	if err != nil {
 		return nil, err
 	}
+
+	_, _ = link(module, r)
 
 	// TODO 2023.09.05: proto.Module -> idl.Module
 
