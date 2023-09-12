@@ -1,51 +1,40 @@
 package compiler
 
 import (
+	"errors"
 	"fmt"
+	"sync"
 
 	"gopkg.microglot.org/compiler.go/internal/exc"
 	"gopkg.microglot.org/compiler.go/internal/proto"
 )
 
-// link() takes a parsed Module descriptor + optional input symbol table, and outputs a linked Module
-// descriptor and the exported symbol table from this module.
-func link(parsed *proto.Module, r exc.Reporter) (*proto.Module, *symbolTable) {
-	// TODO 2023.09.11: all imported modules need to be compiled first, and their (linked) descriptors
-	// and exported symbol tables passed in
-
-	symbols := symbolTable{}
-	symbols.types = make(map[string]proto.TypeReference)
-
-	// TODO 2023.09.11: figure out how to handle built-in types
-	// TODO 2023.09.11: "alias" all of the dependencies' symbols into the local symbol table
-
-	// populate the local symbol table, and populate all declaration references in the descriptor
-	// TODO 2023.09.11: add AttributeReference and SDKInputReference
-	// TODO 2023.09.11: are APIs, SDKs and Annotation "types"? Or some other kind of symbol?
-	// TODO 2023.09.11: Constants don't seem like "types", so store them in a different table?
-	var type_uid uint64 = 0
-	for _, struct_ := range parsed.Structs {
-		type_uid++
-		struct_.Reference = &proto.TypeReference{
-			ModuleUID: parsed.UID,
-			TypeUID:   type_uid,
-		}
-
-		symbols.types[struct_.Name.Name] = *struct_.Reference
+// link() takes a parsed Module descriptor + global symbol table, and outputs a linked Module descriptor.
+// reports: unresolved imports and unknown types
+func link(parsed proto.Module, gsymbols *globalSymbolTable, r exc.Reporter) (*proto.Module, error) {
+	symbols := newLocalSymbols(gsymbols, parsed.URI)
+	if symbols == nil {
+		return nil, errors.New("unable to initialize local symbol table (???)")
 	}
-	for _, enum := range parsed.Enums {
-		type_uid++
-		enum.Reference = &proto.TypeReference{
-			ModuleUID: parsed.UID,
-			TypeUID:   type_uid,
-		}
 
-		symbols.types[enum.Name] = *enum.Reference
+	// alias all of the dependencies' symbols into the local symbol table
+	for _, import_ := range parsed.Imports {
+		if !symbols.alias(gsymbols, import_.ImportedURI, import_.Alias, import_.IsDot) {
+			// TODO 2023.09.12: replace CodeUnknownFatal with something more meaningful
+			r.Report(exc.New(exc.Location{
+				URI: parsed.URI,
+				// TODO 2023.09.12: getting Location here would sure be nice!
+			}, exc.CodeUnknownFatal, fmt.Sprintf("unknown import %s", import_.ImportedURI)))
+			return nil, errors.New("unable to alias")
+		}
 	}
 
 	// populate all the TypeSpecifiers
-	walkTypeSpecifiers(parsed, func(typeSpecifier *proto.TypeSpecifier) {
-		sym, ok := symbols.types[typeSpecifier.Name.Name]
+	walkTypeSpecifiers(&parsed, func(typeSpecifier *proto.TypeSpecifier) {
+		sym, ok := symbols.types[localSymbolName{
+			qualifier: typeSpecifier.Qualifier,
+			name:      typeSpecifier.Name.Name,
+		}]
 		if !ok {
 			// TODO 2023.09.11: replace CodeUnknownFatal with something more meaningful
 			r.Report(exc.New(exc.Location{
@@ -57,14 +46,170 @@ func link(parsed *proto.Module, r exc.Reporter) (*proto.Module, *symbolTable) {
 		}
 	})
 
-	// TODO 2023.09.11: we probably need to differentiate between the internal symbol table (used while
-	// linking *this* module) and the external one, because of import-aliasing.
-
-	return parsed, &symbols
+	return &parsed, nil
 }
 
-type symbolTable struct {
-	types map[string]proto.TypeReference
+type localSymbolName struct {
+	// magic value "" means "no qualifier" (same as proto.TypeSpecifier)
+	qualifier string
+	name      string
+}
+
+type localSymbolTable struct {
+	types map[localSymbolName]proto.TypeReference
+}
+
+func newLocalSymbols(gsymbols *globalSymbolTable, URI string) *localSymbolTable {
+	symbols := localSymbolTable{}
+	symbols.types = make(map[localSymbolName]proto.TypeReference)
+
+	for _, internalTypeName := range []string{
+		"Bool",
+		"Text",
+		"Data",
+		"Int8",
+		"Int16",
+		"Int32",
+		"Int64",
+		"UInt8",
+		"UInt16",
+		"UInt32",
+		"UInt64",
+		"Float32",
+		"Float64",
+		"List",
+		"Map",
+		"Empty",
+		"Presence",
+		"AsyncTask",
+	} {
+		symbols.types[localSymbolName{
+			qualifier: "",
+			name:      internalTypeName,
+		}] = proto.TypeReference{
+			// moduleUID 0 is for built-in types
+			ModuleUID: 0,
+			// TODO 2023.09.12: just a shim to allow linking; this will need to be fleshed out
+			TypeUID: 0,
+		}
+	}
+
+	ok := symbols.alias(gsymbols, URI, "", false)
+	if !ok {
+		return nil
+	}
+	return &symbols
+}
+
+func (s *localSymbolTable) alias(gsymbols *globalSymbolTable, URI string, alias string, isDot bool) bool {
+	gsymbols.lock.Lock()
+	defer gsymbols.lock.Unlock()
+
+	if isDot {
+		alias = ""
+	}
+
+	names, ok := gsymbols.types[URI]
+	if !ok {
+		return false
+	}
+
+	for name, ref := range names {
+		s.types[localSymbolName{
+			qualifier: alias,
+			name:      name,
+		}] = ref
+	}
+	return true
+}
+
+type globalSymbolTable struct {
+	lock  sync.RWMutex
+	types map[string]map[string]proto.TypeReference
+}
+
+// symbolTable.collect() populates a symbol table with the symbols in a given descriptor
+// reports: name collisions
+func (s *globalSymbolTable) collect(parsed *proto.Module, r exc.Reporter) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	if s.types == nil {
+		s.types = make(map[string]map[string]proto.TypeReference)
+	}
+	if s.types[parsed.URI] == nil {
+		s.types[parsed.URI] = make(map[string]proto.TypeReference)
+	}
+
+	// TODO 2023.09.11: add AttributeReference and SDKInputReference
+	// TODO 2023.09.12: correctly compute TypeUIDs
+	var type_uid uint64 = 0
+	for _, struct_ := range parsed.Structs {
+		type_uid++
+		struct_.Reference = &proto.TypeReference{
+			ModuleUID: parsed.UID,
+			TypeUID:   type_uid,
+		}
+		s.addType(r, parsed.URI, struct_.Name.Name, *struct_.Reference)
+	}
+	for _, enum := range parsed.Enums {
+		type_uid++
+		enum.Reference = &proto.TypeReference{
+			ModuleUID: parsed.UID,
+			TypeUID:   type_uid,
+		}
+
+		s.addType(r, parsed.URI, enum.Name, *enum.Reference)
+	}
+	for _, api := range parsed.APIs {
+		type_uid++
+		api.Reference = &proto.TypeReference{
+			ModuleUID: parsed.UID,
+			TypeUID:   type_uid,
+		}
+
+		s.addType(r, parsed.URI, api.Name.Name, *api.Reference)
+	}
+	for _, sdk := range parsed.SDKs {
+		type_uid++
+		sdk.Reference = &proto.TypeReference{
+			ModuleUID: parsed.UID,
+			TypeUID:   type_uid,
+		}
+
+		s.addType(r, parsed.URI, sdk.Name.Name, *sdk.Reference)
+	}
+	for _, annotation := range parsed.Annotations {
+		type_uid++
+		annotation.Reference = &proto.TypeReference{
+			ModuleUID: parsed.UID,
+			TypeUID:   type_uid,
+		}
+
+		s.addType(r, parsed.URI, annotation.Name, *annotation.Reference)
+	}
+	for _, constant := range parsed.Constants {
+		type_uid++
+		constant.Reference = &proto.TypeReference{
+			ModuleUID: parsed.UID,
+			TypeUID:   type_uid,
+		}
+
+		s.addType(r, parsed.URI, constant.Name, *constant.Reference)
+	}
+}
+
+func (s *globalSymbolTable) addType(r exc.Reporter, URI string, name string, typeReference proto.TypeReference) {
+	// Assumes we're already holding s.lock!
+	if _, ok := s.types[URI][name]; ok {
+		// TODO 2023.09.12: replace CodeUnknownFatal with something more meaningful
+		r.Report(exc.New(exc.Location{
+			URI: URI,
+			// TODO 2023.09.12: getting Location here would be nice!
+		}, exc.CodeUnknownFatal, fmt.Sprintf("there is already a declaration of '%s' in '%s'", name, URI)))
+	} else {
+		s.types[URI][name] = typeReference
+	}
 }
 
 // TODO 2023.09.11: will almost certainly need a more general walk() fn, but this is okay for now

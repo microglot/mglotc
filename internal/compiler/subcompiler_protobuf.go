@@ -11,11 +11,12 @@ import (
 
 	"gopkg.microglot.org/compiler.go/internal/exc"
 	"gopkg.microglot.org/compiler.go/internal/idl"
+	"gopkg.microglot.org/compiler.go/internal/proto"
 )
 
 type SubCompilerProtobuf struct{}
 
-func (self *SubCompilerProtobuf) CompileFile(ctx context.Context, r exc.Reporter, file idl.File, dumpTokens bool, dumpTree bool) (*idl.Module, error) {
+func (self *SubCompilerProtobuf) CompileFile(ctx context.Context, r exc.Reporter, file idl.File, dumpTokens bool, dumpTree bool) (*proto.Module, error) {
 	b, err := file.Body(ctx)
 	if dumpTokens {
 		return nil, errors.New("token stream dumping isn't implemented for protobuf, sorry")
@@ -40,7 +41,7 @@ func (self *SubCompilerProtobuf) CompileFile(ctx context.Context, r exc.Reporter
 	return resultToModule(result)
 }
 
-func resultToModule(r parser.Result) (*idl.Module, error) {
+func resultToModule(r parser.Result) (*proto.Module, error) {
 	// TODO: Convert protobuf FileDescriptorProto to idl.Module.
 	return nil, nil
 }

@@ -6,6 +6,7 @@ import (
 	"gopkg.microglot.org/compiler.go/internal/exc"
 	"gopkg.microglot.org/compiler.go/internal/idl"
 	"gopkg.microglot.org/compiler.go/internal/iter"
+	"gopkg.microglot.org/compiler.go/internal/proto"
 )
 
 // SubCompilerIDL is an adaptive sub-compiler for all IDL formats that switches
@@ -15,7 +16,7 @@ type SubCompilerIDL struct {
 	Protobuf  SubCompiler
 }
 
-func (self *SubCompilerIDL) CompileFile(ctx context.Context, r exc.Reporter, file idl.File, dumpTokens bool, dumpTree bool) (*idl.Module, error) {
+func (self *SubCompilerIDL) CompileFile(ctx context.Context, r exc.Reporter, file idl.File, dumpTokens bool, dumpTree bool) (*proto.Module, error) {
 	lex := NewLexerIDL(r)
 	lexf, err := lex.Lex(ctx, file)
 	if err != nil {

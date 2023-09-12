@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"gopkg.microglot.org/compiler.go/internal/optional"
+	"gopkg.microglot.org/compiler.go/internal/proto"
 )
 
 type Closer interface {
@@ -95,7 +96,8 @@ type CompileResponse struct {
 }
 
 type Image struct {
-	Modules []*Module
+	// TODO 2023.09.12: this should be re-pointed at the local Module def
+	Modules []*proto.Module
 }
 type Module struct {
 	URI string

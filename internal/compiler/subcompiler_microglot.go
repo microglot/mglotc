@@ -7,11 +7,12 @@ import (
 
 	"gopkg.microglot.org/compiler.go/internal/exc"
 	"gopkg.microglot.org/compiler.go/internal/idl"
+	"gopkg.microglot.org/compiler.go/internal/proto"
 )
 
 type SubCompilerMicroglot struct{}
 
-func (self *SubCompilerMicroglot) CompileFile(ctx context.Context, r exc.Reporter, file idl.File, dumpTokens bool, dumpTree bool) (*idl.Module, error) {
+func (self *SubCompilerMicroglot) CompileFile(ctx context.Context, r exc.Reporter, file idl.File, dumpTokens bool, dumpTree bool) (*proto.Module, error) {
 	lexer := NewLexerMicroglot(r)
 	parser := NewParserMicroglot(r)
 	lf, err := lexer.Lex(ctx, file)
@@ -51,9 +52,5 @@ func (self *SubCompilerMicroglot) CompileFile(ctx context.Context, r exc.Reporte
 		return nil, err
 	}
 
-	_, _ = link(module, r)
-
-	// TODO 2023.09.05: proto.Module -> idl.Module
-
-	return nil, nil
+	return module, nil
 }

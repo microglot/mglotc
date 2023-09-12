@@ -149,7 +149,7 @@ struct Annotation {
   Name         :Text                             @2  
   Scopes       :List<:AnnotationScope> @3  
   Type         :TypeSpecifier                   @4  
-  CommentBlock :DescriptorCommentBlock           @5  
+  CommentBlock :CommentBlock           @5
 }
 
 enum AnnotationScope { 

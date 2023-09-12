@@ -55,7 +55,7 @@ func fromStatementImport(statementImport *astStatementImport) *proto.Import {
 	return &proto.Import{
 		// ModuleUID:
 		// ImportedUID:
-		// IsDot:
+		IsDot:        statementImport.name.Value == ".",
 		ImportedURI:  statementImport.uri.val.Value,
 		Alias:        statementImport.name.Value,
 		CommentBlock: fromCommentBlock(statementImport.comments),
