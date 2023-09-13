@@ -9,7 +9,6 @@ import (
 	"gopkg.microglot.org/compiler.go/internal/exc"
 	"gopkg.microglot.org/compiler.go/internal/idl"
 	"gopkg.microglot.org/compiler.go/internal/iter"
-	"gopkg.microglot.org/compiler.go/internal/proto"
 )
 
 type ParserMicroglot struct {
@@ -239,7 +238,9 @@ func applyOverCommentedBlock[N node](p *parserMicroglotTokens, parser func() *N)
 
 // Module = [CommentBlock] StatementSyntax { Statement }
 func (p *parserMicroglotTokens) parseModule() *astModule {
-	this := astModule{}
+	this := astModule{
+		URI: p.uri,
+	}
 
 	maybeToken := p.peek()
 	if maybeToken != nil && maybeToken.Type == idl.TokenTypeComment {
@@ -293,9 +294,6 @@ func (p *parserMicroglotTokens) parseModule() *astModule {
 		}
 		this.statements = append(this.statements, maybeStatement)
 	}
-
-	// TODO 2023.09.04: remove me
-	fmt.Println(proto.OperationUnary_name)
 
 	return &this
 }

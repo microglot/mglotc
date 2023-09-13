@@ -20,7 +20,9 @@ func mapFrom[F any, T any](in []F, f func(*F) T) []T {
 }
 
 func fromModule(module *astModule) (*proto.Module, error) {
-	this := proto.Module{}
+	this := proto.Module{
+		URI: module.URI,
+	}
 
 	for _, statement := range module.statements {
 		switch s := statement.(type) {
@@ -53,7 +55,7 @@ func fromStatementImport(statementImport *astStatementImport) *proto.Import {
 	return &proto.Import{
 		// ModuleUID:
 		// ImportedUID:
-		// IsDot:
+		IsDot:        statementImport.name.Value == ".",
 		ImportedURI:  statementImport.uri.val.Value,
 		Alias:        statementImport.name.Value,
 		CommentBlock: fromCommentBlock(statementImport.comments),

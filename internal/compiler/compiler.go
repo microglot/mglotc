@@ -11,6 +11,7 @@ import (
 
 	"gopkg.microglot.org/compiler.go/internal/exc"
 	"gopkg.microglot.org/compiler.go/internal/idl"
+	"gopkg.microglot.org/compiler.go/internal/proto"
 )
 
 type Option func(c *compiler) error
@@ -100,14 +101,15 @@ func (self *compiler) Compile(ctx context.Context, req *idl.CompileRequest) (*id
 			files = append(files, inf)
 		}
 	}
-	modules := make([]*idl.Module, 0, len(files))
+	modules := make([]*proto.Module, 0, len(files))
 	loaded := &sync.Map{}
 	results := make(chan fileResult)
 	expectedResults := len(files)
+	symbols := globalSymbolTable{}
 
 	for _, file := range files {
 		go func(file idl.File) {
-			image, err := self.compileFile(ctx, file, loaded, req.DumpTokens, req.DumpTree)
+			image, err := self.compileFile(ctx, file, loaded, &symbols, req.DumpTokens, req.DumpTree)
 			results <- fileResult{image, err}
 		}(file)
 	}
@@ -122,18 +124,41 @@ func (self *compiler) Compile(ctx context.Context, req *idl.CompileRequest) (*id
 			}
 			if result.module != nil {
 				modules = append(modules, result.module)
-				// for _, mod := range result.module.Elements {
-				// 	_ = mod
-				// 	// TODO: iterate module elements and add any imports to the
-				// 	// set of targets to compile.
-				// }
+				for _, import_ := range result.module.Imports {
+					uri := self.targetURI(ctx, import_.ImportedURI)
+					in, err := self.FS.Open(ctx, uri)
+					if err != nil {
+						return nil, err
+					}
+					for _, inf := range in {
+						if inf.Kind(ctx) == idl.FileKindNone {
+							continue
+						}
+
+						go func(file idl.File) {
+							image, err := self.compileFile(ctx, file, loaded, &symbols, req.DumpTokens, req.DumpTree)
+							results <- fileResult{image, err}
+						}(inf)
+						expectedResults += 1
+					}
+				}
 			}
 		}
 	}
 
+	linked_modules := make([]*proto.Module, 0, len(modules))
+	for _, mod := range modules {
+		linked_module, err := link(*mod, &symbols, self.Reporter)
+		if err != nil {
+			return nil, err
+		}
+
+		linked_modules = append(linked_modules, linked_module)
+	}
+
 	final := &idl.Image{}
 	included := make(map[string]bool)
-	for _, mod := range modules {
+	for _, mod := range linked_modules {
 		if _, ok := included[mod.URI]; ok {
 			continue
 		}
@@ -151,7 +176,7 @@ func (self *compiler) Compile(ctx context.Context, req *idl.CompileRequest) (*id
 	}, nil
 }
 
-func (self *compiler) compileFile(ctx context.Context, file idl.File, loaded *sync.Map, dumpTokens bool, dumpTree bool) (*idl.Module, error) {
+func (self *compiler) compileFile(ctx context.Context, file idl.File, loaded *sync.Map, symbols *globalSymbolTable, dumpTokens bool, dumpTree bool) (*proto.Module, error) {
 	self.Semaphore.Lock()
 	defer self.Semaphore.Unlock()
 	if _, ok := loaded.Load(file.Path(ctx)); ok {
@@ -163,7 +188,14 @@ func (self *compiler) compileFile(ctx context.Context, file idl.File, loaded *sy
 		e := exc.New(exc.Location{URI: file.Path(ctx)}, exc.CodeUnsupportedFileFormat, "Unsupported file format")
 		return nil, self.Reporter.Report(e)
 	}
-	return sc.CompileFile(ctx, self.Reporter, file, dumpTokens, dumpTree)
+	module, err := sc.CompileFile(ctx, self.Reporter, file, dumpTokens, dumpTree)
+	if err != nil {
+		return nil, err
+	}
+
+	symbols.collect(module, self.Reporter)
+
+	return module, nil
 }
 
 func (self *compiler) targetURI(ctx context.Context, target string) string {
@@ -186,7 +218,7 @@ func (self *compiler) targetURI(ctx context.Context, target string) string {
 }
 
 type fileResult struct {
-	module *idl.Module
+	module *proto.Module
 	err    error
 }
 

@@ -60,6 +60,7 @@ type step interface {
 }
 
 type astModule struct {
+	URI        string
 	comments   *astCommentBlock
 	syntax     astStatementSyntax
 	statements []statement
