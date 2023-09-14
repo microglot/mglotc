@@ -3,7 +3,6 @@ package compiler
 import (
 	"errors"
 	"fmt"
-	"sync"
 
 	"gopkg.microglot.org/compiler.go/internal/exc"
 	"gopkg.microglot.org/compiler.go/internal/proto"
@@ -25,7 +24,6 @@ func link(parsed proto.Module, gsymbols *globalSymbolTable, r exc.Reporter) (*pr
 				URI: parsed.URI,
 				// TODO 2023.09.12: getting Location here would sure be nice!
 			}, exc.CodeUnknownFatal, fmt.Sprintf("unknown import %s", import_.ImportedURI)))
-			return nil, errors.New("unable to alias")
 		}
 	}
 
@@ -46,6 +44,9 @@ func link(parsed proto.Module, gsymbols *globalSymbolTable, r exc.Reporter) (*pr
 		}
 	})
 
+	if len(r.Reported()) > 0 {
+		return nil, errors.New("linking failed")
+	}
 	return &parsed, nil
 }
 
@@ -121,95 +122,6 @@ func (s *localSymbolTable) alias(gsymbols *globalSymbolTable, URI string, alias 
 		}] = ref
 	}
 	return true
-}
-
-type globalSymbolTable struct {
-	lock  sync.RWMutex
-	types map[string]map[string]proto.TypeReference
-}
-
-// symbolTable.collect() populates a symbol table with the symbols in a given descriptor
-// reports: name collisions
-func (s *globalSymbolTable) collect(parsed *proto.Module, r exc.Reporter) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	if s.types == nil {
-		s.types = make(map[string]map[string]proto.TypeReference)
-	}
-	if s.types[parsed.URI] == nil {
-		s.types[parsed.URI] = make(map[string]proto.TypeReference)
-	}
-
-	// TODO 2023.09.11: add AttributeReference and SDKInputReference
-	// TODO 2023.09.12: correctly compute TypeUIDs
-	var type_uid uint64 = 0
-	for _, struct_ := range parsed.Structs {
-		type_uid++
-		struct_.Reference = &proto.TypeReference{
-			ModuleUID: parsed.UID,
-			TypeUID:   type_uid,
-		}
-		s.addType(r, parsed.URI, struct_.Name.Name, *struct_.Reference)
-	}
-	for _, enum := range parsed.Enums {
-		type_uid++
-		enum.Reference = &proto.TypeReference{
-			ModuleUID: parsed.UID,
-			TypeUID:   type_uid,
-		}
-
-		s.addType(r, parsed.URI, enum.Name, *enum.Reference)
-	}
-	for _, api := range parsed.APIs {
-		type_uid++
-		api.Reference = &proto.TypeReference{
-			ModuleUID: parsed.UID,
-			TypeUID:   type_uid,
-		}
-
-		s.addType(r, parsed.URI, api.Name.Name, *api.Reference)
-	}
-	for _, sdk := range parsed.SDKs {
-		type_uid++
-		sdk.Reference = &proto.TypeReference{
-			ModuleUID: parsed.UID,
-			TypeUID:   type_uid,
-		}
-
-		s.addType(r, parsed.URI, sdk.Name.Name, *sdk.Reference)
-	}
-	for _, annotation := range parsed.Annotations {
-		type_uid++
-		annotation.Reference = &proto.TypeReference{
-			ModuleUID: parsed.UID,
-			TypeUID:   type_uid,
-		}
-
-		s.addType(r, parsed.URI, annotation.Name, *annotation.Reference)
-	}
-	for _, constant := range parsed.Constants {
-		type_uid++
-		constant.Reference = &proto.TypeReference{
-			ModuleUID: parsed.UID,
-			TypeUID:   type_uid,
-		}
-
-		s.addType(r, parsed.URI, constant.Name, *constant.Reference)
-	}
-}
-
-func (s *globalSymbolTable) addType(r exc.Reporter, URI string, name string, typeReference proto.TypeReference) {
-	// Assumes we're already holding s.lock!
-	if _, ok := s.types[URI][name]; ok {
-		// TODO 2023.09.12: replace CodeUnknownFatal with something more meaningful
-		r.Report(exc.New(exc.Location{
-			URI: URI,
-			// TODO 2023.09.12: getting Location here would be nice!
-		}, exc.CodeUnknownFatal, fmt.Sprintf("there is already a declaration of '%s' in '%s'", name, URI)))
-	} else {
-		s.types[URI][name] = typeReference
-	}
 }
 
 // TODO 2023.09.11: will almost certainly need a more general walk() fn, but this is okay for now

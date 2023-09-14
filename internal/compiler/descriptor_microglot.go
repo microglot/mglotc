@@ -64,7 +64,7 @@ func fromStatementImport(statementImport *astStatementImport) *proto.Import {
 
 func fromStatementAnnotation(statementAnnotation *astStatementAnnotation) *proto.Annotation {
 	return &proto.Annotation{
-		// Reference:
+		Reference:              fromUID(statementAnnotation.uid),
 		Name:                   statementAnnotation.identifier.Value,
 		Scopes:                 fromAnnotationScopes(statementAnnotation.annotationScopes),
 		Type:                   fromTypeSpecifier(&statementAnnotation.typeSpecifier),
@@ -74,7 +74,7 @@ func fromStatementAnnotation(statementAnnotation *astStatementAnnotation) *proto
 
 func fromStatementConst(statementConst *astStatementConst) *proto.Constant {
 	return &proto.Constant{
-		// Reference:
+		Reference:              fromUID(statementConst.meta.uid),
 		Name:                   statementConst.identifier.Value,
 		Type:                   fromTypeSpecifier(&statementConst.typeSpecifier),
 		AnnotationApplications: fromAnnotationApplication(statementConst.meta.annotationApplication),
@@ -84,7 +84,7 @@ func fromStatementConst(statementConst *astStatementConst) *proto.Constant {
 
 func fromStatementEnum(statementEnum *astStatementEnum) *proto.Enum {
 	return &proto.Enum{
-		// Reference:
+		Reference:  fromUID(statementEnum.meta.uid),
 		Name:       statementEnum.identifier.Value,
 		Enumerants: mapFrom(statementEnum.enumerants, fromEnumerant),
 		// Reserved:
@@ -96,10 +96,10 @@ func fromStatementEnum(statementEnum *astStatementEnum) *proto.Enum {
 
 func fromStatementStruct(statementStruct *astStatementStruct) *proto.Struct {
 	this := proto.Struct{
-		// Reference:
-		Name:   fromTypeName(&statementStruct.typeName),
-		Fields: nil,
-		Unions: nil,
+		Reference: fromUID(statementStruct.meta.uid),
+		Name:      fromTypeName(&statementStruct.typeName),
+		Fields:    nil,
+		Unions:    nil,
 		// Reserved:
 		CommentBlock:           fromCommentBlock(statementStruct.meta.comments),
 		AnnotationApplications: fromAnnotationApplication(statementStruct.meta.annotationApplication),
@@ -125,10 +125,10 @@ func fromStatementAPI(statementAPI *astStatementAPI) *proto.API {
 	}
 
 	return &proto.API{
-		// Reference:
-		Name:    fromTypeName(&statementAPI.typeName),
-		Methods: mapFrom(statementAPI.methods, fromAPIMethod),
-		Extends: extends,
+		Reference: fromUID(statementAPI.meta.uid),
+		Name:      fromTypeName(&statementAPI.typeName),
+		Methods:   mapFrom(statementAPI.methods, fromAPIMethod),
+		Extends:   extends,
 		// Reserved:
 		// ReservedNames:
 		CommentBlock:           fromCommentBlock(statementAPI.meta.comments),
@@ -143,10 +143,10 @@ func fromStatementSDK(statementSDK *astStatementSDK) *proto.SDK {
 	}
 
 	return &proto.SDK{
-		// Reference:
-		Name:    fromTypeName(&statementSDK.typeName),
-		Methods: mapFrom(statementSDK.methods, fromSDKMethod),
-		Extends: extends,
+		Reference: fromUID(statementSDK.meta.uid),
+		Name:      fromTypeName(&statementSDK.typeName),
+		Methods:   mapFrom(statementSDK.methods, fromSDKMethod),
+		Extends:   extends,
 		// Reserved:
 		// ReservedNames:
 		CommentBlock:           fromCommentBlock(statementSDK.meta.comments),
@@ -441,4 +441,18 @@ func fromTypeName(typeName *astTypeName) *proto.TypeName {
 		Name:       typeName.identifier.Value,
 		Parameters: mapFrom(typeName.parameters, fromTypeSpecifier),
 	}
+}
+
+func fromUID(typeUID *astValueLiteralInt) *proto.TypeReference {
+	this := proto.TypeReference{
+		// zero is reserved to mean "to be populated during the collect() pass of linking"
+		ModuleUID: 0,
+	}
+	if typeUID != nil {
+		this.TypeUID = typeUID.val
+	} else {
+		// zero is reserved to mean "to be populated during the collect() pass of linking"
+		this.TypeUID = 0
+	}
+	return &this
 }

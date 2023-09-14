@@ -193,9 +193,12 @@ func (self *compiler) compileFile(ctx context.Context, file idl.File, loaded *sy
 		return nil, err
 	}
 
-	symbols.collect(module, self.Reporter)
+	collected, err := symbols.collect(*module, self.Reporter)
+	if err != nil {
+		return nil, err
+	}
 
-	return module, nil
+	return collected, nil
 }
 
 func (self *compiler) targetURI(ctx context.Context, target string) string {
