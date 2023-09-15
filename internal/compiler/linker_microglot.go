@@ -64,6 +64,8 @@ func newLocalSymbols(gsymbols *globalSymbolTable, URI string) *localSymbolTable 
 	symbols := localSymbolTable{}
 	symbols.types = make(map[localSymbolName]proto.TypeReference)
 
+	// TODO 2023.09.14: bring in attributes and inputs!
+
 	for _, internalTypeName := range []string{
 		"Bool",
 		"Text",
