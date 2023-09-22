@@ -138,29 +138,30 @@ func TestLinker(t *testing.T) {
 				files = append(files, fs.NewFileString(f.uri, f.contents, idl.FileKindMicroglot))
 			}
 
-			parsed_descriptors := make([]*proto.Module, 0, len(testCase.files))
+			parsedDescriptors := make([]*proto.Module, 0, len(testCase.files))
 			for i, f := range files {
 				d, err := subcompilers[f.Kind(ctx)].CompileFile(ctx, r, f, false, false)
 				require.NoError(t, err, testCase.files[i].uri, r.Reported())
-				parsed_descriptors = append(parsed_descriptors, d)
+				parsedDescriptors = append(parsedDescriptors, d)
 			}
 
 			symbols := globalSymbolTable{}
-			collected_descriptors := make([]*proto.Module, 0, len(parsed_descriptors))
-			for i, parsed_descriptor := range parsed_descriptors {
-				d, err := symbols.collect(*parsed_descriptor, r)
+			completedDescriptors := make([]*proto.Module, 0, len(parsedDescriptors))
+			for i, parsedDescriptor := range parsedDescriptors {
+				completedDescriptor := completeUIDs(*parsedDescriptor)
+				err := symbols.collect(*completedDescriptor, r)
 				if testCase.files[i].expectCollectError {
 					require.Error(t, err, testCase.files[i].uri)
 				} else {
 					require.NoError(t, err, testCase.files[i].uri, r.Reported())
 				}
-				collected_descriptors = append(collected_descriptors, d)
+				completedDescriptors = append(completedDescriptors, completedDescriptor)
 			}
 
 			if len(r.Reported()) == 0 {
-				for i, collected_descriptor := range collected_descriptors {
-					if collected_descriptor != nil {
-						_, err := link(*collected_descriptor, &symbols, r)
+				for i, completedDescriptor := range completedDescriptors {
+					if completedDescriptor != nil {
+						_, err := link(*completedDescriptor, &symbols, r)
 						if testCase.files[i].expectLinkError {
 							require.Error(t, err, testCase.files[i].uri)
 						} else {

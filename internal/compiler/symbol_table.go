@@ -1,9 +1,6 @@
 package compiler
 
 import (
-	"bytes"
-	"crypto/sha256"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"sync"
@@ -21,9 +18,8 @@ type globalSymbolTable struct {
 }
 
 // globalSymbolTable.collect() populates a symbol table with the symbols in a given descriptor
-// as a side-effect, it generates any missing TypeUID values in the descriptor!
 // reports: name collisions, UID collisions
-func (s *globalSymbolTable) collect(parsed proto.Module, r exc.Reporter) (*proto.Module, error) {
+func (s *globalSymbolTable) collect(parsed proto.Module, r exc.Reporter) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -44,7 +40,7 @@ func (s *globalSymbolTable) collect(parsed proto.Module, r exc.Reporter) (*proto
 			URI: parsed.URI,
 			// TODO 2023.09.14: getting Location here would be nice!
 		}, exc.CodeUnknownFatal, fmt.Sprintf("symbols for '%s' have already been collected (????)", parsed.URI)))
-		return nil, errors.New("collect error")
+		return errors.New("collect error")
 	}
 	for moduleURI, moduleUID := range s.modules {
 		if moduleUID == parsed.UID {
@@ -53,7 +49,7 @@ func (s *globalSymbolTable) collect(parsed proto.Module, r exc.Reporter) (*proto
 				URI: parsed.URI,
 				// TODO 2023.09.14: getting Location here would be nice!
 			}, exc.CodeUnknownFatal, fmt.Sprintf("module UID '%d' is already in-use by '%s'", parsed.UID, moduleURI)))
-			return nil, errors.New("collect error")
+			return errors.New("collect error")
 		}
 	}
 	s.modules[parsed.URI] = parsed.UID
@@ -104,45 +100,13 @@ func (s *globalSymbolTable) collect(parsed proto.Module, r exc.Reporter) (*proto
 	}
 
 	if len(r.Reported()) > 0 {
-		return nil, errors.New("collect error")
+		return errors.New("collect error")
 	}
-	return &parsed, nil
-}
-
-func newUID(parentUID uint64, name string) uint64 {
-	hasher := sha256.New()
-	err := binary.Write(hasher, binary.LittleEndian, parentUID)
-	if err != nil {
-		// IIUC this can only happen if something is *really* wrong (OOM?)
-		panic(err)
-	}
-	hasher.Write([]byte(name))
-	var typeUID uint64
-	err = binary.Read(bytes.NewReader(hasher.Sum(nil)), binary.LittleEndian, &typeUID)
-	if err != nil {
-		// IIUC this can only happen if something is *really* wrong (OOM?)
-		panic(err)
-	}
-	return typeUID
+	return nil
 }
 
 func (s *globalSymbolTable) addType(r exc.Reporter, moduleURI string, name string, typeReference *proto.TypeReference, typeUIDs map[uint64]string) {
 	// Assumes we're already holding s.lock!
-
-	moduleUID := s.modules[moduleURI]
-
-	if typeReference.ModuleUID == 0 {
-		typeReference.ModuleUID = moduleUID
-	} else {
-		// TODO 2023.09.14: replace CodeUnknownFatal with something more meaningful
-		r.Report(exc.New(exc.Location{
-			URI: moduleURI,
-			// TODO 2023.09.14: getting Location here would be nice!
-		}, exc.CodeUnknownFatal, fmt.Sprintf("the module UID for %s is already set, which shouldn't happen", name)))
-	}
-	if typeReference.TypeUID == 0 {
-		typeReference.TypeUID = newUID(moduleUID, name)
-	}
 
 	if _, ok := typeUIDs[typeReference.TypeUID]; ok {
 		// TODO 2023.09.14: replace CodeUnknownFatal with something more meaningful
@@ -167,33 +131,6 @@ func (s *globalSymbolTable) addType(r exc.Reporter, moduleURI string, name strin
 func (s *globalSymbolTable) addAttribute(r exc.Reporter, moduleURI string, typeName string, name string, attributeReference *proto.AttributeReference, attributeUIDs map[uint64]string) {
 	// Assumes we're already holding s.lock!
 
-	moduleUID := s.modules[moduleURI]
-	typeUID := s.types[moduleURI][typeName].TypeUID
-
-	if attributeReference.ModuleUID == 0 {
-		attributeReference.ModuleUID = moduleUID
-	} else {
-		// TODO 2023.09.14: replace CodeUnknownFatal with something more meaningful
-		r.Report(exc.New(exc.Location{
-			URI: moduleURI,
-			// TODO 2023.09.14: getting Location here would be nice!
-		}, exc.CodeUnknownFatal, fmt.Sprintf("the module UID for %s is already set, which shouldn't happen", name)))
-	}
-
-	if attributeReference.TypeUID == 0 {
-		attributeReference.TypeUID = typeUID
-	} else {
-		// TODO 2023.09.14: replace CodeUnknownFatal with something more meaningful
-		r.Report(exc.New(exc.Location{
-			URI: moduleURI,
-			// TODO 2023.09.14: getting Location here would be nice!
-		}, exc.CodeUnknownFatal, fmt.Sprintf("the type UID for %s is already set, which shouldn't happen", name)))
-	}
-
-	if attributeReference.AttributeUID == 0 {
-		attributeReference.AttributeUID = newUID(typeUID, name)
-	}
-
 	if _, ok := attributeUIDs[attributeReference.AttributeUID]; ok {
 		// TODO 2023.09.14: replace CodeUnknownFatal with something more meaningful
 		r.Report(exc.New(exc.Location{
@@ -216,44 +153,6 @@ func (s *globalSymbolTable) addAttribute(r exc.Reporter, moduleURI string, typeN
 
 func (s *globalSymbolTable) addSDKMethodInput(r exc.Reporter, moduleURI string, typeName string, sdkMethodName string, name string, sdkInputReference *proto.SDKInputReference, sdkMethodInputUIDs map[uint64]string) {
 	// Assumes we're already holding s.lock!
-
-	moduleUID := s.modules[moduleURI]
-	typeUID := s.types[moduleURI][typeName].TypeUID
-	attributeUID := s.attributes[moduleURI][typeName][sdkMethodName].AttributeUID
-
-	if sdkInputReference.ModuleUID == 0 {
-		sdkInputReference.ModuleUID = moduleUID
-	} else {
-		// TODO 2023.09.14: replace CodeUnknownFatal with something more meaningful
-		r.Report(exc.New(exc.Location{
-			URI: moduleURI,
-			// TODO 2023.09.14: getting Location here would be nice!
-		}, exc.CodeUnknownFatal, fmt.Sprintf("the module UID for %s is already set, which shouldn't happen", name)))
-	}
-
-	if sdkInputReference.TypeUID == 0 {
-		sdkInputReference.TypeUID = typeUID
-	} else {
-		// TODO 2023.09.14: replace CodeUnknownFatal with something more meaningful
-		r.Report(exc.New(exc.Location{
-			URI: moduleURI,
-			// TODO 2023.09.14: getting Location here would be nice!
-		}, exc.CodeUnknownFatal, fmt.Sprintf("the type UID for %s is already set, which shouldn't happen", name)))
-	}
-
-	if sdkInputReference.AttributeUID == 0 {
-		sdkInputReference.AttributeUID = attributeUID
-	} else {
-		// TODO 2023.09.14: replace CodeUnknownFatal with something more meaningful
-		r.Report(exc.New(exc.Location{
-			URI: moduleURI,
-			// TODO 2023.09.14: getting Location here would be nice!
-		}, exc.CodeUnknownFatal, fmt.Sprintf("the attribute UID for %s is already set, which shouldn't happen", name)))
-	}
-
-	if sdkInputReference.AttributeUID == 0 {
-		sdkInputReference.InputUID = newUID(attributeUID, name)
-	}
 
 	if _, ok := sdkMethodInputUIDs[sdkInputReference.AttributeUID]; ok {
 		// TODO 2023.09.14: replace CodeUnknownFatal with something more meaningful

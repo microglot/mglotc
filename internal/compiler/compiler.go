@@ -1,7 +1,11 @@
 package compiler
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/binary"
+	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -192,13 +196,14 @@ func (self *compiler) compileFile(ctx context.Context, file idl.File, loaded *sy
 	if err != nil {
 		return nil, err
 	}
+	completed := completeUIDs(*module)
 
-	collected, err := symbols.collect(*module, self.Reporter)
+	err = symbols.collect(*completed, self.Reporter)
 	if err != nil {
 		return nil, err
 	}
 
-	return collected, nil
+	return completed, nil
 }
 
 func (self *compiler) targetURI(ctx context.Context, target string) string {
@@ -235,4 +240,117 @@ func (self MultiException) Error() string {
 	}
 	b.WriteString(self[len(self)-1].Error())
 	return b.String()
+}
+
+func newUID(parentUID uint64, name string) uint64 {
+	hasher := sha256.New()
+	err := binary.Write(hasher, binary.LittleEndian, parentUID)
+	if err != nil {
+		// IIUC this can only happen if something is *really* wrong (OOM?)
+		panic(err)
+	}
+	hasher.Write([]byte(name))
+	var typeUID uint64
+	err = binary.Read(bytes.NewReader(hasher.Sum(nil)), binary.LittleEndian, &typeUID)
+	if err != nil {
+		// IIUC this can only happen if something is *really* wrong (OOM?)
+		panic(err)
+	}
+	return typeUID
+}
+
+func completeTypeReference(moduleUID uint64, name string, typeReference *proto.TypeReference) {
+	if typeReference.ModuleUID == 0 {
+		typeReference.ModuleUID = moduleUID
+	} else {
+		panic(fmt.Errorf("the module UID for %s is already set, which shouldn't happen", name))
+	}
+	if typeReference.TypeUID == 0 {
+		typeReference.TypeUID = newUID(moduleUID, name)
+	}
+}
+
+func completeAttributeReference(moduleUID uint64, typeUID uint64, name string, attributeReference *proto.AttributeReference) {
+	if attributeReference.ModuleUID == 0 {
+		attributeReference.ModuleUID = moduleUID
+	} else {
+		panic(fmt.Errorf("the module UID for %s is already set, which shouldn't happen", name))
+	}
+
+	if attributeReference.TypeUID == 0 {
+		attributeReference.TypeUID = typeUID
+	} else {
+		panic(fmt.Errorf("the type UID for %s is already set, which shouldn't happen", name))
+	}
+
+	if attributeReference.AttributeUID == 0 {
+		attributeReference.AttributeUID = newUID(typeUID, name)
+	}
+
+}
+
+func completeSDKInputReference(moduleUID uint64, typeUID uint64, attributeUID uint64, name string, sdkInputReference *proto.SDKInputReference) {
+	if sdkInputReference.ModuleUID == 0 {
+		sdkInputReference.ModuleUID = moduleUID
+	} else {
+		panic(fmt.Errorf("the module UID for %s is already set, which shouldn't happen", name))
+	}
+
+	if sdkInputReference.TypeUID == 0 {
+		sdkInputReference.TypeUID = typeUID
+	} else {
+		panic(fmt.Errorf("the type UID for %s is already set, which shouldn't happen", name))
+	}
+
+	if sdkInputReference.AttributeUID == 0 {
+		sdkInputReference.AttributeUID = attributeUID
+	} else {
+		panic(fmt.Errorf("the attribute UID for %s is already set, which shouldn't happen", name))
+	}
+
+	if sdkInputReference.AttributeUID == 0 {
+		sdkInputReference.InputUID = newUID(attributeUID, name)
+	}
+}
+
+// this completes the pre-linked descriptor by generating any missing TypeUID values in the descriptor!
+func completeUIDs(parsed proto.Module) *proto.Module {
+	for _, struct_ := range parsed.Structs {
+		completeTypeReference(parsed.UID, struct_.Name.Name, struct_.Reference)
+		for _, field := range struct_.Fields {
+			completeAttributeReference(parsed.UID, struct_.Reference.TypeUID, field.Name, field.Reference)
+		}
+		for _, union := range struct_.Unions {
+			completeAttributeReference(parsed.UID, struct_.Reference.TypeUID, union.Name, union.Reference)
+		}
+	}
+	for _, enum := range parsed.Enums {
+		completeTypeReference(parsed.UID, enum.Name, enum.Reference)
+		for _, enumerant := range enum.Enumerants {
+			completeAttributeReference(parsed.UID, enum.Reference.TypeUID, enumerant.Name, enumerant.Reference)
+		}
+	}
+	for _, api := range parsed.APIs {
+		completeTypeReference(parsed.UID, api.Name.Name, api.Reference)
+		for _, apiMethod := range api.Methods {
+			completeAttributeReference(parsed.UID, api.Reference.TypeUID, apiMethod.Name, apiMethod.Reference)
+		}
+	}
+	for _, sdk := range parsed.SDKs {
+		completeTypeReference(parsed.UID, sdk.Name.Name, sdk.Reference)
+		for _, sdkMethod := range sdk.Methods {
+			completeAttributeReference(parsed.UID, sdk.Reference.TypeUID, sdkMethod.Name, sdkMethod.Reference)
+			for _, sdkMethodInput := range sdkMethod.Input {
+				completeSDKInputReference(parsed.UID, sdk.Reference.TypeUID, sdkMethod.Reference.AttributeUID, sdkMethodInput.Name, sdkMethodInput.Reference)
+			}
+		}
+	}
+	for _, annotation := range parsed.Annotations {
+		completeTypeReference(parsed.UID, annotation.Name, annotation.Reference)
+	}
+	for _, constant := range parsed.Constants {
+		completeTypeReference(parsed.UID, constant.Name, constant.Reference)
+	}
+
+	return &parsed
 }

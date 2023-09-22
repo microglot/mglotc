@@ -445,13 +445,13 @@ func fromTypeName(typeName *astTypeName) *proto.TypeName {
 
 func fromUID(typeUID *astValueLiteralInt) *proto.TypeReference {
 	this := proto.TypeReference{
-		// zero is reserved to mean "to be populated during the collect() pass of linking"
+		// zero is reserved to mean "to be populated during the completeUIDs() pass"
 		ModuleUID: 0,
 	}
 	if typeUID != nil {
 		this.TypeUID = typeUID.val
 	} else {
-		// zero is reserved to mean "to be populated during the collect() pass of linking"
+		// zero is reserved to mean "to be populated during the completeUIDs() pass"
 		this.TypeUID = 0
 	}
 	return &this
