@@ -151,13 +151,26 @@ func (self *compiler) Compile(ctx context.Context, req *idl.CompileRequest) (*id
 	}
 
 	linked_modules := make([]*proto.Module, 0, len(modules))
-	for _, mod := range modules {
-		linked_module, err := link(*mod, &symbols, self.Reporter)
-		if err != nil {
-			return nil, err
-		}
+	linkResults := make(chan fileResult)
+	expectedLinkResults := len(modules)
 
-		linked_modules = append(linked_modules, linked_module)
+	for _, mod := range modules {
+		go func(mod proto.Module) {
+			linked_module, err := link(mod, &symbols, self.Reporter)
+			linkResults <- fileResult{linked_module, err}
+		}(*mod)
+	}
+
+	for x := 0; x < expectedLinkResults; x = x + 1 {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case result := <-linkResults:
+			if result.err != nil {
+				return nil, MultiException(self.Reporter.Reported())
+			}
+			linked_modules = append(linked_modules, result.module)
+		}
 	}
 
 	final := &idl.Image{}

@@ -42,7 +42,9 @@ func walkStruct(struct_ *proto.Struct, f func(interface{})) {
 func walkField(field *proto.Field, f func(interface{})) {
 	f(field)
 	f(field.Type)
-	walkValue(field.DefaultValue, f)
+	if field.DefaultValue != nil {
+		walkValue(field.DefaultValue, f)
+	}
 	for _, annotation := range field.AnnotationApplications {
 		walkAnnotationApplication(annotation, f)
 	}
