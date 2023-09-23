@@ -29,8 +29,12 @@ func (s *globalSymbolTable) collect(parsed proto.Module, r exc.Reporter) error {
 	if s.types == nil {
 		s.types = make(map[string]map[string]proto.TypeReference)
 	}
-
-	// TODO 2023.09.14: allocate attributes, inputs!
+	if s.attributes == nil {
+		s.attributes = make(map[string]map[string]map[string]proto.AttributeReference)
+	}
+	if s.inputs == nil {
+		s.inputs = make(map[string]map[string]map[string]map[string]proto.SDKInputReference)
+	}
 
 	if s.types[parsed.URI] == nil {
 		s.types[parsed.URI] = make(map[string]proto.TypeReference)
@@ -39,9 +43,30 @@ func (s *globalSymbolTable) collect(parsed proto.Module, r exc.Reporter) error {
 		r.Report(exc.New(exc.Location{
 			URI: parsed.URI,
 			// TODO 2023.09.14: getting Location here would be nice!
-		}, exc.CodeUnknownFatal, fmt.Sprintf("symbols for '%s' have already been collected (????)", parsed.URI)))
+		}, exc.CodeUnknownFatal, fmt.Sprintf("types for '%s' have already been collected (????)", parsed.URI)))
 		return errors.New("collect error")
 	}
+	if s.attributes[parsed.URI] == nil {
+		s.attributes[parsed.URI] = make(map[string]map[string]proto.AttributeReference)
+	} else {
+		// TODO 2023.09.14: replace CodeUnknownFatal with something more meaningful
+		r.Report(exc.New(exc.Location{
+			URI: parsed.URI,
+			// TODO 2023.09.14: getting Location here would be nice!
+		}, exc.CodeUnknownFatal, fmt.Sprintf("attributes for '%s' have already been collected (????)", parsed.URI)))
+		return errors.New("collect error")
+	}
+	if s.inputs[parsed.URI] == nil {
+		s.inputs[parsed.URI] = make(map[string]map[string]map[string]proto.SDKInputReference)
+	} else {
+		// TODO 2023.09.14: replace CodeUnknownFatal with something more meaningful
+		r.Report(exc.New(exc.Location{
+			URI: parsed.URI,
+			// TODO 2023.09.14: getting Location here would be nice!
+		}, exc.CodeUnknownFatal, fmt.Sprintf("inputs for '%s' have already been collected (????)", parsed.URI)))
+		return errors.New("collect error")
+	}
+
 	for moduleURI, moduleUID := range s.modules {
 		if moduleUID == parsed.UID {
 			// TODO 2023.09.14: replace CodeUnknownFatal with something more meaningful
@@ -140,6 +165,10 @@ func (s *globalSymbolTable) addAttribute(r exc.Reporter, moduleURI string, typeN
 	}
 	attributeUIDs[attributeReference.AttributeUID] = typeName
 
+	if s.attributes[moduleURI][typeName] == nil {
+		s.attributes[moduleURI][typeName] = make(map[string]proto.AttributeReference)
+	}
+
 	if _, ok := s.attributes[moduleURI][typeName][name]; ok {
 		// TODO 2023.09.12: replace CodeUnknownFatal with something more meaningful
 		r.Report(exc.New(exc.Location{
@@ -163,7 +192,14 @@ func (s *globalSymbolTable) addSDKMethodInput(r exc.Reporter, moduleURI string, 
 	}
 	sdkMethodInputUIDs[sdkInputReference.AttributeUID] = typeName
 
-	if _, ok := s.attributes[moduleURI][typeName][name]; ok {
+	if s.inputs[moduleURI][typeName] == nil {
+		s.inputs[moduleURI][typeName] = make(map[string]map[string]proto.SDKInputReference)
+	}
+	if s.inputs[moduleURI][typeName][sdkMethodName] == nil {
+		s.inputs[moduleURI][typeName][sdkMethodName] = make(map[string]proto.SDKInputReference)
+	}
+
+	if _, ok := s.inputs[moduleURI][typeName][sdkMethodName][name]; ok {
 		// TODO 2023.09.12: replace CodeUnknownFatal with something more meaningful
 		r.Report(exc.New(exc.Location{
 			URI: moduleURI,

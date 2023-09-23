@@ -64,7 +64,7 @@ func fromStatementImport(statementImport *astStatementImport) *proto.Import {
 
 func fromStatementAnnotation(statementAnnotation *astStatementAnnotation) *proto.Annotation {
 	return &proto.Annotation{
-		Reference:              fromUID(statementAnnotation.uid),
+		Reference:              fromTypeUID(statementAnnotation.uid),
 		Name:                   statementAnnotation.identifier.Value,
 		Scopes:                 fromAnnotationScopes(statementAnnotation.annotationScopes),
 		Type:                   fromTypeSpecifier(&statementAnnotation.typeSpecifier),
@@ -73,18 +73,20 @@ func fromStatementAnnotation(statementAnnotation *astStatementAnnotation) *proto
 }
 
 func fromStatementConst(statementConst *astStatementConst) *proto.Constant {
-	return &proto.Constant{
-		Reference:              fromUID(statementConst.meta.uid),
+	x := proto.Constant{
+		Reference:              fromTypeUID(statementConst.meta.uid),
 		Name:                   statementConst.identifier.Value,
 		Type:                   fromTypeSpecifier(&statementConst.typeSpecifier),
+		Value:                  fromValue(&statementConst.value),
 		AnnotationApplications: fromAnnotationApplication(statementConst.meta.annotationApplication),
 		CommentBlock:           fromCommentBlock(statementConst.meta.comments),
 	}
+	return &x
 }
 
 func fromStatementEnum(statementEnum *astStatementEnum) *proto.Enum {
 	return &proto.Enum{
-		Reference:  fromUID(statementEnum.meta.uid),
+		Reference:  fromTypeUID(statementEnum.meta.uid),
 		Name:       statementEnum.identifier.Value,
 		Enumerants: mapFrom(statementEnum.enumerants, fromEnumerant),
 		// Reserved:
@@ -96,7 +98,7 @@ func fromStatementEnum(statementEnum *astStatementEnum) *proto.Enum {
 
 func fromStatementStruct(statementStruct *astStatementStruct) *proto.Struct {
 	this := proto.Struct{
-		Reference: fromUID(statementStruct.meta.uid),
+		Reference: fromTypeUID(statementStruct.meta.uid),
 		Name:      fromTypeName(&statementStruct.typeName),
 		Fields:    nil,
 		Unions:    nil,
@@ -125,7 +127,7 @@ func fromStatementAPI(statementAPI *astStatementAPI) *proto.API {
 	}
 
 	return &proto.API{
-		Reference: fromUID(statementAPI.meta.uid),
+		Reference: fromTypeUID(statementAPI.meta.uid),
 		Name:      fromTypeName(&statementAPI.typeName),
 		Methods:   mapFrom(statementAPI.methods, fromAPIMethod),
 		Extends:   extends,
@@ -143,7 +145,7 @@ func fromStatementSDK(statementSDK *astStatementSDK) *proto.SDK {
 	}
 
 	return &proto.SDK{
-		Reference: fromUID(statementSDK.meta.uid),
+		Reference: fromTypeUID(statementSDK.meta.uid),
 		Name:      fromTypeName(&statementSDK.typeName),
 		Methods:   mapFrom(statementSDK.methods, fromSDKMethod),
 		Extends:   extends,
@@ -156,7 +158,7 @@ func fromStatementSDK(statementSDK *astStatementSDK) *proto.SDK {
 
 func fromAPIMethod(apiMethod *astAPIMethod) *proto.APIMethod {
 	return &proto.APIMethod{
-		// Reference:
+		Reference:              fromAttributeUID(apiMethod.meta.uid),
 		Name:                   apiMethod.identifier.Value,
 		Input:                  fromTypeSpecifier(&apiMethod.methodInput.typeSpecifier),
 		Output:                 fromTypeSpecifier(&apiMethod.methodReturns.typeSpecifier),
@@ -167,7 +169,7 @@ func fromAPIMethod(apiMethod *astAPIMethod) *proto.APIMethod {
 
 func fromSDKMethod(sdkMethod *astSDKMethod) *proto.SDKMethod {
 	return &proto.SDKMethod{
-		// Reference:
+		Reference:              fromAttributeUID(sdkMethod.meta.uid),
 		Name:                   sdkMethod.identifier.Value,
 		Input:                  mapFrom(sdkMethod.methodInput.parameters, fromSDKMethodParameter),
 		Output:                 fromTypeSpecifier(&sdkMethod.methodReturns.typeSpecifier),
@@ -187,7 +189,7 @@ func fromSDKMethodParameter(sdkMethodParameter *astSDKMethodParameter) *proto.SD
 
 func fromField(field *astField) *proto.Field {
 	return &proto.Field{
-		// Reference:
+		Reference:    fromAttributeUID(field.meta.uid),
 		Name:         field.identifier.Value,
 		Type:         fromTypeSpecifier(&field.typeSpecifier),
 		DefaultValue: fromValue(&field.value),
@@ -199,7 +201,7 @@ func fromField(field *astField) *proto.Field {
 
 func fromUnion(union *astUnion) *proto.Union {
 	return &proto.Union{
-		// Reference:
+		Reference:              fromAttributeUID(union.meta.uid),
 		Name:                   union.identifier.Value,
 		CommentBlock:           fromCommentBlock(union.meta.comments),
 		AnnotationApplications: fromAnnotationApplication(union.meta.annotationApplication),
@@ -208,7 +210,7 @@ func fromUnion(union *astUnion) *proto.Union {
 
 func fromEnumerant(enumerant *astEnumerant) *proto.Enumerant {
 	return &proto.Enumerant{
-		// Reference:
+		Reference:              fromAttributeUID(enumerant.meta.uid),
 		Name:                   enumerant.identifier.Value,
 		CommentBlock:           fromCommentBlock(enumerant.meta.comments),
 		AnnotationApplications: fromAnnotationApplication(enumerant.meta.annotationApplication),
@@ -350,14 +352,14 @@ func fromValue(value *astValue) *proto.Value {
 	this := proto.Value{}
 
 	switch v := value.value.(type) {
-	case *astValueUnary:
+	case astValueUnary:
 		this.Kind = &proto.Value_Unary{
 			Unary: &proto.ValueUnary{
 				Operation: fromOperationUnary(&v.operator),
 				Value:     fromValue(&v.operand),
 			},
 		}
-	case *astValueBinary:
+	case astValueBinary:
 		this.Kind = &proto.Value_Binary{
 			Binary: &proto.ValueBinary{
 				Operation: fromOperationBinary(&v.operator),
@@ -365,56 +367,56 @@ func fromValue(value *astValue) *proto.Value {
 				Right:     fromValue(&v.rightOperand),
 			},
 		}
-	case *astValueLiteralBool:
+	case astValueLiteralBool:
 		this.Kind = &proto.Value_Bool{
 			Bool: &proto.ValueBool{
 				Value: v.val,
 				// Source:
 			},
 		}
-	case *astValueLiteralInt:
+	case astValueLiteralInt:
 		this.Kind = &proto.Value_Int32{
 			Int32: &proto.ValueInt32{
 				Value:  (int32)(v.val),
 				Source: v.token.Value,
 			},
 		}
-	case *astValueLiteralFloat:
+	case astValueLiteralFloat:
 		this.Kind = &proto.Value_Float64{
 			Float64: &proto.ValueFloat64{
 				Value:  v.val,
 				Source: v.token.Value,
 			},
 		}
-	case *astValueLiteralText:
+	case astValueLiteralText:
 		this.Kind = &proto.Value_Text{
 			Text: &proto.ValueText{
 				Value:  v.val.Value,
 				Source: v.val.Value,
 			},
 		}
-	case *astValueLiteralData:
+	case astValueLiteralData:
 		this.Kind = &proto.Value_Data{
 			Data: &proto.ValueData{
 				Value:  []byte(v.val.Value),
 				Source: v.val.Value,
 			},
 		}
-	case *astValueLiteralList:
+	case astValueLiteralList:
 		this.Kind = &proto.Value_List{
 			List: &proto.ValueList{
 				Elements: mapFrom(v.vals, fromValue),
 			},
 		}
-	case *astValueLiteralStruct:
+	case astValueLiteralStruct:
 		this.Kind = &proto.Value_Struct{
 			Struct: &proto.ValueStruct{
 				Fields: mapFrom(v.vals, fromLiteralStructPair),
 			},
 		}
-	case *astValueIdentifier:
+	case astValueIdentifier:
 		this.Kind = &proto.Value_Identifier{
-			Identifier: fromValueIdentifier(v),
+			Identifier: fromValueIdentifier(&v),
 		}
 	default:
 		return nil
@@ -443,7 +445,7 @@ func fromTypeName(typeName *astTypeName) *proto.TypeName {
 	}
 }
 
-func fromUID(typeUID *astValueLiteralInt) *proto.TypeReference {
+func fromTypeUID(typeUID *astValueLiteralInt) *proto.TypeReference {
 	this := proto.TypeReference{
 		// zero is reserved to mean "to be populated during the completeUIDs() pass"
 		ModuleUID: 0,
@@ -453,6 +455,37 @@ func fromUID(typeUID *astValueLiteralInt) *proto.TypeReference {
 	} else {
 		// zero is reserved to mean "to be populated during the completeUIDs() pass"
 		this.TypeUID = 0
+	}
+	return &this
+}
+
+func fromAttributeUID(attributeUID *astValueLiteralInt) *proto.AttributeReference {
+	this := proto.AttributeReference{
+		// zero is reserved to mean "to be populated during the completeUIDs() pass"
+		ModuleUID: 0,
+		TypeUID:   0,
+	}
+	if attributeUID != nil {
+		this.AttributeUID = attributeUID.val
+	} else {
+		// zero is reserved to mean "to be populated during the completeUIDs() pass"
+		this.AttributeUID = 0
+	}
+	return &this
+}
+
+func fromInputUID(inputUID *astValueLiteralInt) *proto.SDKInputReference {
+	this := proto.SDKInputReference{
+		// zero is reserved to mean "to be populated during the completeUIDs() pass"
+		ModuleUID:    0,
+		TypeUID:      0,
+		AttributeUID: 0,
+	}
+	if inputUID != nil {
+		this.InputUID = inputUID.val
+	} else {
+		// zero is reserved to mean "to be populated during the completeUIDs() pass"
+		this.InputUID = 0
 	}
 	return &this
 }

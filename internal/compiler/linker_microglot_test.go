@@ -40,6 +40,22 @@ func TestLinker(t *testing.T) {
 			},
 		},
 		{
+			name: "correctly linked type",
+			files: []struct {
+				uri                string
+				contents           string
+				expectCollectError bool
+				expectLinkError    bool
+			}{
+				{
+					uri:                "/test.mgdl",
+					contents:           "syntax = \"microglot0\"\nconst foo :Bool = true",
+					expectCollectError: false,
+					expectLinkError:    false,
+				},
+			},
+		},
+		{
 			name: "duplicate declaration",
 			files: []struct {
 				uri                string
@@ -49,7 +65,7 @@ func TestLinker(t *testing.T) {
 			}{
 				{
 					uri:                "/test.mgdl",
-					contents:           "syntax = \"microglot0\"\nconst foo :Boolean = true\nconst foo :String = \"asdf\"\n",
+					contents:           "syntax = \"microglot0\"\nconst foo :Bool = true\nconst foo :String = \"asdf\"\n",
 					expectCollectError: true,
 					expectLinkError:    false,
 				},
@@ -125,6 +141,70 @@ func TestLinker(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "correctly linked valueidentifier (type)",
+			files: []struct {
+				uri                string
+				contents           string
+				expectCollectError bool
+				expectLinkError    bool
+			}{
+				{
+					uri:                "/test.mgdl",
+					contents:           "syntax = \"microglot0\"\nconst x :Bool = true\nconst y :Bool = x",
+					expectCollectError: false,
+					expectLinkError:    false,
+				},
+			},
+		},
+		{
+			name: "unknown valueidentifier (type)",
+			files: []struct {
+				uri                string
+				contents           string
+				expectCollectError bool
+				expectLinkError    bool
+			}{
+				{
+					uri:                "/test.mgdl",
+					contents:           "syntax = \"microglot0\"\nconst y :Bool = x",
+					expectCollectError: false,
+					expectLinkError:    true,
+				},
+			},
+		},
+		{
+			name: "correctly linked valueidentifier (attribute)",
+			files: []struct {
+				uri                string
+				contents           string
+				expectCollectError bool
+				expectLinkError    bool
+			}{
+				{
+					uri:                "/test.mgdl",
+					contents:           "syntax = \"microglot0\"\nenum x { y }\nconst z :Bool = x.y",
+					expectCollectError: false,
+					expectLinkError:    false,
+				},
+			},
+		},
+		{
+			name: "unknown valueidentifier (attribute)",
+			files: []struct {
+				uri                string
+				contents           string
+				expectCollectError bool
+				expectLinkError    bool
+			}{
+				{
+					uri:                "/test.mgdl",
+					contents:           "syntax = \"microglot0\"\nenum x { y }\nconst z :Bool = x.a",
+					expectCollectError: false,
+					expectLinkError:    true,
+				},
+			},
+		},
 	}
 
 	subcompilers := DefaultSubCompilers()
@@ -158,16 +238,33 @@ func TestLinker(t *testing.T) {
 				completedDescriptors = append(completedDescriptors, completedDescriptor)
 			}
 
+			linkedDescriptors := make([]*proto.Module, 0, len(completedDescriptors))
 			if len(r.Reported()) == 0 {
 				for i, completedDescriptor := range completedDescriptors {
 					if completedDescriptor != nil {
-						_, err := link(*completedDescriptor, &symbols, r)
+						linkedDescriptor, err := link(*completedDescriptor, &symbols, r)
 						if testCase.files[i].expectLinkError {
 							require.Error(t, err, testCase.files[i].uri)
 						} else {
 							require.NoError(t, err, testCase.files[i].uri, r.Reported())
 						}
+						linkedDescriptors = append(linkedDescriptors, linkedDescriptor)
 					}
+				}
+			}
+
+			if len(r.Reported()) == 0 {
+				for i, linkedDescriptor := range linkedDescriptors {
+					walkModule(linkedDescriptor, func(node interface{}) {
+						switch n := node.(type) {
+						case *proto.TypeSpecifier:
+							require.NotNil(t, n.Reference, testCase.files[i].uri)
+							require.NotZero(t, *n, testCase.files[i].uri)
+						case *proto.ValueIdentifier:
+							require.NotNil(t, n.Reference, testCase.files[i].uri)
+							require.NotZero(t, *n, testCase.files[i].uri)
+						}
+					})
 				}
 			}
 		})
