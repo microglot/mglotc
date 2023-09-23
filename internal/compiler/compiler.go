@@ -263,6 +263,7 @@ func completeTypeReference(moduleUID uint64, name string, typeReference *proto.T
 	if typeReference.ModuleUID == 0 {
 		typeReference.ModuleUID = moduleUID
 	} else {
+		// TODO 2023.09.23: this may become a non-panic in future, but right now means a logic error
 		panic(fmt.Errorf("the module UID for %s is already set, which shouldn't happen", name))
 	}
 	if typeReference.TypeUID == 0 {
@@ -274,12 +275,14 @@ func completeAttributeReference(moduleUID uint64, typeUID uint64, name string, a
 	if attributeReference.ModuleUID == 0 {
 		attributeReference.ModuleUID = moduleUID
 	} else {
+		// TODO 2023.09.23: this may become a non-panic in future, but right now means a logic error
 		panic(fmt.Errorf("the module UID for %s is already set, which shouldn't happen", name))
 	}
 
 	if attributeReference.TypeUID == 0 {
 		attributeReference.TypeUID = typeUID
 	} else {
+		// TODO 2023.09.23: this may become a non-panic in future, but right now means a logic error
 		panic(fmt.Errorf("the type UID for %s is already set, which shouldn't happen", name))
 	}
 
@@ -293,18 +296,21 @@ func completeSDKInputReference(moduleUID uint64, typeUID uint64, attributeUID ui
 	if sdkInputReference.ModuleUID == 0 {
 		sdkInputReference.ModuleUID = moduleUID
 	} else {
+		// TODO 2023.09.23: this may become a non-panic in future, but right now means a logic error
 		panic(fmt.Errorf("the module UID for %s is already set, which shouldn't happen", name))
 	}
 
 	if sdkInputReference.TypeUID == 0 {
 		sdkInputReference.TypeUID = typeUID
 	} else {
+		// TODO 2023.09.23: this may become a non-panic in future, but right now means a logic error
 		panic(fmt.Errorf("the type UID for %s is already set, which shouldn't happen", name))
 	}
 
 	if sdkInputReference.AttributeUID == 0 {
 		sdkInputReference.AttributeUID = attributeUID
 	} else {
+		// TODO 2023.09.23: this may become a non-panic in future, but right now means a logic error
 		panic(fmt.Errorf("the attribute UID for %s is already set, which shouldn't happen", name))
 	}
 
