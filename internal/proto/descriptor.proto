@@ -182,7 +182,7 @@ message AnnotationApplication {
 }
 
 message Value {
-   oneof Kind { 
+   oneof Kind {
       ValueBool Bool                  = 2;
       ValueText Text                  = 3;
       ValueData Data                  = 4;
@@ -272,6 +272,10 @@ message ValueFloat64 {
 
 message ValueIdentifier { 
    repeated string Names = 2;
+   oneof Reference {
+      TypeReference Type = 3;
+      AttributeReference Attribute = 4;
+   }
 } 
 
 message ValueList { 
