@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"gopkg.microglot.org/compiler.go/internal/compiler/microglot"
 	"gopkg.microglot.org/compiler.go/internal/exc"
 	"gopkg.microglot.org/compiler.go/internal/idl"
 	"gopkg.microglot.org/compiler.go/internal/proto"
@@ -13,8 +14,8 @@ import (
 type SubCompilerMicroglot struct{}
 
 func (self *SubCompilerMicroglot) CompileFile(ctx context.Context, r exc.Reporter, file idl.File, dumpTokens bool, dumpTree bool) (*proto.Module, error) {
-	lexer := NewLexerMicroglot(r)
-	parser := NewParserMicroglot(r)
+	lexer := microglot.NewLexerMicroglot(r)
+	parser := microglot.NewParserMicroglot(r)
 	lf, err := lexer.Lex(ctx, file)
 	if err != nil {
 		return nil, err
@@ -39,7 +40,7 @@ func (self *SubCompilerMicroglot) CompileFile(ctx context.Context, r exc.Reporte
 	if err != nil {
 		return nil, err
 	}
-	ast := p.parseModule()
+	ast := p.ParseModule()
 	if ast == nil {
 		return nil, errors.New("parse failure")
 	}
@@ -47,7 +48,7 @@ func (self *SubCompilerMicroglot) CompileFile(ctx context.Context, r exc.Reporte
 		fmt.Println(ast)
 	}
 
-	module, err := fromModule(ast)
+	module, err := microglot.FromModule(ast)
 	if err != nil {
 		return nil, err
 	}

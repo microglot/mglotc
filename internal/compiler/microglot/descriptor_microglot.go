@@ -1,4 +1,4 @@
-package compiler
+package microglot
 
 import (
 	"errors"
@@ -19,7 +19,7 @@ func mapFrom[F any, T any](in []F, f func(*F) T) []T {
 	return nil
 }
 
-func fromModule(module *astModule) (*proto.Module, error) {
+func FromModule(module *astModule) (*proto.Module, error) {
 	this := proto.Module{
 		URI: module.URI,
 	}
