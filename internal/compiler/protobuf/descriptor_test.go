@@ -27,7 +27,7 @@ func TestDescriptor(t *testing.T) {
 		},
 		{
 			name:  "message -> struct",
-			input: "syntax = \"proto3\";\nmessage Foo {}\n",
+			input: "syntax = \"proto3\";\nmessage Foo { string X = 1; }\n",
 			expected: &proto.Module{
 				UID: 1449310910991872227,
 				Structs: []*proto.Struct{
@@ -36,13 +36,27 @@ func TestDescriptor(t *testing.T) {
 							Name: "Foo",
 						},
 						Reference: &proto.TypeReference{},
+						Fields: []*proto.Field{
+							&proto.Field{
+								Reference: &proto.AttributeReference{
+									AttributeUID: 1,
+								},
+								Name: "X",
+								Type: &proto.TypeSpecifier{
+									Qualifier: "",
+									Name: &proto.TypeName{
+										Name: "Text",
+									},
+								},
+							},
+						},
 					},
 				},
 			},
 		},
 		{
 			name:  "nested message -> struct",
-			input: "syntax = \"proto3\";\nmessage Foo { message Bar { message Baz {} } }\n",
+			input: "syntax = \"proto3\";\nmessage Foo { message Bar { message Baz { pkg.Barney X = 1; } } }\n",
 			expected: &proto.Module{
 				UID: 1449310910991872227,
 				Structs: []*proto.Struct{
@@ -63,6 +77,20 @@ func TestDescriptor(t *testing.T) {
 							Name: "Foo_Bar_Baz",
 						},
 						Reference: &proto.TypeReference{},
+						Fields: []*proto.Field{
+							&proto.Field{
+								Reference: &proto.AttributeReference{
+									AttributeUID: 1,
+								},
+								Name: "X",
+								Type: &proto.TypeSpecifier{
+									Qualifier: "pkg",
+									Name: &proto.TypeName{
+										Name: "Barney",
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -76,6 +104,14 @@ func TestDescriptor(t *testing.T) {
 					&proto.Enum{
 						Name:      "Foo",
 						Reference: &proto.TypeReference{},
+						Enumerants: []*proto.Enumerant{
+							&proto.Enumerant{
+								Reference: &proto.AttributeReference{
+									AttributeUID: 0,
+								},
+								Name: "X",
+							},
+						},
 					},
 				},
 			},
@@ -103,6 +139,47 @@ func TestDescriptor(t *testing.T) {
 					&proto.Enum{
 						Name:      "Foo_Bar_Baz",
 						Reference: &proto.TypeReference{},
+						Enumerants: []*proto.Enumerant{
+							&proto.Enumerant{
+								Reference: &proto.AttributeReference{
+									AttributeUID: 0,
+								},
+								Name: "X",
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:  "service -> api",
+			input: "syntax = \"proto3\";service Foo { rpc Bar(Baz) returns (Barney); }",
+			expected: &proto.Module{
+				UID: 1449310910991872227,
+				APIs: []*proto.API{
+					&proto.API{
+						Reference: &proto.TypeReference{},
+						Name: &proto.TypeName{
+							Name: "Foo",
+						},
+						Methods: []*proto.APIMethod{
+							&proto.APIMethod{
+								Reference: &proto.AttributeReference{},
+								Name:      "Bar",
+								Input: &proto.TypeSpecifier{
+									Qualifier: "",
+									Name: &proto.TypeName{
+										Name: "Baz",
+									},
+								},
+								Output: &proto.TypeSpecifier{
+									Qualifier: "",
+									Name: &proto.TypeName{
+										Name: "Barney",
+									},
+								},
+							},
+						},
 					},
 				},
 			},
