@@ -132,7 +132,23 @@ func fromDescriptorProto(descriptor *descriptorpb.DescriptorProto) (*proto.Struc
 		return nil, err
 	}
 
+	var unions []*proto.Union
+	for _, oneofDescriptor := range descriptor.OneofDecl {
+		unions = append(unions, &proto.Union{
+			Reference: &proto.AttributeReference{
+				// ModuleUID:
+				// TypeUID:
+				// AttributeUID:
+			},
+			Name: *oneofDescriptor.Name,
+			// CommentBlock:
+			// AnnotationApplications:
+		})
+	}
+
 	// TODO 2023.10.10: convert Options
+
+	// TODO 2023.10.29: deal with Proto3Optional
 
 	return &proto.Struct{
 		Reference: &proto.TypeReference{},
@@ -141,7 +157,7 @@ func fromDescriptorProto(descriptor *descriptorpb.DescriptorProto) (*proto.Struc
 			Parameters: nil,
 		},
 		Fields: fields,
-		// Unions:
+		Unions: unions,
 		// Reserved:
 		// CommentBlock:
 		// AnnotationsApplications:
