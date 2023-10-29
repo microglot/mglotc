@@ -181,9 +181,11 @@ func fromSDKMethod(sdkMethod *astSDKMethod) *proto.SDKMethod {
 
 func fromSDKMethodParameter(sdkMethodParameter *astSDKMethodParameter) *proto.SDKMethodInput {
 	return &proto.SDKMethodInput{
-		// Reference:
-		Name: sdkMethodParameter.identifier.Value,
-		Type: fromTypeSpecifier(&sdkMethodParameter.typeSpecifier),
+		// TODO 2023.10.29: the ebnf and ast don't actually allow setting the InputUID,
+		// which is different from every other kind of UID. Is this intentional?
+		Reference: fromInputUID(nil),
+		Name:      sdkMethodParameter.identifier.Value,
+		Type:      fromTypeSpecifier(&sdkMethodParameter.typeSpecifier),
 	}
 }
 
@@ -224,12 +226,16 @@ func fromTypeSpecifier(typeSpecifier *astTypeSpecifier) *proto.TypeSpecifier {
 	}
 
 	return &proto.TypeSpecifier{
-		// Reference:
-		Qualifier: qualifier,
-		Name:      fromTypeName(&typeSpecifier.typeName),
-		// IsList:
-		// IsMap:
-		// HasPresence:
+		Reference: &proto.TypeSpecifier_Forward{
+			Forward: &proto.ForwardReference{
+				Reference: &proto.ForwardReference_Microglot{
+					Microglot: &proto.MicroglotForwardReference{
+						Qualifier: qualifier,
+						Name:      fromTypeName(&typeSpecifier.typeName),
+					},
+				},
+			},
+		},
 	}
 }
 

@@ -40,7 +40,7 @@ func (s *globalSymbolTable) collect(parsed proto.Module, r exc.Reporter) error {
 		s.types[parsed.URI] = make(map[string]proto.TypeReference)
 	} else {
 		// TODO 2023.09.14: replace CodeUnknownFatal with something more meaningful
-		r.Report(exc.New(exc.Location{
+		_ = r.Report(exc.New(exc.Location{
 			URI: parsed.URI,
 			// TODO 2023.09.14: getting Location here would be nice!
 		}, exc.CodeUnknownFatal, fmt.Sprintf("types for '%s' have already been collected (????)", parsed.URI)))
@@ -50,7 +50,7 @@ func (s *globalSymbolTable) collect(parsed proto.Module, r exc.Reporter) error {
 		s.attributes[parsed.URI] = make(map[string]map[string]proto.AttributeReference)
 	} else {
 		// TODO 2023.09.14: replace CodeUnknownFatal with something more meaningful
-		r.Report(exc.New(exc.Location{
+		_ = r.Report(exc.New(exc.Location{
 			URI: parsed.URI,
 			// TODO 2023.09.14: getting Location here would be nice!
 		}, exc.CodeUnknownFatal, fmt.Sprintf("attributes for '%s' have already been collected (????)", parsed.URI)))
@@ -60,7 +60,7 @@ func (s *globalSymbolTable) collect(parsed proto.Module, r exc.Reporter) error {
 		s.inputs[parsed.URI] = make(map[string]map[string]map[string]proto.SDKInputReference)
 	} else {
 		// TODO 2023.09.14: replace CodeUnknownFatal with something more meaningful
-		r.Report(exc.New(exc.Location{
+		_ = r.Report(exc.New(exc.Location{
 			URI: parsed.URI,
 			// TODO 2023.09.14: getting Location here would be nice!
 		}, exc.CodeUnknownFatal, fmt.Sprintf("inputs for '%s' have already been collected (????)", parsed.URI)))
@@ -70,7 +70,7 @@ func (s *globalSymbolTable) collect(parsed proto.Module, r exc.Reporter) error {
 	for moduleURI, moduleUID := range s.modules {
 		if moduleUID == parsed.UID {
 			// TODO 2023.09.14: replace CodeUnknownFatal with something more meaningful
-			r.Report(exc.New(exc.Location{
+			_ = r.Report(exc.New(exc.Location{
 				URI: parsed.URI,
 				// TODO 2023.09.14: getting Location here would be nice!
 			}, exc.CodeUnknownFatal, fmt.Sprintf("module UID '%d' is already in-use by '%s'", parsed.UID, moduleURI)))
@@ -135,7 +135,7 @@ func (s *globalSymbolTable) addType(r exc.Reporter, moduleURI string, name strin
 
 	if _, ok := typeUIDs[typeReference.TypeUID]; ok {
 		// TODO 2023.09.14: replace CodeUnknownFatal with something more meaningful
-		r.Report(exc.New(exc.Location{
+		_ = r.Report(exc.New(exc.Location{
 			URI: moduleURI,
 			// TODO 2023.09.14: getting Location here would be nice!
 		}, exc.CodeUnknownFatal, fmt.Sprintf("there is already a declaration with the uid '%d' in '%s'", typeReference.TypeUID, typeUIDs[typeReference.TypeUID])))
@@ -144,7 +144,7 @@ func (s *globalSymbolTable) addType(r exc.Reporter, moduleURI string, name strin
 
 	if _, ok := s.types[moduleURI][name]; ok {
 		// TODO 2023.09.12: replace CodeUnknownFatal with something more meaningful
-		r.Report(exc.New(exc.Location{
+		_ = r.Report(exc.New(exc.Location{
 			URI: moduleURI,
 			// TODO 2023.09.12: getting Location here would be nice!
 		}, exc.CodeUnknownFatal, fmt.Sprintf("there is already a declaration of '%s' in '%s'", name, moduleURI)))
@@ -158,7 +158,7 @@ func (s *globalSymbolTable) addAttribute(r exc.Reporter, moduleURI string, typeN
 
 	if _, ok := attributeUIDs[attributeReference.AttributeUID]; ok {
 		// TODO 2023.09.14: replace CodeUnknownFatal with something more meaningful
-		r.Report(exc.New(exc.Location{
+		_ = r.Report(exc.New(exc.Location{
 			URI: moduleURI,
 			// TODO 2023.09.14: getting Location here would be nice!
 		}, exc.CodeUnknownFatal, fmt.Sprintf("there is already a declaration with the uid '%d' in '%s'", attributeReference.AttributeUID, attributeUIDs[attributeReference.AttributeUID])))
@@ -171,7 +171,7 @@ func (s *globalSymbolTable) addAttribute(r exc.Reporter, moduleURI string, typeN
 
 	if _, ok := s.attributes[moduleURI][typeName][name]; ok {
 		// TODO 2023.09.12: replace CodeUnknownFatal with something more meaningful
-		r.Report(exc.New(exc.Location{
+		_ = r.Report(exc.New(exc.Location{
 			URI: moduleURI,
 			// TODO 2023.09.12: getting Location here would be nice!
 		}, exc.CodeUnknownFatal, fmt.Sprintf("there is already a declaration of '%s' in '%s'", name, typeName)))
@@ -185,7 +185,7 @@ func (s *globalSymbolTable) addSDKMethodInput(r exc.Reporter, moduleURI string, 
 
 	if _, ok := sdkMethodInputUIDs[sdkInputReference.AttributeUID]; ok {
 		// TODO 2023.09.14: replace CodeUnknownFatal with something more meaningful
-		r.Report(exc.New(exc.Location{
+		_ = r.Report(exc.New(exc.Location{
 			URI: moduleURI,
 			// TODO 2023.09.14: getting Location here would be nice!
 		}, exc.CodeUnknownFatal, fmt.Sprintf("there is already a declaration with the uid '%d' in '%s'", sdkInputReference.AttributeUID, sdkMethodInputUIDs[sdkInputReference.AttributeUID])))
@@ -201,7 +201,7 @@ func (s *globalSymbolTable) addSDKMethodInput(r exc.Reporter, moduleURI string, 
 
 	if _, ok := s.inputs[moduleURI][typeName][sdkMethodName][name]; ok {
 		// TODO 2023.09.12: replace CodeUnknownFatal with something more meaningful
-		r.Report(exc.New(exc.Location{
+		_ = r.Report(exc.New(exc.Location{
 			URI: moduleURI,
 			// TODO 2023.09.12: getting Location here would be nice!
 		}, exc.CodeUnknownFatal, fmt.Sprintf("there is already a declaration of '%s' in '%s'", name, typeName)))

@@ -43,9 +43,12 @@ func TestDescriptor(t *testing.T) {
 								},
 								Name: "X",
 								Type: &proto.TypeSpecifier{
-									Qualifier: "",
-									Name: &proto.TypeName{
-										Name: "Text",
+									Reference: &proto.TypeSpecifier_Forward{
+										Forward: &proto.ForwardReference{
+											Reference: &proto.ForwardReference_Protobuf{
+												Protobuf: "Text",
+											},
+										},
 									},
 								},
 							},
@@ -84,9 +87,12 @@ func TestDescriptor(t *testing.T) {
 								},
 								Name: "X",
 								Type: &proto.TypeSpecifier{
-									Qualifier: "pkg",
-									Name: &proto.TypeName{
-										Name: "Barney",
+									Reference: &proto.TypeSpecifier_Forward{
+										Forward: &proto.ForwardReference{
+											Reference: &proto.ForwardReference_Protobuf{
+												Protobuf: "pkg.Barney",
+											},
+										},
 									},
 								},
 							},
@@ -167,15 +173,21 @@ func TestDescriptor(t *testing.T) {
 								Reference: &proto.AttributeReference{},
 								Name:      "Bar",
 								Input: &proto.TypeSpecifier{
-									Qualifier: "",
-									Name: &proto.TypeName{
-										Name: "Baz",
+									Reference: &proto.TypeSpecifier_Forward{
+										Forward: &proto.ForwardReference{
+											Reference: &proto.ForwardReference_Protobuf{
+												Protobuf: "Baz",
+											},
+										},
 									},
 								},
 								Output: &proto.TypeSpecifier{
-									Qualifier: "",
-									Name: &proto.TypeName{
-										Name: "Barney",
+									Reference: &proto.TypeSpecifier_Forward{
+										Forward: &proto.ForwardReference{
+											Reference: &proto.ForwardReference_Protobuf{
+												Protobuf: "Barney",
+											},
+										},
 									},
 								},
 							},
@@ -193,7 +205,7 @@ func TestDescriptor(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			h := reporter.NewHandler(reporter.NewReporter(
 				func(err reporter.ErrorWithPos) error { return nil },
-				func(err reporter.ErrorWithPos) { return },
+				func(err reporter.ErrorWithPos) {},
 			))
 			ast, err := parser.Parse("", strings.NewReader(testCase.input), h)
 			require.Nil(t, err)

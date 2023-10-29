@@ -145,8 +145,14 @@ func walkAnnotation(annotation *proto.Annotation, f func(interface{})) {
 
 func walkTypeSpecifier(typeSpecifier *proto.TypeSpecifier, f func(interface{})) {
 	f(typeSpecifier)
-	for _, parameter := range typeSpecifier.Name.Parameters {
-		walkTypeSpecifier(parameter, f)
+	switch r := typeSpecifier.Reference.(type) {
+	case *proto.TypeSpecifier_Forward:
+		switch kind := r.Forward.Reference.(type) {
+		case *proto.ForwardReference_Microglot:
+			for _, parameter := range kind.Microglot.Name.Parameters {
+				walkTypeSpecifier(parameter, f)
+			}
+		}
 	}
 }
 

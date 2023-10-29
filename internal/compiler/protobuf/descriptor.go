@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"errors"
-	"strings"
 
 	"google.golang.org/protobuf/types/descriptorpb"
 
@@ -22,8 +21,8 @@ func mapFrom[F any, T any](in []*F, f func(*F) (T, error)) ([]T, error) {
 				return nil, err
 			}
 			out = append(out, outElement)
-			return out, nil
 		}
+		return out, nil
 	}
 	return nil, nil
 }
@@ -153,10 +152,9 @@ func fromDescriptorProto(descriptor *descriptorpb.DescriptorProto) (*proto.Struc
 }
 
 func fromFieldDescriptorProto(fieldDescriptor *descriptorpb.FieldDescriptorProto) (*proto.Field, error) {
-	qualifier := ""
 	typeName := ""
 	if fieldDescriptor.Type == nil || *fieldDescriptor.Type == descriptorpb.FieldDescriptorProto_TYPE_GROUP || *fieldDescriptor.Type == descriptorpb.FieldDescriptorProto_TYPE_MESSAGE || *fieldDescriptor.Type == descriptorpb.FieldDescriptorProto_TYPE_ENUM {
-		qualifier, typeName = fromTypeString(*fieldDescriptor.TypeName)
+		typeName = *fieldDescriptor.TypeName
 	} else {
 		switch *fieldDescriptor.Type {
 		case descriptorpb.FieldDescriptorProto_TYPE_DOUBLE:
@@ -208,15 +206,13 @@ func fromFieldDescriptorProto(fieldDescriptor *descriptorpb.FieldDescriptorProto
 		},
 		Name: *fieldDescriptor.Name,
 		Type: &proto.TypeSpecifier{
-			Reference: nil,
-			Qualifier: qualifier,
-			Name: &proto.TypeName{
-				Name:       typeName,
-				Parameters: nil,
+			Reference: &proto.TypeSpecifier_Forward{
+				Forward: &proto.ForwardReference{
+					Reference: &proto.ForwardReference_Protobuf{
+						Protobuf: typeName,
+					},
+				},
 			},
-			// IsList:
-			// IsMap:
-			// HasPresence:
 		},
 
 		// TODO 2023.10.10: fieldDescriptor.DefaultValue is a string, whereas
@@ -294,48 +290,30 @@ func fromMethodDescriptorProto(methodDescriptor *descriptorpb.MethodDescriptorPr
 		return nil, errors.New("server streaming protobufs have no microglot equivalent")
 	}
 
-	inputQualifier, inputTypeName := fromTypeString(*methodDescriptor.InputType)
-	outputQualifier, outputTypeName := fromTypeString(*methodDescriptor.OutputType)
-
 	// TODO 2023.10.10: convert Options
 
 	return &proto.APIMethod{
 		Reference: &proto.AttributeReference{},
 		Name:      *methodDescriptor.Name,
 		Input: &proto.TypeSpecifier{
-			Reference: nil,
-			Qualifier: inputQualifier,
-			Name: &proto.TypeName{
-				Name:       inputTypeName,
-				Parameters: nil,
+			Reference: &proto.TypeSpecifier_Forward{
+				Forward: &proto.ForwardReference{
+					Reference: &proto.ForwardReference_Protobuf{
+						Protobuf: *methodDescriptor.InputType,
+					},
+				},
 			},
-			// IsList:
-			// IsMap:
-			// HasPresence:
 		},
 		Output: &proto.TypeSpecifier{
-			Reference: nil,
-			Qualifier: outputQualifier,
-			Name: &proto.TypeName{
-				Name:       outputTypeName,
-				Parameters: nil,
+			Reference: &proto.TypeSpecifier_Forward{
+				Forward: &proto.ForwardReference{
+					Reference: &proto.ForwardReference_Protobuf{
+						Protobuf: *methodDescriptor.OutputType,
+					},
+				},
 			},
-			// IsList:
-			// IsMap:
-			// HasPresence:
 		},
 		// CommentBlock
 		// AnnotationApplication
 	}, nil
-}
-
-func fromTypeString(typeString string) (string, string) {
-	qualifier := ""
-	typeName := ""
-	segments := strings.Split(typeString, ".")
-	if len(segments) > 1 {
-		qualifier = strings.Join(segments[:len(segments)-1], ".")
-	}
-	typeName = segments[len(segments)-1]
-	return qualifier, typeName
 }
