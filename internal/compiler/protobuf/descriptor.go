@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"errors"
+	"strconv"
 
 	"google.golang.org/protobuf/types/descriptorpb"
 
@@ -66,9 +67,6 @@ func FromFileDescriptorProto(fileDescriptor *descriptorpb.FileDescriptorProto) (
 			// ImportedUID:
 			// IsDot:
 
-			// TODO 2023.10.10: this works okay as long as none of the imports
-			// have "package" statements. If they do, though, they will fail to
-			// link (for now, until we work out the desired semantics.)
 			ImportedURI: import_,
 			// Alias:
 
@@ -196,6 +194,124 @@ func fromFieldDescriptorProto(fieldDescriptor *descriptorpb.FieldDescriptorProto
 		}
 	}
 
+	// Default values are a proto2 feature.
+	// In the fieldDescriptor, they are *string. It's not really clear if/where/when
+	// default values are supposed to be type-checked.
+	// For microglot's descriptor, we need a typed proto.Value.
+	// We can't "just" use microglot's parser, because apparently we're supposed to
+	// coerce these into the fieldDescriptor.Type, i.e. a default of "10" can be
+	// *either* a string or a number, depending on the field type!
+	// As a result, we're doing something vaguely type-checker-like here, even
+	// though in theory we're not yet at the point of type-checking.
+	// In particular, this currently *fails* if the value can't be parsed as the
+	// expected type (we could punt these cases down to the type-checker by
+	// emitting a ValueText instead, on failure; maybe that'd be better?)
+	var defaultValue *proto.Value = nil
+	if fieldDescriptor.DefaultValue != nil {
+		switch typeName {
+		case "Bool":
+			v, err := strconv.ParseBool(*fieldDescriptor.DefaultValue)
+			if err != nil {
+				return nil, err
+			}
+			defaultValue = &proto.Value{
+				Kind: &proto.Value_Bool{
+					Bool: &proto.ValueBool{
+						Value:  v,
+						Source: *fieldDescriptor.DefaultValue,
+					},
+				},
+			}
+		case "Float64":
+			v, err := strconv.ParseFloat(*fieldDescriptor.DefaultValue, 64)
+			if err != nil {
+				return nil, err
+			}
+			defaultValue = &proto.Value{
+				Kind: &proto.Value_Float64{
+					Float64: &proto.ValueFloat64{
+						Value:  v,
+						Source: *fieldDescriptor.DefaultValue,
+					},
+				},
+			}
+		case "Float32":
+			v, err := strconv.ParseFloat(*fieldDescriptor.DefaultValue, 32)
+			if err != nil {
+				return nil, err
+			}
+			defaultValue = &proto.Value{
+				Kind: &proto.Value_Float32{
+					Float32: &proto.ValueFloat32{
+						Value:  float32(v),
+						Source: *fieldDescriptor.DefaultValue,
+					},
+				},
+			}
+		case "Int64":
+			v, err := strconv.ParseInt(*fieldDescriptor.DefaultValue, 10, 64)
+			if err != nil {
+				return nil, err
+			}
+			defaultValue = &proto.Value{
+				Kind: &proto.Value_Int64{
+					Int64: &proto.ValueInt64{
+						Value:  v,
+						Source: *fieldDescriptor.DefaultValue,
+					},
+				},
+			}
+		case "Int32":
+			v, err := strconv.ParseInt(*fieldDescriptor.DefaultValue, 10, 32)
+			if err != nil {
+				return nil, err
+			}
+			defaultValue = &proto.Value{
+				Kind: &proto.Value_Int32{
+					Int32: &proto.ValueInt32{
+						Value:  int32(v),
+						Source: *fieldDescriptor.DefaultValue,
+					},
+				},
+			}
+		case "UInt64":
+			v, err := strconv.ParseUint(*fieldDescriptor.DefaultValue, 10, 64)
+			if err != nil {
+				return nil, err
+			}
+			defaultValue = &proto.Value{
+				Kind: &proto.Value_UInt64{
+					UInt64: &proto.ValueUInt64{
+						Value:  v,
+						Source: *fieldDescriptor.DefaultValue,
+					},
+				},
+			}
+		case "UInt32":
+			v, err := strconv.ParseUint(*fieldDescriptor.DefaultValue, 10, 32)
+			if err != nil {
+				return nil, err
+			}
+			defaultValue = &proto.Value{
+				Kind: &proto.Value_UInt32{
+					UInt32: &proto.ValueUInt32{
+						Value:  uint32(v),
+						Source: *fieldDescriptor.DefaultValue,
+					},
+				},
+			}
+		default:
+			defaultValue = &proto.Value{
+				Kind: &proto.Value_Text{
+					Text: &proto.ValueText{
+						Value:  *fieldDescriptor.DefaultValue,
+						Source: *fieldDescriptor.DefaultValue,
+					},
+				},
+			}
+		}
+	}
+
 	// TODO 2023.10.10: convert Options
 
 	return &proto.Field{
@@ -214,11 +330,7 @@ func fromFieldDescriptorProto(fieldDescriptor *descriptorpb.FieldDescriptorProto
 				},
 			},
 		},
-
-		// TODO 2023.10.10: fieldDescriptor.DefaultValue is a string, whereas
-		// proto.Field.DefaultValue is a proto.Value. Can we safely call
-		// the microglot *parser* from here??? Should we do something else???
-		// DefaultValue:
+		DefaultValue: defaultValue,
 
 		// UnionUID:
 		// CommentBlock:
