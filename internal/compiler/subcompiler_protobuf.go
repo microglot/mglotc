@@ -9,6 +9,7 @@ import (
 	"github.com/bufbuild/protocompile/parser"
 	"github.com/bufbuild/protocompile/reporter"
 
+	"gopkg.microglot.org/compiler.go/internal/compiler/protobuf"
 	"gopkg.microglot.org/compiler.go/internal/exc"
 	"gopkg.microglot.org/compiler.go/internal/idl"
 	"gopkg.microglot.org/compiler.go/internal/proto"
@@ -38,12 +39,12 @@ func (self *SubCompilerProtobuf) CompileFile(ctx context.Context, r exc.Reporter
 	if err != nil {
 		return nil, err
 	}
-	return resultToModule(result)
-}
 
-func resultToModule(r parser.Result) (*proto.Module, error) {
-	// TODO: Convert protobuf FileDescriptorProto to idl.Module.
-	return nil, nil
+	module, err := protobuf.FromFileDescriptorProto(result.FileDescriptorProto())
+	if err != nil {
+		return nil, err
+	}
+	return module, nil
 }
 
 type protoReporter struct {

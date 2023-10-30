@@ -1,4 +1,4 @@
-package compiler
+package microglot
 
 import (
 	"context"
@@ -1066,6 +1066,25 @@ func newTokenLineSpan(line int32, col int32, offset int64, size int, kind idl.To
 				Line:   line,
 				Column: col,
 				Offset: offset,
+			},
+		},
+		Type:  kind,
+		Value: value,
+	}
+}
+
+func newToken(startLine int32, startCol int32, startOffset int64, endLine int32, endCol int32, endOffset int64, kind idl.TokenType, value string) *idl.Token {
+	return &idl.Token{
+		Span: &idl.Span{
+			Start: &idl.Location{
+				Line:   startLine,
+				Column: startCol,
+				Offset: startOffset,
+			},
+			End: &idl.Location{
+				Line:   endLine,
+				Column: endCol,
+				Offset: endOffset,
 			},
 		},
 		Type:  kind,

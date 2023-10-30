@@ -337,12 +337,29 @@ message TypeReference {
 }
 
 message TypeSpecifier {
+   oneof Reference {
+      ForwardReference Forward = 1;
+      ResolvedReference Resolved = 2;
+   }
+}
+
+message ForwardReference {
+   oneof Reference {
+      MicroglotForwardReference Microglot = 1;
+      string Protobuf = 2;
+   }
+}
+
+message MicroglotForwardReference {
+   string Qualifier = 1;
+   TypeName Name = 2;
+}
+
+message ResolvedReference {
    TypeReference Reference = 1;
-   string Qualifier = 2;
-   TypeName Name = 3;
-   bool IsList = 4;
-   bool IsMap = 5;
-   bool HasPresence = 6;
+   bool IsList = 2;
+   bool IsMap = 3;
+   bool HasPresence = 4;
 }
 
 message AttributeReference {

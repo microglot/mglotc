@@ -21,7 +21,7 @@ func link(parsed proto.Module, gsymbols *globalSymbolTable, r exc.Reporter) (*pr
 	for _, import_ := range parsed.Imports {
 		if !symbols.alias(gsymbols, import_.ImportedURI, import_.Alias, import_.IsDot) {
 			// TODO 2023.09.12: replace CodeUnknownFatal with something more meaningful
-			r.Report(exc.New(exc.Location{
+			_ = r.Report(exc.New(exc.Location{
 				URI: parsed.URI,
 				// TODO 2023.09.12: getting Location here would sure be nice!
 			}, exc.CodeUnknownFatal, fmt.Sprintf("unknown import %s", import_.ImportedURI)))
@@ -32,18 +32,36 @@ func link(parsed proto.Module, gsymbols *globalSymbolTable, r exc.Reporter) (*pr
 	walkModule(&parsed, func(node interface{}) {
 		switch n := node.(type) {
 		case *proto.TypeSpecifier:
-			sym, ok := symbols.types[localSymbolName{
-				qualifier: n.Qualifier,
-				name:      n.Name.Name,
-			}]
-			if !ok {
-				// TODO 2023.09.11: replace CodeUnknownFatal with something more meaningful
-				r.Report(exc.New(exc.Location{
-					URI: parsed.URI,
-					// TODO 2023.09.11: getting Location here would sure be nice!
-				}, exc.CodeUnknownFatal, fmt.Sprintf("unknown type %s", n.Name.Name)))
-			} else {
-				n.Reference = &sym
+			switch kind := n.Reference.(type) {
+			case *proto.TypeSpecifier_Forward:
+				switch reference := kind.Forward.Reference.(type) {
+				case *proto.ForwardReference_Microglot:
+					sym, ok := symbols.types[localSymbolName{
+						qualifier: reference.Microglot.Qualifier,
+						name:      reference.Microglot.Name.Name,
+					}]
+					if !ok {
+						// TODO 2023.09.11: replace CodeUnknownFatal with something more meaningful
+						_ = r.Report(exc.New(exc.Location{
+							URI: parsed.URI,
+							// TODO 2023.09.11: getting Location here would sure be nice!
+						}, exc.CodeUnknownFatal, fmt.Sprintf("unknown type %s", reference.Microglot.Name.Name)))
+					} else {
+						n.Reference = &proto.TypeSpecifier_Resolved{
+							Resolved: &proto.ResolvedReference{
+								Reference: &sym,
+								// IsList:
+								// IsMap:
+								// HasPresence:
+							},
+						}
+					}
+				case *proto.ForwardReference_Protobuf:
+					// TODO 2023.10.29: finish protobuf linking!
+					_ = r.Report(exc.New(exc.Location{
+						URI: parsed.URI,
+					}, exc.CodeUnknownFatal, "protobuf linking is incomplete!"))
+				}
 			}
 		case *proto.ValueIdentifier:
 			// TODO 2023.09.23: the ambiguity of whether the first component of the ValueIdentifier
@@ -79,7 +97,7 @@ func link(parsed proto.Module, gsymbols *globalSymbolTable, r exc.Reporter) (*pr
 			}
 
 			// TODO 2023.09.23: replace CodeUnknownFatal with something more meaningful
-			r.Report(exc.New(exc.Location{
+			_ = r.Report(exc.New(exc.Location{
 				URI: parsed.URI,
 				// TODO 2023.09.23: getting Location here would sure be nice!
 			}, exc.CodeUnknownFatal, fmt.Sprintf("unknown identifier: %s", strings.Join(n.Names, "."))))

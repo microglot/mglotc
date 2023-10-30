@@ -1,4 +1,4 @@
-package compiler
+package microglot
 
 import (
 	"context"
@@ -237,7 +237,7 @@ func applyOverCommentedBlock[N node](p *parserMicroglotTokens, parser func() *N)
 }
 
 // Module = [CommentBlock] StatementSyntax { Statement }
-func (p *parserMicroglotTokens) parseModule() *astModule {
+func (p *parserMicroglotTokens) ParseModule() *astModule {
 	this := astModule{
 		URI: p.uri,
 	}
