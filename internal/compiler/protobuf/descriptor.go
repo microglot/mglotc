@@ -127,11 +127,6 @@ func FromFileDescriptorProto(fileDescriptor *descriptorpb.FileDescriptorProto) (
 }
 
 func fromDescriptorProto(descriptor *descriptorpb.DescriptorProto) (*proto.Struct, error) {
-	fields, err := mapFrom(descriptor.Field, fromFieldDescriptorProto)
-	if err != nil {
-		return nil, err
-	}
-
 	var unions []*proto.Union
 	for _, oneofDescriptor := range descriptor.OneofDecl {
 		unions = append(unions, &proto.Union{
@@ -144,6 +139,11 @@ func fromDescriptorProto(descriptor *descriptorpb.DescriptorProto) (*proto.Struc
 			// CommentBlock:
 			// AnnotationApplications:
 		})
+	}
+
+	fields, err := mapFrom(descriptor.Field, fromFieldDescriptorProto)
+	if err != nil {
+		return nil, err
 	}
 
 	// TODO 2023.10.10: convert Options
@@ -330,6 +330,12 @@ func fromFieldDescriptorProto(fieldDescriptor *descriptorpb.FieldDescriptorProto
 
 	// TODO 2023.10.10: convert Options
 
+	var unionIndex *uint64
+	if fieldDescriptor.OneofIndex != nil {
+		unionIndex = new(uint64)
+		*unionIndex = (uint64)(*fieldDescriptor.OneofIndex)
+	}
+
 	return &proto.Field{
 		Reference: &proto.AttributeReference{
 			// ModuleUID:
@@ -347,8 +353,8 @@ func fromFieldDescriptorProto(fieldDescriptor *descriptorpb.FieldDescriptorProto
 			},
 		},
 		DefaultValue: defaultValue,
+		UnionIndex:   unionIndex,
 
-		// UnionUID:
 		// CommentBlock:
 		// AnnotationApplications:
 	}, nil

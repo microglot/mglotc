@@ -11,6 +11,8 @@ import (
 	"gopkg.microglot.org/compiler.go/internal/proto"
 )
 
+var zero uint64 = 0
+
 func TestDescriptor(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
@@ -91,6 +93,61 @@ func TestDescriptor(t *testing.T) {
 										Forward: &proto.ForwardReference{
 											Reference: &proto.ForwardReference_Protobuf{
 												Protobuf: "pkg.Barney",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:  "oneof -> union",
+			input: "syntax = \"proto3\";\nmessage Foo { oneof Bar { string Baz = 1; string Barney = 2; } }\n",
+			expected: &proto.Module{
+				UID: 1449310910991872227,
+				Structs: []*proto.Struct{
+					&proto.Struct{
+						Name: &proto.TypeName{
+							Name: "Foo",
+						},
+						Reference: &proto.TypeReference{},
+						Unions: []*proto.Union{
+							&proto.Union{
+								Reference: &proto.AttributeReference{},
+								Name:      "Bar",
+							},
+						},
+						Fields: []*proto.Field{
+							&proto.Field{
+								Reference: &proto.AttributeReference{
+									AttributeUID: 1,
+								},
+								Name:       "Baz",
+								UnionIndex: &zero,
+								Type: &proto.TypeSpecifier{
+									Reference: &proto.TypeSpecifier_Forward{
+										Forward: &proto.ForwardReference{
+											Reference: &proto.ForwardReference_Protobuf{
+												Protobuf: "Text",
+											},
+										},
+									},
+								},
+							},
+							&proto.Field{
+								Reference: &proto.AttributeReference{
+									AttributeUID: 2,
+								},
+								Name:       "Barney",
+								UnionIndex: &zero,
+								Type: &proto.TypeSpecifier{
+									Reference: &proto.TypeSpecifier_Forward{
+										Forward: &proto.ForwardReference{
+											Reference: &proto.ForwardReference_Protobuf{
+												Protobuf: "Text",
 											},
 										},
 									},
