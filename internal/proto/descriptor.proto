@@ -59,7 +59,9 @@ message Field {
    string Name = 2;
    TypeSpecifier Type = 3;
    Value DefaultValue = 4;
-   uint64 UnionUID = 5;
+   // if set, gives the index of a union in the containing struct's Unions list.
+   // This field is a member of that union.
+   optional uint64 UnionIndex = 5;
    CommentBlock CommentBlock = 6;
    repeated AnnotationApplication AnnotationApplications = 7;
 }

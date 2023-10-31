@@ -114,6 +114,9 @@ func fromStatementStruct(statementStruct *astStatementStruct) *proto.Struct {
 			this.Fields = append(this.Fields, fromField(e))
 		case *astUnion:
 			this.Unions = append(this.Unions, fromUnion(e))
+			for _, unionField := range e.fields {
+				this.Fields = append(this.Fields, fromUnionField(&unionField, uint64(len(this.Unions)-1)))
+			}
 		}
 	}
 
@@ -191,11 +194,11 @@ func fromSDKMethodParameter(sdkMethodParameter *astSDKMethodParameter) *proto.SD
 
 func fromField(field *astField) *proto.Field {
 	return &proto.Field{
-		Reference:    fromAttributeUID(field.meta.uid),
-		Name:         field.identifier.Value,
-		Type:         fromTypeSpecifier(&field.typeSpecifier),
-		DefaultValue: fromValue(&field.value),
-		// UnionUID:
+		Reference:              fromAttributeUID(field.meta.uid),
+		Name:                   field.identifier.Value,
+		Type:                   fromTypeSpecifier(&field.typeSpecifier),
+		DefaultValue:           fromValue(&field.value),
+		UnionIndex:             nil,
 		CommentBlock:           fromCommentBlock(field.meta.comments),
 		AnnotationApplications: fromAnnotationApplication(field.meta.annotationApplication),
 	}
@@ -207,6 +210,18 @@ func fromUnion(union *astUnion) *proto.Union {
 		Name:                   union.identifier.Value,
 		CommentBlock:           fromCommentBlock(union.meta.comments),
 		AnnotationApplications: fromAnnotationApplication(union.meta.annotationApplication),
+	}
+}
+
+func fromUnionField(unionField *astUnionField, unionIndex uint64) *proto.Field {
+	return &proto.Field{
+		Reference:              fromAttributeUID(unionField.meta.uid),
+		Name:                   unionField.identifier.Value,
+		Type:                   fromTypeSpecifier(&unionField.typeSpecifier),
+		DefaultValue:           nil,
+		UnionIndex:             &unionIndex,
+		CommentBlock:           fromCommentBlock(unionField.meta.comments),
+		AnnotationApplications: fromAnnotationApplication(unionField.meta.annotationApplication),
 	}
 }
 
