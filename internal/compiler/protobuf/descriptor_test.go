@@ -104,6 +104,33 @@ func TestDescriptor(t *testing.T) {
 			},
 		},
 		{
+			name:  "nested message -> uniquely named struct",
+			input: "syntax = \"proto3\";\nmessage Foo_Bar { }\nmessage Foo { message Bar { } }\n",
+			expected: &proto.Module{
+				UID: 1449310910991872227,
+				Structs: []*proto.Struct{
+					&proto.Struct{
+						Name: &proto.TypeName{
+							Name: "Foo_Bar",
+						},
+						Reference: &proto.TypeReference{},
+					},
+					&proto.Struct{
+						Name: &proto.TypeName{
+							Name: "Foo",
+						},
+						Reference: &proto.TypeReference{},
+					},
+					&proto.Struct{
+						Name: &proto.TypeName{
+							Name: "Foo_BarX",
+						},
+						Reference: &proto.TypeReference{},
+					},
+				},
+			},
+		},
+		{
 			name:  "oneof -> union",
 			input: "syntax = \"proto3\";\nmessage Foo { oneof Bar { string Baz = 1; string Barney = 2; } }\n",
 			expected: &proto.Module{

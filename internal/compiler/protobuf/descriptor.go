@@ -28,14 +28,39 @@ func mapFrom[F any, T any](in []*F, f func(*F) (T, error)) ([]T, error) {
 	return nil, nil
 }
 
+func nameCollides(name string, structs *[]*proto.Struct, enums *[]*proto.Enum) bool {
+	if structs != nil {
+		for _, struct_ := range *structs {
+			if name == struct_.Name.Name {
+				return true
+			}
+		}
+	}
+	if enums != nil {
+		for _, enum := range *enums {
+			if name == enum.Name {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func promoteNested(structs *[]*proto.Struct, enums *[]*proto.Enum, prefix string, descriptor *descriptorpb.DescriptorProto) error {
 	for _, descriptorProto := range descriptor.NestedType {
 		struct_, err := fromDescriptorProto(descriptorProto)
 		if err != nil {
 			return err
 		}
-		struct_.Name.Name = prefix + struct_.Name.Name
-		// TODO 2023.10.06: append "X" and warn if promoted name collides
+		suffix := ""
+		for nameCollides(prefix+struct_.Name.Name+suffix, structs, enums) {
+			suffix = suffix + "X"
+		}
+		struct_.Name.Name = prefix + struct_.Name.Name + suffix
+		if suffix != "" {
+			// TODO 2023.10.31: emit a warning?
+		}
+
 		// TODO 2023.10.06: annotate with $(Protobuf.NestedTypeInfo({}))
 		*structs = append(*structs, struct_)
 	}
@@ -44,8 +69,14 @@ func promoteNested(structs *[]*proto.Struct, enums *[]*proto.Enum, prefix string
 		if err != nil {
 			return err
 		}
-		enum.Name = prefix + enum.Name
-		// TODO 2023.10.06: append "X" and warn if promoted name collides
+		suffix := ""
+		for nameCollides(prefix+enum.Name+suffix, structs, enums) {
+			suffix = suffix + "X"
+		}
+		enum.Name = prefix + enum.Name + suffix
+		if suffix != "" {
+			// TODO 2023.10.31: emit a warning?
+		}
 		// TODO 2023.10.06: annotate with $(Protobuf.NestedTypeInfo({}))
 		*enums = append(*enums, enum)
 	}
