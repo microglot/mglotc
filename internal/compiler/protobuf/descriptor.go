@@ -28,14 +28,39 @@ func mapFrom[F any, T any](in []*F, f func(*F) (T, error)) ([]T, error) {
 	return nil, nil
 }
 
+func nameCollides(name string, structs *[]*proto.Struct, enums *[]*proto.Enum) bool {
+	if structs != nil {
+		for _, struct_ := range *structs {
+			if name == struct_.Name.Name {
+				return true
+			}
+		}
+	}
+	if enums != nil {
+		for _, enum := range *enums {
+			if name == enum.Name {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func promoteNested(structs *[]*proto.Struct, enums *[]*proto.Enum, prefix string, descriptor *descriptorpb.DescriptorProto) error {
 	for _, descriptorProto := range descriptor.NestedType {
 		struct_, err := fromDescriptorProto(descriptorProto)
 		if err != nil {
 			return err
 		}
-		struct_.Name.Name = prefix + struct_.Name.Name
-		// TODO 2023.10.06: append "X" and warn if promoted name collides
+		suffix := ""
+		for nameCollides(prefix+struct_.Name.Name+suffix, structs, enums) {
+			suffix = suffix + "X"
+		}
+		struct_.Name.Name = prefix + struct_.Name.Name + suffix
+		if suffix != "" {
+			// TODO 2023.10.31: emit a warning?
+		}
+
 		// TODO 2023.10.06: annotate with $(Protobuf.NestedTypeInfo({}))
 		*structs = append(*structs, struct_)
 	}
@@ -44,8 +69,14 @@ func promoteNested(structs *[]*proto.Struct, enums *[]*proto.Enum, prefix string
 		if err != nil {
 			return err
 		}
-		enum.Name = prefix + enum.Name
-		// TODO 2023.10.06: append "X" and warn if promoted name collides
+		suffix := ""
+		for nameCollides(prefix+enum.Name+suffix, structs, enums) {
+			suffix = suffix + "X"
+		}
+		enum.Name = prefix + enum.Name + suffix
+		if suffix != "" {
+			// TODO 2023.10.31: emit a warning?
+		}
 		// TODO 2023.10.06: annotate with $(Protobuf.NestedTypeInfo({}))
 		*enums = append(*enums, enum)
 	}
@@ -127,11 +158,6 @@ func FromFileDescriptorProto(fileDescriptor *descriptorpb.FileDescriptorProto) (
 }
 
 func fromDescriptorProto(descriptor *descriptorpb.DescriptorProto) (*proto.Struct, error) {
-	fields, err := mapFrom(descriptor.Field, fromFieldDescriptorProto)
-	if err != nil {
-		return nil, err
-	}
-
 	var unions []*proto.Union
 	for _, oneofDescriptor := range descriptor.OneofDecl {
 		unions = append(unions, &proto.Union{
@@ -144,6 +170,11 @@ func fromDescriptorProto(descriptor *descriptorpb.DescriptorProto) (*proto.Struc
 			// CommentBlock:
 			// AnnotationApplications:
 		})
+	}
+
+	fields, err := mapFrom(descriptor.Field, fromFieldDescriptorProto)
+	if err != nil {
+		return nil, err
 	}
 
 	// TODO 2023.10.10: convert Options
@@ -330,6 +361,12 @@ func fromFieldDescriptorProto(fieldDescriptor *descriptorpb.FieldDescriptorProto
 
 	// TODO 2023.10.10: convert Options
 
+	var unionIndex *uint64
+	if fieldDescriptor.OneofIndex != nil {
+		unionIndex = new(uint64)
+		*unionIndex = (uint64)(*fieldDescriptor.OneofIndex)
+	}
+
 	return &proto.Field{
 		Reference: &proto.AttributeReference{
 			// ModuleUID:
@@ -347,8 +384,8 @@ func fromFieldDescriptorProto(fieldDescriptor *descriptorpb.FieldDescriptorProto
 			},
 		},
 		DefaultValue: defaultValue,
+		UnionIndex:   unionIndex,
 
-		// UnionUID:
 		// CommentBlock:
 		// AnnotationApplications:
 	}, nil
