@@ -2,6 +2,7 @@ package microglot
 
 import (
 	"errors"
+	"net/url"
 	"strings"
 
 	"gopkg.microglot.org/compiler.go/internal/idl"
@@ -78,8 +79,22 @@ func protobufPackage(annotationApplications []*proto.AnnotationApplication, modu
 			}
 		}
 	}
-	parts := strings.Split(moduleURI, "/")
-	defaultProtobufPackage, _, _ := strings.Cut(parts[len(parts)-1], ".")
+
+	// in absence of a $Protobuf.Package() annotation, derive a default from the module URI
+	u, err := url.Parse(moduleURI)
+	if err != nil {
+		return "", err
+	}
+	hostSegments := strings.Split(strings.TrimRight(u.Host, "."), ".") // Remove trailing dot from host to handle fully qualified domains
+	base := strings.Join(hostSegments, ".")
+	if base != "" {
+		base = base + "."
+	}
+	pathSegments := strings.Split(strings.TrimLeft(u.Path, "/"), "/")
+	pathSegments[len(pathSegments)-1], _, _ = strings.Cut(pathSegments[len(pathSegments)-1], ".")
+	p := strings.Join(pathSegments, ".")
+	defaultProtobufPackage := base + p
+
 	return defaultProtobufPackage, nil
 }
 
