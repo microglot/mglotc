@@ -12,14 +12,16 @@ message Module {
    // https://domain/path/to/file.
    string URI = 1;
    uint64 UID = 2;
-   repeated Import Imports = 3;
-   repeated Struct Structs = 4;
-   repeated Enum Enums = 5;
-   repeated API APIs = 6;
-   repeated SDK SDKs = 7;
-   repeated Constant Constants = 8;
-   repeated Annotation Annotations = 9;
-   repeated DotImport DotImports = 10;
+   string ProtobufPackage = 3;
+   repeated AnnotationApplication AnnotationApplications = 4;
+   repeated Import Imports = 5;
+   repeated Struct Structs = 6;
+   repeated Enum Enums = 7;
+   repeated API APIs = 8;
+   repeated SDK SDKs = 9;
+   repeated Constant Constants = 10;
+   repeated Annotation Annotations = 11;
+   repeated DotImport DotImports = 12;
 }
 
 message Import {

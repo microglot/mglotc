@@ -2,6 +2,7 @@ package microglot
 
 import (
 	"errors"
+	"strings"
 
 	"gopkg.microglot.org/compiler.go/internal/idl"
 	"gopkg.microglot.org/compiler.go/internal/proto"
@@ -28,6 +29,7 @@ func FromModule(module *astModule) (*proto.Module, error) {
 		switch s := statement.(type) {
 		case *astStatementModuleMeta:
 			this.UID = s.uid.val
+			this.AnnotationApplications = fromAnnotationApplication(s.annotationApplication)
 		case *astStatementImport:
 			this.Imports = append(this.Imports, fromStatementImport(s))
 		case *astStatementAnnotation:
@@ -48,7 +50,31 @@ func FromModule(module *astModule) (*proto.Module, error) {
 			return nil, errors.New("unknown statement type")
 		}
 	}
+
+	this.ProtobufPackage = protobufPackage(this.AnnotationApplications, module.URI)
+
 	return &this, nil
+}
+
+func protobufPackage(annotationApplications []*proto.AnnotationApplication, moduleURI string) string {
+	for _, annotationApplication := range annotationApplications {
+		forward, ok := annotationApplication.Annotation.Reference.(*proto.TypeSpecifier_Forward)
+		if ok {
+			microglot, ok := forward.Forward.Reference.(*proto.ForwardReference_Microglot)
+			if ok {
+				// this annotation is special, in that we are using it before linking!
+				if microglot.Microglot.Qualifier == "Protobuf" && microglot.Microglot.Name.Name == "Package" {
+					// this is intentionally a crash if the annotation value isn't a string, because
+					// silently ignoring the annotation seems wrong, but I don't have a better idea for
+					// how to return an error from here right now.
+					return annotationApplication.Value.Kind.(*proto.Value_Text).Text.Value
+				}
+			}
+		}
+	}
+	parts := strings.Split(moduleURI, "/")
+	defaultProtobufPackage, _, _ := strings.Cut(parts[len(parts)-1], ".")
+	return defaultProtobufPackage
 }
 
 func fromStatementImport(statementImport *astStatementImport) *proto.Import {

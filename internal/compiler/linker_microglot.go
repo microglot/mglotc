@@ -34,33 +34,44 @@ func link(parsed proto.Module, gsymbols *globalSymbolTable, r exc.Reporter) (*pr
 		case *proto.TypeSpecifier:
 			switch kind := n.Reference.(type) {
 			case *proto.TypeSpecifier_Forward:
+				var sym proto.TypeReference
+				var ok bool
+				var fullName string
 				switch reference := kind.Forward.Reference.(type) {
 				case *proto.ForwardReference_Microglot:
-					sym, ok := symbols.types[localSymbolName{
+					fullName = fmt.Sprintf("%s.%s", reference.Microglot.Qualifier, reference.Microglot.Name.Name)
+					sym, ok = symbols.types[localSymbolName{
 						qualifier: reference.Microglot.Qualifier,
 						name:      reference.Microglot.Name.Name,
 					}]
-					if !ok {
-						// TODO 2023.09.11: replace CodeUnknownFatal with something more meaningful
-						_ = r.Report(exc.New(exc.Location{
-							URI: parsed.URI,
-							// TODO 2023.09.11: getting Location here would sure be nice!
-						}, exc.CodeUnknownFatal, fmt.Sprintf("unknown type %s", reference.Microglot.Name.Name)))
-					} else {
-						n.Reference = &proto.TypeSpecifier_Resolved{
-							Resolved: &proto.ResolvedReference{
-								Reference: &sym,
-								// IsList:
-								// IsMap:
-								// HasPresence:
-							},
-						}
-					}
 				case *proto.ForwardReference_Protobuf:
-					// TODO 2023.10.29: finish protobuf linking!
+					fullName = reference.Protobuf
+					sym, ok = gsymbols.packageSearch(parsed.ProtobufPackage, reference.Protobuf)
+
+					// this is how we deal with built-in types in protobuf, for now,
+					// but it definitely feels a little bit off.
+					if (!ok) && (!strings.Contains(reference.Protobuf, ".")) {
+						sym, ok = symbols.types[localSymbolName{
+							qualifier: "",
+							name:      reference.Protobuf,
+						}]
+					}
+				}
+				if !ok {
+					// TODO 2023.11.01: replace CodeUnknownFatal with something more meaningful
 					_ = r.Report(exc.New(exc.Location{
 						URI: parsed.URI,
-					}, exc.CodeUnknownFatal, "protobuf linking is incomplete!"))
+						// TODO 2023.11.01: getting Location here would sure be nice!
+					}, exc.CodeUnknownFatal, fmt.Sprintf("unknown type %s", fullName)))
+				} else {
+					n.Reference = &proto.TypeSpecifier_Resolved{
+						Resolved: &proto.ResolvedReference{
+							Reference: &sym,
+							// IsList:
+							// IsMap:
+							// HasPresence:
+						},
+					}
 				}
 			}
 		case *proto.ValueIdentifier:

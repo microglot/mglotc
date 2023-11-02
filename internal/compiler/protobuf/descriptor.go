@@ -134,6 +134,12 @@ func FromFileDescriptorProto(fileDescriptor *descriptorpb.FileDescriptorProto) (
 		return nil, err
 	}
 
+	// compute protobufPackage
+	var protobufPackage string
+	if fileDescriptor.Package != nil {
+		protobufPackage = *fileDescriptor.Package
+	}
+
 	apis, err := mapFrom(fileDescriptor.Service, fromServiceDescriptorProto)
 	if err != nil {
 		return nil, err
@@ -144,8 +150,10 @@ func FromFileDescriptorProto(fileDescriptor *descriptorpb.FileDescriptorProto) (
 	// TODO 2023.10.10: convert Options
 
 	return &proto.Module{
-		URI:     *fileDescriptor.Name,
-		UID:     moduleUID,
+		URI:             *fileDescriptor.Name,
+		UID:             moduleUID,
+		ProtobufPackage: protobufPackage,
+		// AnnotationApplications:
 		Imports: imports,
 		Structs: structs,
 		Enums:   enums,
