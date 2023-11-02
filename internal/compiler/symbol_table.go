@@ -160,10 +160,11 @@ func (s *globalSymbolTable) addType(r exc.Reporter, moduleURI string, name strin
 		}, exc.CodeUnknownFatal, fmt.Sprintf("there is already a declaration of '%s' in '%s'", name, moduleURI)))
 	}
 
-	// TODO 2023.11.01: this technically doesn't have to be treated as an error condition as long as there
-	// are no ForwardReference_Protobufs in any descriptors. IMO it's better to consistently treat it as an
-	// error, since otherwise it becomes a surprise "gotcha" that prevents using some mgdl from protobuf,
-	// but a case could be made in the other direction.
+	// We consider it an error to have the more than one declaration of the same typename in a given
+	// *protobuf* package.
+	//  * this is *required* for .proto compilation and linking
+	//  * it is *assumed* by protobuf plugins (even if we're passing them descriptors compiled from mgdl!)
+	//  * it is hopefully rare to trigger accidentally, given how we assign default protobuf package names
 	for uri, meta := range s.modules {
 		if meta.protobufPackage == s.modules[moduleURI].protobufPackage {
 			if _, ok := s.types[uri][name]; ok {
