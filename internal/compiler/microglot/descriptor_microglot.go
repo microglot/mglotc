@@ -51,12 +51,16 @@ func FromModule(module *astModule) (*proto.Module, error) {
 		}
 	}
 
-	this.ProtobufPackage = protobufPackage(this.AnnotationApplications, module.URI)
+	pkg, err := protobufPackage(this.AnnotationApplications, module.URI)
+	if err != nil {
+		return nil, err
+	}
+	this.ProtobufPackage = pkg
 
 	return &this, nil
 }
 
-func protobufPackage(annotationApplications []*proto.AnnotationApplication, moduleURI string) string {
+func protobufPackage(annotationApplications []*proto.AnnotationApplication, moduleURI string) (string, error) {
 	for _, annotationApplication := range annotationApplications {
 		forward, ok := annotationApplication.Annotation.Reference.(*proto.TypeSpecifier_Forward)
 		if ok {
@@ -64,17 +68,19 @@ func protobufPackage(annotationApplications []*proto.AnnotationApplication, modu
 			if ok {
 				// this annotation is special, in that we are using it before linking!
 				if microglot.Microglot.Qualifier == "Protobuf" && microglot.Microglot.Name.Name == "Package" {
-					// this is intentionally a crash if the annotation value isn't a string, because
-					// silently ignoring the annotation seems wrong, but I don't have a better idea for
-					// how to return an error from here right now.
-					return annotationApplication.Value.Kind.(*proto.Value_Text).Text.Value
+					text, ok := annotationApplication.Value.Kind.(*proto.Value_Text)
+					if ok {
+						return text.Text.Value, nil
+					} else {
+						return "", errors.New("$Protobuf.Package() annotation value must be text")
+					}
 				}
 			}
 		}
 	}
 	parts := strings.Split(moduleURI, "/")
 	defaultProtobufPackage, _, _ := strings.Cut(parts[len(parts)-1], ".")
-	return defaultProtobufPackage
+	return defaultProtobufPackage, nil
 }
 
 func fromStatementImport(statementImport *astStatementImport) *proto.Import {
