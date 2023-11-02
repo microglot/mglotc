@@ -68,6 +68,12 @@ func protobufPackage(annotationApplications []*proto.AnnotationApplication, modu
 			microglot, ok := forward.Forward.Reference.(*proto.ForwardReference_Microglot)
 			if ok {
 				// this annotation is special, in that we are using it before linking!
+				// TODO 2023.11.02: this isn't quite right!
+				// Specifically, it assumes the user hasn't given the protobuf import an
+				// alias other than "Protobuf".
+				// However, as of right now, the protobuf import doesn't even exist, and
+				// it's not 100% clear whether it should be allowed to give it a different
+				// alias, or it should be built-in in some way, or something else entirely.
 				if microglot.Microglot.Qualifier == "Protobuf" && microglot.Microglot.Name.Name == "Package" {
 					text, ok := annotationApplication.Value.Kind.(*proto.Value_Text)
 					if ok {
