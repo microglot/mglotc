@@ -3,15 +3,22 @@ package compiler
 import (
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 	"sync"
 
 	"gopkg.microglot.org/compiler.go/internal/exc"
 	"gopkg.microglot.org/compiler.go/internal/proto"
 )
 
+type moduleMeta struct {
+	uid             uint64
+	protobufPackage string
+}
+
 type globalSymbolTable struct {
 	lock       sync.RWMutex
-	modules    map[string]uint64
+	modules    map[string]moduleMeta
 	types      map[string]map[string]proto.TypeReference
 	attributes map[string]map[string]map[string]proto.AttributeReference
 	inputs     map[string]map[string]map[string]map[string]proto.SDKInputReference
@@ -24,7 +31,7 @@ func (s *globalSymbolTable) collect(parsed proto.Module, r exc.Reporter) error {
 	defer s.lock.Unlock()
 
 	if s.modules == nil {
-		s.modules = make(map[string]uint64)
+		s.modules = make(map[string]moduleMeta)
 	}
 	if s.types == nil {
 		s.types = make(map[string]map[string]proto.TypeReference)
@@ -67,8 +74,8 @@ func (s *globalSymbolTable) collect(parsed proto.Module, r exc.Reporter) error {
 		return errors.New("collect error")
 	}
 
-	for moduleURI, moduleUID := range s.modules {
-		if moduleUID == parsed.UID {
+	for moduleURI, moduleMeta := range s.modules {
+		if moduleMeta.uid == parsed.UID {
 			// TODO 2023.09.14: replace CodeUnknownFatal with something more meaningful
 			_ = r.Report(exc.New(exc.Location{
 				URI: parsed.URI,
@@ -77,7 +84,10 @@ func (s *globalSymbolTable) collect(parsed proto.Module, r exc.Reporter) error {
 			return errors.New("collect error")
 		}
 	}
-	s.modules[parsed.URI] = parsed.UID
+	s.modules[parsed.URI] = moduleMeta{
+		uid:             parsed.UID,
+		protobufPackage: parsed.ProtobufPackage,
+	}
 
 	typeUIDs := make(map[uint64]string)
 
@@ -148,9 +158,26 @@ func (s *globalSymbolTable) addType(r exc.Reporter, moduleURI string, name strin
 			URI: moduleURI,
 			// TODO 2023.09.12: getting Location here would be nice!
 		}, exc.CodeUnknownFatal, fmt.Sprintf("there is already a declaration of '%s' in '%s'", name, moduleURI)))
-	} else {
-		s.types[moduleURI][name] = *typeReference
 	}
+
+	// We consider it an error to have the more than one declaration of the same typename in a given
+	// *protobuf* package.
+	//  * this is *required* for .proto compilation and linking
+	//  * it is *assumed* by protobuf plugins (even if we're passing them descriptors compiled from mgdl!)
+	//  * it is hopefully rare to trigger accidentally, given how we assign default protobuf package names
+	for uri, meta := range s.modules {
+		if meta.protobufPackage == s.modules[moduleURI].protobufPackage {
+			if _, ok := s.types[uri][name]; ok {
+				// TODO 2023.11.01: replace CodeUnknownFatal with something more meaningful
+				_ = r.Report(exc.New(exc.Location{
+					URI: moduleURI,
+					// TODO 2023.11.01: getting Location here would be nice!
+				}, exc.CodeUnknownFatal, fmt.Sprintf("there is already a declaration of '%s.%s' in '%s'", meta.protobufPackage, name, uri)))
+			}
+		}
+	}
+
+	s.types[moduleURI][name] = *typeReference
 }
 
 func (s *globalSymbolTable) addAttribute(r exc.Reporter, moduleURI string, typeName string, name string, attributeReference *proto.AttributeReference, attributeUIDs map[uint64]string) {
@@ -208,4 +235,59 @@ func (s *globalSymbolTable) addSDKMethodInput(r exc.Reporter, moduleURI string, 
 	} else {
 		s.inputs[moduleURI][typeName][sdkMethodName][name] = *sdkInputReference
 	}
+}
+
+func (s *globalSymbolTable) packageSearch(pkg string, name string) (proto.TypeReference, bool) {
+	// build segmentPackages, which is the list of packages to search, i.e. if the current package is
+	// "outer.inner", it will be ["", "outer", "outer.inner"]
+	segmentPackage := ""
+	segmentPackages := []string{segmentPackage}
+	for _, segment := range strings.Split(pkg, ".") {
+		if segmentPackage == "" {
+			segmentPackage = segment
+		} else {
+			segmentPackage = segmentPackage + "." + segment
+		}
+		segmentPackages = append(segmentPackages, segmentPackage)
+	}
+
+	// if the name starts with '.', remove it. Otherwise, reverse the search order.
+	if !strings.HasPrefix(name, ".") {
+		slices.Reverse(segmentPackages)
+	} else {
+		name = name[1:]
+	}
+
+	// now divide the name into qualifier and base
+	nameSegments := strings.Split(name, ".")
+	qualifier := ""
+	base := nameSegments[len(nameSegments)-1]
+	if len(nameSegments) > 1 {
+		qualifier = strings.Join(nameSegments[0:len(nameSegments)-1], ".")
+	}
+
+	// and search, in segmentPackages order!
+	for _, segmentPackage := range segmentPackages {
+		// fullPackage is the segmentPackage plus the qualifier part of the name
+		fullPackage := segmentPackage
+		if qualifier != "" {
+			if fullPackage != "" {
+				fullPackage = fullPackage + "." + qualifier
+			} else {
+				fullPackage = qualifier
+			}
+		}
+
+		// look for exact package matches
+		for uri, meta := range s.modules {
+			if meta.protobufPackage == fullPackage {
+				// we're in a matching package. Is 'base' in the type symbol table?
+				sym, ok := s.types[uri][base]
+				if ok {
+					return sym, true
+				}
+			}
+		}
+	}
+	return proto.TypeReference{}, false
 }

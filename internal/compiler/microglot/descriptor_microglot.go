@@ -2,6 +2,8 @@ package microglot
 
 import (
 	"errors"
+	"net/url"
+	"strings"
 
 	"gopkg.microglot.org/compiler.go/internal/idl"
 	"gopkg.microglot.org/compiler.go/internal/proto"
@@ -28,6 +30,7 @@ func FromModule(module *astModule) (*proto.Module, error) {
 		switch s := statement.(type) {
 		case *astStatementModuleMeta:
 			this.UID = s.uid.val
+			this.AnnotationApplications = fromAnnotationApplication(s.annotationApplication)
 		case *astStatementImport:
 			this.Imports = append(this.Imports, fromStatementImport(s))
 		case *astStatementAnnotation:
@@ -48,7 +51,57 @@ func FromModule(module *astModule) (*proto.Module, error) {
 			return nil, errors.New("unknown statement type")
 		}
 	}
+
+	pkg, err := protobufPackage(this.AnnotationApplications, module.URI)
+	if err != nil {
+		return nil, err
+	}
+	this.ProtobufPackage = pkg
+
 	return &this, nil
+}
+
+func protobufPackage(annotationApplications []*proto.AnnotationApplication, moduleURI string) (string, error) {
+	for _, annotationApplication := range annotationApplications {
+		forward, ok := annotationApplication.Annotation.Reference.(*proto.TypeSpecifier_Forward)
+		if ok {
+			microglot, ok := forward.Forward.Reference.(*proto.ForwardReference_Microglot)
+			if ok {
+				// this annotation is special, in that we are using it before linking!
+				// TODO 2023.11.02: this isn't quite right!
+				// Specifically, it assumes the user hasn't given the protobuf import an
+				// alias other than "Protobuf".
+				// However, as of right now, the protobuf import doesn't even exist, and
+				// it's not 100% clear whether it should be allowed to give it a different
+				// alias, or it should be built-in in some way, or something else entirely.
+				if microglot.Microglot.Qualifier == "Protobuf" && microglot.Microglot.Name.Name == "Package" {
+					text, ok := annotationApplication.Value.Kind.(*proto.Value_Text)
+					if ok {
+						return text.Text.Value, nil
+					} else {
+						return "", errors.New("$Protobuf.Package() annotation value must be text")
+					}
+				}
+			}
+		}
+	}
+
+	// in absence of a $Protobuf.Package() annotation, derive a default from the module URI
+	u, err := url.Parse(moduleURI)
+	if err != nil {
+		return "", err
+	}
+	hostSegments := strings.Split(strings.TrimRight(u.Host, "."), ".") // Remove trailing dot from host to handle fully qualified domains
+	base := strings.Join(hostSegments, ".")
+	if base != "" {
+		base = base + "."
+	}
+	pathSegments := strings.Split(strings.TrimLeft(u.Path, "/"), "/")
+	pathSegments[len(pathSegments)-1], _, _ = strings.Cut(pathSegments[len(pathSegments)-1], ".")
+	p := strings.Join(pathSegments, ".")
+	defaultProtobufPackage := base + p
+
+	return defaultProtobufPackage, nil
 }
 
 func fromStatementImport(statementImport *astStatementImport) *proto.Import {
