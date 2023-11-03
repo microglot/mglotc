@@ -9,16 +9,19 @@ import (
 
 	"github.com/spf13/pflag"
 
+	"google.golang.org/protobuf/proto"
+
 	"gopkg.microglot.org/compiler.go/internal/compiler"
 	"gopkg.microglot.org/compiler.go/internal/fs"
 	"gopkg.microglot.org/compiler.go/internal/idl"
 )
 
 type opts struct {
-	Roots      []string
-	Output     string
-	DumpTokens bool
-	DumpTree   bool
+	Roots            []string
+	Output           string
+	DumpTokens       bool
+	DumpTree         bool
+	DescriptorSetOut string
 }
 
 func main() {
@@ -31,6 +34,7 @@ func main() {
 	flags.StringVar(&op.Output, "output", ".", "Output directory or - for STDOUT.")
 	flags.BoolVar(&op.DumpTokens, "dump-tokens", false, "Output the token stream as it is processed")
 	flags.BoolVar(&op.DumpTree, "dump-tree", false, "Output the parse tree after parsing")
+	flags.StringVar(&op.DescriptorSetOut, "descriptor_set_out", "", "Writes a protobuf FileDescriptorSet containing all the input to FILE")
 	_ = flags.Parse(os.Args[1:])
 	targets := flags.Args()
 
@@ -81,6 +85,26 @@ func main() {
 		}
 		panic(err)
 	}
+
+	if op.DescriptorSetOut != "" {
+		// TODO 2023.11.03: convert out.Image to FileDescriptorSet
+		fds, err := out.Image.ToFileDescriptorSet()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
+		bytes, err := proto.Marshal(fds)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
+
+		if err = os.WriteFile(op.DescriptorSetOut, bytes, 0o644); err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
+	}
+
 	fmt.Println(out.Image)
 	fmt.Println(output)
 }

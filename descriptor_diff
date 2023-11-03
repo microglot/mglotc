@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+set -e -x
+
+DS=$(mktemp)
+OUT=$(mktemp -d)
+
+go run main.go internal/proto/descriptor.proto --descriptor_set_out=$DS
+protoc --descriptor_set_in=$DS /internal/proto/descriptor.proto --go_out=$OUT --fatal_warnings
+git diff --no-index internal/proto/descriptor.pb.go $OUT/gopkg.microglot.org/compiler.go/internal/proto/descriptor.pb.go
