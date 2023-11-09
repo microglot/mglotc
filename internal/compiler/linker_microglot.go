@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"gopkg.microglot.org/compiler.go/internal/exc"
+	"gopkg.microglot.org/compiler.go/internal/idl"
 	"gopkg.microglot.org/compiler.go/internal/proto"
 )
 
@@ -141,34 +142,14 @@ func newLocalSymbols(gsymbols *globalSymbolTable, URI string) *localSymbolTable 
 	symbols.attributes = make(map[localSymbolName]proto.AttributeReference)
 	symbols.inputs = make(map[localSymbolName]proto.SDKInputReference)
 
-	for _, internalTypeName := range []string{
-		"Bool",
-		"Text",
-		"Data",
-		"Int8",
-		"Int16",
-		"Int32",
-		"Int64",
-		"UInt8",
-		"UInt16",
-		"UInt32",
-		"UInt64",
-		"Float32",
-		"Float64",
-		"List",
-		"Map",
-		"Empty",
-		"Presence",
-		"AsyncTask",
-	} {
+	for builtinTypeName, builtinTypeUID := range idl.BUILTIN_TYPE_UIDS {
 		symbols.types[localSymbolName{
 			qualifier: "",
-			name:      internalTypeName,
+			name:      builtinTypeName,
 		}] = proto.TypeReference{
 			// moduleUID 0 is for built-in types
 			ModuleUID: 0,
-			// TODO 2023.09.12: just a shim to allow linking; this will need to be fleshed out
-			TypeUID: 0,
+			TypeUID:   builtinTypeUID,
 		}
 	}
 

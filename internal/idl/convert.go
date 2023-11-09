@@ -1,19 +1,29 @@
 package idl
 
 import (
+	"errors"
+	"fmt"
+
 	"google.golang.org/protobuf/types/descriptorpb"
 
 	"gopkg.microglot.org/compiler.go/internal/proto"
 )
 
 func (image *Image) ToFileDescriptorSet() (*descriptorpb.FileDescriptorSet, error) {
-	return fromImage(image)
+	converter := imageConverter{
+		image: image,
+	}
+	return converter.convert()
 }
 
-func fromImage(image *Image) (*descriptorpb.FileDescriptorSet, error) {
-	files := make([]*descriptorpb.FileDescriptorProto, 0, len(image.Modules))
-	for _, module := range image.Modules {
-		file, err := fromModule(module)
+type imageConverter struct {
+	image *Image
+}
+
+func (c *imageConverter) convert() (*descriptorpb.FileDescriptorSet, error) {
+	files := make([]*descriptorpb.FileDescriptorProto, 0, len(c.image.Modules))
+	for _, module := range c.image.Modules {
+		file, err := c.fromModule(module)
 		if err != nil {
 			return nil, err
 		}
@@ -41,7 +51,7 @@ func mapFrom[F any, T any](in []*F, f func(*F) (T, error)) ([]T, error) {
 	return nil, nil
 }
 
-func fromModule(module *proto.Module) (*descriptorpb.FileDescriptorProto, error) {
+func (c *imageConverter) fromModule(module *proto.Module) (*descriptorpb.FileDescriptorProto, error) {
 	// TODO 2023.11.03: is it a fatal error to attempt to convert a microglot Module that contains
 	// stuff that cannot be represented in protobuf, e.g. SDKs? Or is this conversion allowed to be
 	// lossy?
@@ -51,12 +61,12 @@ func fromModule(module *proto.Module) (*descriptorpb.FileDescriptorProto, error)
 		dependencies = append(dependencies, import_.ImportedURI)
 	}
 
-	messageTypes, err := mapFrom(module.Structs, fromStruct)
+	messageTypes, err := mapFrom(module.Structs, c.fromStruct)
 	if err != nil {
 		return nil, err
 	}
 
-	enumTypes, err := mapFrom(module.Enums, fromEnum)
+	enumTypes, err := mapFrom(module.Enums, c.fromEnum)
 	if err != nil {
 		return nil, err
 	}
@@ -89,8 +99,8 @@ func fromModule(module *proto.Module) (*descriptorpb.FileDescriptorProto, error)
 	}, nil
 }
 
-func fromStruct(struct_ *proto.Struct) (*descriptorpb.DescriptorProto, error) {
-	fields, err := mapFrom(struct_.Fields, fromField)
+func (c *imageConverter) fromStruct(struct_ *proto.Struct) (*descriptorpb.DescriptorProto, error) {
+	fields, err := mapFrom(struct_.Fields, c.fromField)
 	if err != nil {
 		return nil, err
 	}
@@ -108,14 +118,20 @@ func fromStruct(struct_ *proto.Struct) (*descriptorpb.DescriptorProto, error) {
 	}, nil
 }
 
-func fromField(field *proto.Field) (*descriptorpb.FieldDescriptorProto, error) {
+func (c *imageConverter) fromField(field *proto.Field) (*descriptorpb.FieldDescriptorProto, error) {
 	number := (int32)(field.Reference.AttributeUID)
+
+	type_, typeName, err := c.fromTypeSpecifier(field.Type)
+	if err != nil {
+		return nil, err
+	}
+
 	return &descriptorpb.FieldDescriptorProto{
 		Name:   &field.Name,
 		Number: &number,
 		// Label
-		// Type
-		// TypeName
+		Type:     type_,
+		TypeName: typeName,
 		// Extendee
 		// DefaultValue
 		// OneofIndex
@@ -125,8 +141,109 @@ func fromField(field *proto.Field) (*descriptorpb.FieldDescriptorProto, error) {
 	}, nil
 }
 
-func fromEnum(enum *proto.Enum) (*descriptorpb.EnumDescriptorProto, error) {
-	values, err := mapFrom(enum.Enumerants, fromEnumerant)
+func (c *imageConverter) fromTypeSpecifier(typeSpecifier *proto.TypeSpecifier) (*descriptorpb.FieldDescriptorProto_Type, *string, error) {
+	resolved, ok := typeSpecifier.Reference.(*proto.TypeSpecifier_Resolved)
+	if !ok {
+		return nil, nil, errors.New("unexpected forward reference while converting descriptor to protobuf!")
+	}
+
+	type_, typeName, err := c.fromTypeReference(resolved.Resolved.Reference)
+	if err != nil {
+		return nil, nil, err
+	}
+	return type_, typeName, nil
+}
+
+func (c *imageConverter) fromTypeReference(typeReference *proto.TypeReference) (*descriptorpb.FieldDescriptorProto_Type, *string, error) {
+
+	// moduleUID 0 is for built-in types
+	if typeReference.ModuleUID == 0 {
+		builtinTypeName, ok := GetBuiltinTypeNameFromUID(typeReference.TypeUID)
+		if !ok {
+			return nil, nil, fmt.Errorf("unknown built-in type UID: %d\n", typeReference.TypeUID)
+		}
+
+		// TODO 2023.11.09: respect $(Protobuf.FieldType())
+
+		var type_ descriptorpb.FieldDescriptorProto_Type
+		switch builtinTypeName {
+		case "Bool":
+			type_ = descriptorpb.FieldDescriptorProto_TYPE_BOOL
+		case "Text":
+			type_ = descriptorpb.FieldDescriptorProto_TYPE_STRING
+		case "Data":
+			type_ = descriptorpb.FieldDescriptorProto_TYPE_BYTES
+		case "Int8":
+			type_ = descriptorpb.FieldDescriptorProto_TYPE_INT32
+		case "Int16":
+			type_ = descriptorpb.FieldDescriptorProto_TYPE_INT32
+		case "Int32":
+			type_ = descriptorpb.FieldDescriptorProto_TYPE_INT32
+		case "Int64":
+			type_ = descriptorpb.FieldDescriptorProto_TYPE_INT64
+		case "UInt8":
+			type_ = descriptorpb.FieldDescriptorProto_TYPE_UINT32
+		case "UInt16":
+			type_ = descriptorpb.FieldDescriptorProto_TYPE_UINT32
+		case "UInt32":
+			type_ = descriptorpb.FieldDescriptorProto_TYPE_UINT32
+		case "UInt64":
+			type_ = descriptorpb.FieldDescriptorProto_TYPE_UINT64
+		case "Float32":
+			type_ = descriptorpb.FieldDescriptorProto_TYPE_FLOAT
+		case "Float64":
+			type_ = descriptorpb.FieldDescriptorProto_TYPE_DOUBLE
+		default:
+			return nil, nil, fmt.Errorf("built-in type %s doesn't convert to protobuf", builtinTypeName)
+		}
+
+		return &type_, nil, nil
+	}
+
+	for _, module := range c.image.Modules {
+		if module.UID == typeReference.ModuleUID {
+			for _, struct_ := range module.Structs {
+				if struct_.Reference.TypeUID == typeReference.TypeUID {
+					// TODO 2023.11.09: convert to fully-qualified type name
+					type_ := descriptorpb.FieldDescriptorProto_TYPE_MESSAGE
+					return &type_, &struct_.Name.Name, nil
+				}
+			}
+			for _, enum := range module.Enums {
+				if enum.Reference.TypeUID == typeReference.TypeUID {
+					// TODO 2023.11.09: convert to fully-qualified type name
+					type_ := descriptorpb.FieldDescriptorProto_TYPE_ENUM
+					return &type_, &enum.Name, nil
+				}
+			}
+			for _, api := range module.APIs {
+				if api.Reference.TypeUID == typeReference.TypeUID {
+					return nil, nil, fmt.Errorf("can't use an API (%s) as a protobuf type", api.Name)
+				}
+			}
+			for _, sdk := range module.SDKs {
+				if sdk.Reference.TypeUID == typeReference.TypeUID {
+					return nil, nil, fmt.Errorf("can't use an SDK (%s) as a protobuf type", sdk.Name)
+				}
+			}
+			for _, annotation := range module.Annotations {
+				if annotation.Reference.TypeUID == typeReference.TypeUID {
+					return nil, nil, fmt.Errorf("can't use an Annotation (%s) as a protobuf type", annotation.Name)
+				}
+			}
+			for _, constant := range module.Constants {
+				if constant.Reference.TypeUID == typeReference.TypeUID {
+					return nil, nil, fmt.Errorf("can't use a Constant (%s) as a protobuf type", constant.Name)
+				}
+			}
+		}
+	}
+
+	return nil, nil, fmt.Errorf("linked type with moduleUID=%d and typeUID=%d wasn't found in the image!", typeReference.ModuleUID, typeReference.TypeUID)
+}
+
+func (c *imageConverter) fromEnum(enum *proto.Enum) (*descriptorpb.EnumDescriptorProto, error) {
+	values, err := mapFrom(enum.Enumerants, c.fromEnumerant)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +257,7 @@ func fromEnum(enum *proto.Enum) (*descriptorpb.EnumDescriptorProto, error) {
 	}, nil
 }
 
-func fromEnumerant(enumerant *proto.Enumerant) (*descriptorpb.EnumValueDescriptorProto, error) {
+func (c *imageConverter) fromEnumerant(enumerant *proto.Enumerant) (*descriptorpb.EnumValueDescriptorProto, error) {
 	number := (int32)(enumerant.Reference.AttributeUID)
 	return &descriptorpb.EnumValueDescriptorProto{
 		Name:   &enumerant.Name,
