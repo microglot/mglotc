@@ -361,9 +361,7 @@ message MicroglotForwardReference {
 
 message ResolvedReference {
    TypeReference Reference = 1;
-   bool IsList = 2;
-   bool IsMap = 3;
-   bool HasPresence = 4;
+   repeated TypeSpecifier Parameters = 2;
 }
 
 message AttributeReference {

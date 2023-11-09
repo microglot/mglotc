@@ -5,7 +5,6 @@ import (
 )
 
 func walkModule(module *proto.Module, f func(interface{})) {
-	f(module)
 	for _, struct_ := range module.Structs {
 		walkStruct(struct_, f)
 	}
@@ -24,10 +23,10 @@ func walkModule(module *proto.Module, f func(interface{})) {
 	for _, annotation := range module.Annotations {
 		walkAnnotation(annotation, f)
 	}
+	f(module)
 }
 
 func walkStruct(struct_ *proto.Struct, f func(interface{})) {
-	f(struct_)
 	for _, field := range struct_.Fields {
 		walkField(field, f)
 	}
@@ -37,51 +36,51 @@ func walkStruct(struct_ *proto.Struct, f func(interface{})) {
 	for _, annotation := range struct_.AnnotationApplications {
 		walkAnnotationApplication(annotation, f)
 	}
+	f(struct_)
 }
 
 func walkField(field *proto.Field, f func(interface{})) {
-	f(field)
-	f(field.Type)
 	if field.DefaultValue != nil {
 		walkValue(field.DefaultValue, f)
 	}
 	for _, annotation := range field.AnnotationApplications {
 		walkAnnotationApplication(annotation, f)
 	}
+	walkTypeSpecifier(field.Type, f)
+	f(field)
 }
 
 func walkUnion(union *proto.Union, f func(interface{})) {
-	f(union)
 	for _, annotation := range union.AnnotationApplications {
 		walkAnnotationApplication(annotation, f)
 	}
+	f(union)
 }
 
 func walkAnnotationApplication(annotationApplication *proto.AnnotationApplication, f func(interface{})) {
-	f(annotationApplication)
 	walkTypeSpecifier(annotationApplication.Annotation, f)
 	walkValue(annotationApplication.Value, f)
+	f(annotationApplication)
 }
 
 func walkEnum(enum *proto.Enum, f func(interface{})) {
-	f(enum)
 	for _, enumerant := range enum.Enumerants {
 		walkEnumerant(enumerant, f)
 	}
 	for _, annotation := range enum.AnnotationApplications {
 		walkAnnotationApplication(annotation, f)
 	}
+	f(enum)
 }
 
 func walkEnumerant(enumerant *proto.Enumerant, f func(interface{})) {
-	f(enumerant)
 	for _, annotation := range enumerant.AnnotationApplications {
 		walkAnnotationApplication(annotation, f)
 	}
+	f(enumerant)
 }
 
 func walkAPI(api *proto.API, f func(interface{})) {
-	f(api)
 	for _, method := range api.Methods {
 		walkAPIMethod(method, f)
 	}
@@ -91,19 +90,19 @@ func walkAPI(api *proto.API, f func(interface{})) {
 	for _, annotation := range api.AnnotationApplications {
 		walkAnnotationApplication(annotation, f)
 	}
+	f(api)
 }
 
 func walkAPIMethod(method *proto.APIMethod, f func(interface{})) {
-	f(method)
 	walkTypeSpecifier(method.Input, f)
 	walkTypeSpecifier(method.Output, f)
 	for _, annotation := range method.AnnotationApplications {
 		walkAnnotationApplication(annotation, f)
 	}
+	f(method)
 }
 
 func walkSDK(sdk *proto.SDK, f func(interface{})) {
-	f(sdk)
 	for _, method := range sdk.Methods {
 		walkSDKMethod(method, f)
 	}
@@ -113,10 +112,10 @@ func walkSDK(sdk *proto.SDK, f func(interface{})) {
 	for _, annotation := range sdk.AnnotationApplications {
 		walkAnnotationApplication(annotation, f)
 	}
+	f(sdk)
 }
 
 func walkSDKMethod(method *proto.SDKMethod, f func(interface{})) {
-	f(method)
 	for _, input := range method.Input {
 		walkTypeSpecifier(input.Type, f)
 	}
@@ -124,27 +123,27 @@ func walkSDKMethod(method *proto.SDKMethod, f func(interface{})) {
 	for _, annotation := range method.AnnotationApplications {
 		walkAnnotationApplication(annotation, f)
 	}
+	f(method)
 }
 
 func walkConstant(constant *proto.Constant, f func(interface{})) {
-	f(constant)
 	walkTypeSpecifier(constant.Type, f)
 	walkValue(constant.Value, f)
 	for _, annotation := range constant.AnnotationApplications {
 		walkAnnotationApplication(annotation, f)
 	}
+	f(constant)
 }
 
 func walkAnnotation(annotation *proto.Annotation, f func(interface{})) {
-	f(annotation)
 	for _, scope := range annotation.Scopes {
 		f(scope)
 	}
 	walkTypeSpecifier(annotation.Type, f)
+	f(annotation)
 }
 
 func walkTypeSpecifier(typeSpecifier *proto.TypeSpecifier, f func(interface{})) {
-	f(typeSpecifier)
 	switch r := typeSpecifier.Reference.(type) {
 	case *proto.TypeSpecifier_Forward:
 		switch kind := r.Forward.Reference.(type) {
@@ -154,6 +153,7 @@ func walkTypeSpecifier(typeSpecifier *proto.TypeSpecifier, f func(interface{})) 
 			}
 		}
 	}
+	f(typeSpecifier)
 }
 
 func walkValue(value *proto.Value, f func(interface{})) {

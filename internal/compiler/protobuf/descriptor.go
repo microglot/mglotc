@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"strconv"
 
 	"google.golang.org/protobuf/types/descriptorpb"
@@ -187,8 +188,6 @@ func fromDescriptorProto(descriptor *descriptorpb.DescriptorProto) (*proto.Struc
 	}
 
 	// TODO 2023.10.10: convert Options
-
-	// TODO 2023.10.29: deal with Proto3Optional
 
 	return &proto.Struct{
 		Reference: &proto.TypeReference{
@@ -373,6 +372,63 @@ func fromFieldDescriptorProto(fieldDescriptor *descriptorpb.FieldDescriptorProto
 
 	// TODO 2023.10.10: convert Options
 
+	forwardTypeSpecifier := proto.TypeSpecifier{
+		Reference: &proto.TypeSpecifier_Forward{
+			Forward: &proto.ForwardReference{
+				Reference: &proto.ForwardReference_Protobuf{
+					Protobuf: typeName,
+				},
+			},
+		},
+	}
+
+	typeSpecifier := forwardTypeSpecifier
+	if fieldDescriptor.Label != nil {
+		switch *fieldDescriptor.Label {
+		case descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL:
+			typeSpecifier = proto.TypeSpecifier{
+				Reference: &proto.TypeSpecifier_Forward{
+					Forward: &proto.ForwardReference{
+						Reference: &proto.ForwardReference_Microglot{
+							Microglot: &proto.MicroglotForwardReference{
+								Qualifier: "",
+								Name: &proto.TypeName{
+									Name: "Presence",
+									Parameters: []*proto.TypeSpecifier{
+										&forwardTypeSpecifier,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+		case descriptorpb.FieldDescriptorProto_LABEL_REPEATED:
+			typeSpecifier = proto.TypeSpecifier{
+				Reference: &proto.TypeSpecifier_Forward{
+					Forward: &proto.ForwardReference{
+						Reference: &proto.ForwardReference_Microglot{
+							Microglot: &proto.MicroglotForwardReference{
+								Qualifier: "",
+								Name: &proto.TypeName{
+									Name: "List",
+									Parameters: []*proto.TypeSpecifier{
+										&forwardTypeSpecifier,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+		default:
+			return nil, fmt.Errorf("unimplemented protobuf label %s", *fieldDescriptor.Label)
+		}
+	}
+
+	// TODO 2023.11.09: do we have to deal with Proto3Optional?
+	// TODO 2023.11.09: how are protobuf maps represented in the descriptor?
+
 	var unionIndex *uint64
 	if fieldDescriptor.OneofIndex != nil {
 		unionIndex = new(uint64)
@@ -385,16 +441,8 @@ func fromFieldDescriptorProto(fieldDescriptor *descriptorpb.FieldDescriptorProto
 			TypeUID:      idl.Incomplete,
 			AttributeUID: (uint64)(*fieldDescriptor.Number),
 		},
-		Name: *fieldDescriptor.Name,
-		Type: &proto.TypeSpecifier{
-			Reference: &proto.TypeSpecifier_Forward{
-				Forward: &proto.ForwardReference{
-					Reference: &proto.ForwardReference_Protobuf{
-						Protobuf: typeName,
-					},
-				},
-			},
-		},
+		Name:         *fieldDescriptor.Name,
+		Type:         &typeSpecifier,
 		DefaultValue: defaultValue,
 		UnionIndex:   unionIndex,
 

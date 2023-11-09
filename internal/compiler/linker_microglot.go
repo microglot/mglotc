@@ -36,6 +36,7 @@ func link(parsed proto.Module, gsymbols *globalSymbolTable, r exc.Reporter) (*pr
 			switch kind := n.Reference.(type) {
 			case *proto.TypeSpecifier_Forward:
 				var sym proto.TypeReference
+				var parameters []*proto.TypeSpecifier
 				var ok bool
 				var fullName string
 				switch reference := kind.Forward.Reference.(type) {
@@ -45,6 +46,8 @@ func link(parsed proto.Module, gsymbols *globalSymbolTable, r exc.Reporter) (*pr
 						qualifier: reference.Microglot.Qualifier,
 						name:      reference.Microglot.Name.Name,
 					}]
+
+					parameters = reference.Microglot.Name.Parameters
 				case *proto.ForwardReference_Protobuf:
 					fullName = reference.Protobuf
 					sym, ok = gsymbols.packageSearch(parsed.ProtobufPackage, reference.Protobuf)
@@ -67,10 +70,8 @@ func link(parsed proto.Module, gsymbols *globalSymbolTable, r exc.Reporter) (*pr
 				} else {
 					n.Reference = &proto.TypeSpecifier_Resolved{
 						Resolved: &proto.ResolvedReference{
-							Reference: &sym,
-							// IsList:
-							// IsMap:
-							// HasPresence:
+							Reference:  &sym,
+							Parameters: parameters,
 						},
 					}
 				}

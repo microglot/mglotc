@@ -77,6 +77,8 @@ func (c *imageConverter) fromModule(module *proto.Module) (*descriptorpb.FileDes
 	// a big hairball; my shortcut is to just hard-code a goPackage here, for now.
 	goPackage := "gopkg.microglot.org/compiler.go/internal/proto"
 
+	syntax := "proto3"
+
 	return &descriptorpb.FileDescriptorProto{
 		Name:       &module.URI,
 		Package:    &module.ProtobufPackage,
@@ -94,7 +96,7 @@ func (c *imageConverter) fromModule(module *proto.Module) (*descriptorpb.FileDes
 		},
 
 		// SourceCodeInfo
-		// Syntax
+		Syntax: &syntax,
 		// Edition
 	}, nil
 }
@@ -121,15 +123,15 @@ func (c *imageConverter) fromStruct(struct_ *proto.Struct) (*descriptorpb.Descri
 func (c *imageConverter) fromField(field *proto.Field) (*descriptorpb.FieldDescriptorProto, error) {
 	number := (int32)(field.Reference.AttributeUID)
 
-	type_, typeName, err := c.fromTypeSpecifier(field.Type)
+	label, type_, typeName, err := c.fromTypeSpecifier(field.Type)
 	if err != nil {
 		return nil, err
 	}
 
 	return &descriptorpb.FieldDescriptorProto{
-		Name:   &field.Name,
-		Number: &number,
-		// Label
+		Name:     &field.Name,
+		Number:   &number,
+		Label:    label,
 		Type:     type_,
 		TypeName: typeName,
 		// Extendee
@@ -141,105 +143,129 @@ func (c *imageConverter) fromField(field *proto.Field) (*descriptorpb.FieldDescr
 	}, nil
 }
 
-func (c *imageConverter) fromTypeSpecifier(typeSpecifier *proto.TypeSpecifier) (*descriptorpb.FieldDescriptorProto_Type, *string, error) {
+func (c *imageConverter) fromTypeSpecifier(typeSpecifier *proto.TypeSpecifier) (*descriptorpb.FieldDescriptorProto_Label, *descriptorpb.FieldDescriptorProto_Type, *string, error) {
 	resolved, ok := typeSpecifier.Reference.(*proto.TypeSpecifier_Resolved)
 	if !ok {
-		return nil, nil, errors.New("unexpected forward reference while converting descriptor to protobuf!")
+		return nil, nil, nil, errors.New("unexpected forward reference while converting descriptor to protobuf!")
 	}
 
-	type_, typeName, err := c.fromTypeReference(resolved.Resolved.Reference)
+	label, type_, typeName, err := c.fromResolvedReference(resolved.Resolved)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	return type_, typeName, nil
+	return label, type_, typeName, nil
 }
 
-func (c *imageConverter) fromTypeReference(typeReference *proto.TypeReference) (*descriptorpb.FieldDescriptorProto_Type, *string, error) {
+func (c *imageConverter) fromResolvedReference(resolvedReference *proto.ResolvedReference) (*descriptorpb.FieldDescriptorProto_Label, *descriptorpb.FieldDescriptorProto_Type, *string, error) {
 
 	// moduleUID 0 is for built-in types
-	if typeReference.ModuleUID == 0 {
-		builtinTypeName, ok := GetBuiltinTypeNameFromUID(typeReference.TypeUID)
+	if resolvedReference.Reference.ModuleUID == 0 {
+		builtinTypeName, ok := GetBuiltinTypeNameFromUID(resolvedReference.Reference.TypeUID)
 		if !ok {
-			return nil, nil, fmt.Errorf("unknown built-in type UID: %d\n", typeReference.TypeUID)
+			return nil, nil, nil, fmt.Errorf("unknown built-in type UID: %d\n", resolvedReference.Reference.TypeUID)
 		}
 
 		// TODO 2023.11.09: respect $(Protobuf.FieldType())
 
-		var type_ descriptorpb.FieldDescriptorProto_Type
 		switch builtinTypeName {
 		case "Bool":
-			type_ = descriptorpb.FieldDescriptorProto_TYPE_BOOL
+			type_ := descriptorpb.FieldDescriptorProto_TYPE_BOOL
+			return nil, &type_, nil, nil
 		case "Text":
-			type_ = descriptorpb.FieldDescriptorProto_TYPE_STRING
+			type_ := descriptorpb.FieldDescriptorProto_TYPE_STRING
+			return nil, &type_, nil, nil
 		case "Data":
-			type_ = descriptorpb.FieldDescriptorProto_TYPE_BYTES
+			type_ := descriptorpb.FieldDescriptorProto_TYPE_BYTES
+			return nil, &type_, nil, nil
 		case "Int8":
-			type_ = descriptorpb.FieldDescriptorProto_TYPE_INT32
+			type_ := descriptorpb.FieldDescriptorProto_TYPE_INT32
+			return nil, &type_, nil, nil
 		case "Int16":
-			type_ = descriptorpb.FieldDescriptorProto_TYPE_INT32
+			type_ := descriptorpb.FieldDescriptorProto_TYPE_INT32
+			return nil, &type_, nil, nil
 		case "Int32":
-			type_ = descriptorpb.FieldDescriptorProto_TYPE_INT32
+			type_ := descriptorpb.FieldDescriptorProto_TYPE_INT32
+			return nil, &type_, nil, nil
 		case "Int64":
-			type_ = descriptorpb.FieldDescriptorProto_TYPE_INT64
+			type_ := descriptorpb.FieldDescriptorProto_TYPE_INT64
+			return nil, &type_, nil, nil
 		case "UInt8":
-			type_ = descriptorpb.FieldDescriptorProto_TYPE_UINT32
+			type_ := descriptorpb.FieldDescriptorProto_TYPE_UINT32
+			return nil, &type_, nil, nil
 		case "UInt16":
-			type_ = descriptorpb.FieldDescriptorProto_TYPE_UINT32
+			type_ := descriptorpb.FieldDescriptorProto_TYPE_UINT32
+			return nil, &type_, nil, nil
 		case "UInt32":
-			type_ = descriptorpb.FieldDescriptorProto_TYPE_UINT32
+			type_ := descriptorpb.FieldDescriptorProto_TYPE_UINT32
+			return nil, &type_, nil, nil
 		case "UInt64":
-			type_ = descriptorpb.FieldDescriptorProto_TYPE_UINT64
+			type_ := descriptorpb.FieldDescriptorProto_TYPE_UINT64
+			return nil, &type_, nil, nil
 		case "Float32":
-			type_ = descriptorpb.FieldDescriptorProto_TYPE_FLOAT
+			type_ := descriptorpb.FieldDescriptorProto_TYPE_FLOAT
+			return nil, &type_, nil, nil
 		case "Float64":
-			type_ = descriptorpb.FieldDescriptorProto_TYPE_DOUBLE
+			type_ := descriptorpb.FieldDescriptorProto_TYPE_DOUBLE
+			return nil, &type_, nil, nil
+		case "List":
+			_, type_, typeName, err := c.fromTypeSpecifier(resolvedReference.Parameters[0])
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			label := descriptorpb.FieldDescriptorProto_LABEL_REPEATED
+			return &label, type_, typeName, nil
+		case "Presence":
+			_, type_, typeName, err := c.fromTypeSpecifier(resolvedReference.Parameters[0])
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			label := descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL
+			return &label, type_, typeName, nil
 		default:
-			return nil, nil, fmt.Errorf("built-in type %s doesn't convert to protobuf", builtinTypeName)
+			return nil, nil, nil, fmt.Errorf("built-in type %s doesn't convert to protobuf", builtinTypeName)
 		}
-
-		return &type_, nil, nil
 	}
 
 	for _, module := range c.image.Modules {
-		if module.UID == typeReference.ModuleUID {
+		if module.UID == resolvedReference.Reference.ModuleUID {
 			for _, struct_ := range module.Structs {
-				if struct_.Reference.TypeUID == typeReference.TypeUID {
+				if struct_.Reference.TypeUID == resolvedReference.Reference.TypeUID {
 					// TODO 2023.11.09: convert to fully-qualified type name
 					type_ := descriptorpb.FieldDescriptorProto_TYPE_MESSAGE
-					return &type_, &struct_.Name.Name, nil
+					return nil, &type_, &struct_.Name.Name, nil
 				}
 			}
 			for _, enum := range module.Enums {
-				if enum.Reference.TypeUID == typeReference.TypeUID {
+				if enum.Reference.TypeUID == resolvedReference.Reference.TypeUID {
 					// TODO 2023.11.09: convert to fully-qualified type name
 					type_ := descriptorpb.FieldDescriptorProto_TYPE_ENUM
-					return &type_, &enum.Name, nil
+					return nil, &type_, &enum.Name, nil
 				}
 			}
 			for _, api := range module.APIs {
-				if api.Reference.TypeUID == typeReference.TypeUID {
-					return nil, nil, fmt.Errorf("can't use an API (%s) as a protobuf type", api.Name)
+				if api.Reference.TypeUID == resolvedReference.Reference.TypeUID {
+					return nil, nil, nil, fmt.Errorf("can't use an API (%s) as a protobuf type", api.Name)
 				}
 			}
 			for _, sdk := range module.SDKs {
-				if sdk.Reference.TypeUID == typeReference.TypeUID {
-					return nil, nil, fmt.Errorf("can't use an SDK (%s) as a protobuf type", sdk.Name)
+				if sdk.Reference.TypeUID == resolvedReference.Reference.TypeUID {
+					return nil, nil, nil, fmt.Errorf("can't use an SDK (%s) as a protobuf type", sdk.Name)
 				}
 			}
 			for _, annotation := range module.Annotations {
-				if annotation.Reference.TypeUID == typeReference.TypeUID {
-					return nil, nil, fmt.Errorf("can't use an Annotation (%s) as a protobuf type", annotation.Name)
+				if annotation.Reference.TypeUID == resolvedReference.Reference.TypeUID {
+					return nil, nil, nil, fmt.Errorf("can't use an Annotation (%s) as a protobuf type", annotation.Name)
 				}
 			}
 			for _, constant := range module.Constants {
-				if constant.Reference.TypeUID == typeReference.TypeUID {
-					return nil, nil, fmt.Errorf("can't use a Constant (%s) as a protobuf type", constant.Name)
+				if constant.Reference.TypeUID == resolvedReference.Reference.TypeUID {
+					return nil, nil, nil, fmt.Errorf("can't use a Constant (%s) as a protobuf type", constant.Name)
 				}
 			}
 		}
 	}
 
-	return nil, nil, fmt.Errorf("linked type with moduleUID=%d and typeUID=%d wasn't found in the image!", typeReference.ModuleUID, typeReference.TypeUID)
+	return nil, nil, nil, fmt.Errorf("linked type with moduleUID=%d and typeUID=%d wasn't found in the image!", resolvedReference.Reference.ModuleUID, resolvedReference.Reference.TypeUID)
 }
 
 func (c *imageConverter) fromEnum(enum *proto.Enum) (*descriptorpb.EnumDescriptorProto, error) {
