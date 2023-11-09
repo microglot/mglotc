@@ -273,61 +273,61 @@ func newUID(parentUID uint64, name string) uint64 {
 }
 
 func completeTypeReference(moduleUID uint64, name string, typeReference *proto.TypeReference) {
-	if typeReference.ModuleUID == 0 {
+	if typeReference.ModuleUID == idl.Incomplete {
 		typeReference.ModuleUID = moduleUID
 	} else {
 		// TODO 2023.09.23: this may become a non-panic in future, but right now means a logic error
 		panic(fmt.Errorf("the module UID for %s is already set, which shouldn't happen", name))
 	}
-	if typeReference.TypeUID == 0 {
+	if typeReference.TypeUID == idl.Incomplete {
 		typeReference.TypeUID = newUID(moduleUID, name)
 	}
 }
 
 func completeAttributeReference(moduleUID uint64, typeUID uint64, name string, attributeReference *proto.AttributeReference) {
-	if attributeReference.ModuleUID == 0 {
+	if attributeReference.ModuleUID == idl.Incomplete {
 		attributeReference.ModuleUID = moduleUID
 	} else {
 		// TODO 2023.09.23: this may become a non-panic in future, but right now means a logic error
 		panic(fmt.Errorf("the module UID for %s is already set, which shouldn't happen", name))
 	}
 
-	if attributeReference.TypeUID == 0 {
+	if attributeReference.TypeUID == idl.Incomplete {
 		attributeReference.TypeUID = typeUID
 	} else {
 		// TODO 2023.09.23: this may become a non-panic in future, but right now means a logic error
 		panic(fmt.Errorf("the type UID for %s is already set, which shouldn't happen", name))
 	}
 
-	if attributeReference.AttributeUID == 0 {
+	if attributeReference.AttributeUID == idl.Incomplete {
 		attributeReference.AttributeUID = newUID(typeUID, name)
 	}
 
 }
 
 func completeSDKInputReference(moduleUID uint64, typeUID uint64, attributeUID uint64, name string, sdkInputReference *proto.SDKInputReference) {
-	if sdkInputReference.ModuleUID == 0 {
+	if sdkInputReference.ModuleUID == idl.Incomplete {
 		sdkInputReference.ModuleUID = moduleUID
 	} else {
 		// TODO 2023.09.23: this may become a non-panic in future, but right now means a logic error
 		panic(fmt.Errorf("the module UID for %s is already set, which shouldn't happen", name))
 	}
 
-	if sdkInputReference.TypeUID == 0 {
+	if sdkInputReference.TypeUID == idl.Incomplete {
 		sdkInputReference.TypeUID = typeUID
 	} else {
 		// TODO 2023.09.23: this may become a non-panic in future, but right now means a logic error
 		panic(fmt.Errorf("the type UID for %s is already set, which shouldn't happen", name))
 	}
 
-	if sdkInputReference.AttributeUID == 0 {
+	if sdkInputReference.AttributeUID == idl.Incomplete {
 		sdkInputReference.AttributeUID = attributeUID
 	} else {
 		// TODO 2023.09.23: this may become a non-panic in future, but right now means a logic error
 		panic(fmt.Errorf("the attribute UID for %s is already set, which shouldn't happen", name))
 	}
 
-	if sdkInputReference.AttributeUID == 0 {
+	if sdkInputReference.AttributeUID == idl.Incomplete {
 		sdkInputReference.InputUID = newUID(attributeUID, name)
 	}
 }

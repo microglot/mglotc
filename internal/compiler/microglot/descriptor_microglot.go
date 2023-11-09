@@ -521,45 +521,39 @@ func fromTypeName(typeName *astTypeName) *proto.TypeName {
 
 func fromTypeUID(typeUID *astValueLiteralInt) *proto.TypeReference {
 	this := proto.TypeReference{
-		// zero is reserved to mean "to be populated during the completeUIDs() pass"
-		ModuleUID: 0,
+		ModuleUID: idl.Incomplete,
 	}
 	if typeUID != nil {
 		this.TypeUID = typeUID.val
 	} else {
-		// zero is reserved to mean "to be populated during the completeUIDs() pass"
-		this.TypeUID = 0
+		this.TypeUID = idl.Incomplete
 	}
 	return &this
 }
 
 func fromAttributeUID(attributeUID *astValueLiteralInt) *proto.AttributeReference {
 	this := proto.AttributeReference{
-		// zero is reserved to mean "to be populated during the completeUIDs() pass"
-		ModuleUID: 0,
-		TypeUID:   0,
+		ModuleUID: idl.Incomplete,
+		TypeUID:   idl.Incomplete,
 	}
 	if attributeUID != nil {
 		this.AttributeUID = attributeUID.val
 	} else {
-		// zero is reserved to mean "to be populated during the completeUIDs() pass"
-		this.AttributeUID = 0
+		this.AttributeUID = idl.Incomplete
 	}
 	return &this
 }
 
 func fromInputUID(inputUID *astValueLiteralInt) *proto.SDKInputReference {
 	this := proto.SDKInputReference{
-		// zero is reserved to mean "to be populated during the completeUIDs() pass"
-		ModuleUID:    0,
-		TypeUID:      0,
-		AttributeUID: 0,
+		ModuleUID:    idl.Incomplete,
+		TypeUID:      idl.Incomplete,
+		AttributeUID: idl.Incomplete,
 	}
 	if inputUID != nil {
 		this.InputUID = inputUID.val
 	} else {
-		// zero is reserved to mean "to be populated during the completeUIDs() pass"
-		this.InputUID = 0
+		this.InputUID = idl.Incomplete
 	}
 	return &this
 }

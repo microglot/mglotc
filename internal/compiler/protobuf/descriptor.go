@@ -9,6 +9,7 @@ import (
 
 	"google.golang.org/protobuf/types/descriptorpb"
 
+	"gopkg.microglot.org/compiler.go/internal/idl"
 	"gopkg.microglot.org/compiler.go/internal/proto"
 )
 
@@ -170,9 +171,9 @@ func fromDescriptorProto(descriptor *descriptorpb.DescriptorProto) (*proto.Struc
 	for _, oneofDescriptor := range descriptor.OneofDecl {
 		unions = append(unions, &proto.Union{
 			Reference: &proto.AttributeReference{
-				// ModuleUID:
-				// TypeUID:
-				// AttributeUID:
+				ModuleUID:    idl.Incomplete,
+				TypeUID:      idl.Incomplete,
+				AttributeUID: idl.Incomplete,
 			},
 			Name: *oneofDescriptor.Name,
 			// CommentBlock:
@@ -190,7 +191,10 @@ func fromDescriptorProto(descriptor *descriptorpb.DescriptorProto) (*proto.Struc
 	// TODO 2023.10.29: deal with Proto3Optional
 
 	return &proto.Struct{
-		Reference: &proto.TypeReference{},
+		Reference: &proto.TypeReference{
+			ModuleUID: idl.Incomplete,
+			TypeUID:   idl.Incomplete,
+		},
 		Name: &proto.TypeName{
 			Name:       *descriptor.Name,
 			Parameters: nil,
@@ -377,8 +381,8 @@ func fromFieldDescriptorProto(fieldDescriptor *descriptorpb.FieldDescriptorProto
 
 	return &proto.Field{
 		Reference: &proto.AttributeReference{
-			// ModuleUID:
-			// TypeUID:
+			ModuleUID:    idl.Incomplete,
+			TypeUID:      idl.Incomplete,
 			AttributeUID: (uint64)(*fieldDescriptor.Number),
 		},
 		Name: *fieldDescriptor.Name,
@@ -408,7 +412,10 @@ func fromEnumDescriptorProto(enumDescriptor *descriptorpb.EnumDescriptorProto) (
 	// TODO 2023.10.10: convert Options
 
 	return &proto.Enum{
-		Reference:  &proto.TypeReference{},
+		Reference: &proto.TypeReference{
+			ModuleUID: idl.Incomplete,
+			TypeUID:   idl.Incomplete,
+		},
 		Name:       *enumDescriptor.Name,
 		Enumerants: enumerants,
 		// Reserved:
@@ -423,8 +430,8 @@ func fromEnumValueDescriptorProto(enumValueDescriptor *descriptorpb.EnumValueDes
 
 	return &proto.Enumerant{
 		Reference: &proto.AttributeReference{
-			// ModuleUID:
-			// TypeUID:
+			ModuleUID:    idl.Incomplete,
+			TypeUID:      idl.Incomplete,
 			AttributeUID: uint64(*enumValueDescriptor.Number),
 		},
 		Name: *enumValueDescriptor.Name,
@@ -442,7 +449,10 @@ func fromServiceDescriptorProto(serviceDescriptor *descriptorpb.ServiceDescripto
 	// TODO 2023.10.10: convert Options
 
 	return &proto.API{
-		Reference: &proto.TypeReference{},
+		Reference: &proto.TypeReference{
+			ModuleUID: idl.Incomplete,
+			TypeUID:   idl.Incomplete,
+		},
 		Name: &proto.TypeName{
 			Name:       *serviceDescriptor.Name,
 			Parameters: nil,
@@ -466,8 +476,12 @@ func fromMethodDescriptorProto(methodDescriptor *descriptorpb.MethodDescriptorPr
 	// TODO 2023.10.10: convert Options
 
 	return &proto.APIMethod{
-		Reference: &proto.AttributeReference{},
-		Name:      *methodDescriptor.Name,
+		Reference: &proto.AttributeReference{
+			ModuleUID:    idl.Incomplete,
+			TypeUID:      idl.Incomplete,
+			AttributeUID: idl.Incomplete,
+		},
+		Name: *methodDescriptor.Name,
 		Input: &proto.TypeSpecifier{
 			Reference: &proto.TypeSpecifier_Forward{
 				Forward: &proto.ForwardReference{
