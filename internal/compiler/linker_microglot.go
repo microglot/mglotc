@@ -154,6 +154,17 @@ func newLocalSymbols(gsymbols *globalSymbolTable, URI string) *localSymbolTable 
 		}
 	}
 
+	for protobufTypeName, protobufTypeUID := range idl.PROTOBUF_TYPE_UIDS {
+		symbols.types[localSymbolName{
+			qualifier: "Protobuf",
+			name:      protobufTypeName,
+		}] = proto.TypeReference{
+			// moduleUID 1 is for Protobuf annotations
+			ModuleUID: 1,
+			TypeUID:   protobufTypeUID,
+		}
+	}
+
 	ok := symbols.alias(gsymbols, URI, "", false)
 	if !ok {
 		return nil

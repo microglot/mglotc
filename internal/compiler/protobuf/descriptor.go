@@ -30,6 +30,23 @@ func mapFrom[F any, T any](in []*F, f func(*F) (T, error)) ([]T, error) {
 	return nil, nil
 }
 
+func appendProtobufAnnotation(as []*proto.AnnotationApplication, name string, value *proto.Value) []*proto.AnnotationApplication {
+	return append(as, &proto.AnnotationApplication{
+		Annotation: &proto.TypeSpecifier{
+			Reference: &proto.TypeSpecifier_Resolved{
+				Resolved: &proto.ResolvedReference{
+					Reference: &proto.TypeReference{
+						// moduleUID 1 is for Protobuf annotations
+						ModuleUID: 1,
+						TypeUID:   idl.PROTOBUF_TYPE_UIDS[name],
+					},
+				},
+			},
+		},
+		Value: value,
+	})
+}
+
 func nameCollides(name string, structs *[]*proto.Struct, enums *[]*proto.Enum) bool {
 	if structs != nil {
 		for _, struct_ := range *structs {
@@ -169,17 +186,27 @@ func FromFileDescriptorProto(fileDescriptor *descriptorpb.FileDescriptorProto) (
 
 func fromDescriptorProto(descriptor *descriptorpb.DescriptorProto) (*proto.Struct, error) {
 	var unions []*proto.Union
-	for _, oneofDescriptor := range descriptor.OneofDecl {
-		unions = append(unions, &proto.Union{
-			Reference: &proto.AttributeReference{
-				ModuleUID:    idl.Incomplete,
-				TypeUID:      idl.Incomplete,
-				AttributeUID: idl.Incomplete,
-			},
-			Name: *oneofDescriptor.Name,
-			// CommentBlock:
-			// AnnotationApplications:
-		})
+	for index, oneofDescriptor := range descriptor.OneofDecl {
+		isSynthetic := false
+		for _, fieldDescriptor := range descriptor.Field {
+			if fieldDescriptor.Proto3Optional != nil && *fieldDescriptor.Proto3Optional {
+				if *fieldDescriptor.OneofIndex == (int32)(index) {
+					isSynthetic = true
+				}
+			}
+		}
+		if !isSynthetic {
+			unions = append(unions, &proto.Union{
+				Reference: &proto.AttributeReference{
+					ModuleUID:    idl.Incomplete,
+					TypeUID:      idl.Incomplete,
+					AttributeUID: idl.Incomplete,
+				},
+				Name: *oneofDescriptor.Name,
+				// CommentBlock:
+				// AnnotationApplications:
+			})
+		}
 	}
 
 	fields, err := mapFrom(descriptor.Field, fromFieldDescriptorProto)
@@ -426,7 +453,6 @@ func fromFieldDescriptorProto(fieldDescriptor *descriptorpb.FieldDescriptorProto
 		}
 	}
 
-	// TODO 2023.11.09: do we have to deal with Proto3Optional?
 	// TODO 2023.11.09: how are protobuf maps represented in the descriptor?
 
 	var unionIndex *uint64
@@ -435,19 +461,32 @@ func fromFieldDescriptorProto(fieldDescriptor *descriptorpb.FieldDescriptorProto
 		*unionIndex = (uint64)(*fieldDescriptor.OneofIndex)
 	}
 
+	var annotationApplications []*proto.AnnotationApplication
+
+	// Proto3Optional needs to be annotated so that we know to regenerate the synthetic
+	// oneof (which doesn't exist in the microglot descriptor!) when calling protoc plugins.
+	if fieldDescriptor.Proto3Optional != nil && *fieldDescriptor.Proto3Optional {
+		unionIndex = nil
+		annotationApplications = appendProtobufAnnotation(
+			annotationApplications,
+			"Proto3Optional",
+			&proto.Value{Kind: &proto.Value_Bool{Bool: &proto.ValueBool{Value: true}}},
+		)
+	}
+
 	return &proto.Field{
 		Reference: &proto.AttributeReference{
 			ModuleUID:    idl.Incomplete,
 			TypeUID:      idl.Incomplete,
 			AttributeUID: (uint64)(*fieldDescriptor.Number),
 		},
-		Name:         *fieldDescriptor.Name,
-		Type:         &typeSpecifier,
-		DefaultValue: defaultValue,
-		UnionIndex:   unionIndex,
+		Name:                   *fieldDescriptor.Name,
+		Type:                   &typeSpecifier,
+		DefaultValue:           defaultValue,
+		UnionIndex:             unionIndex,
+		AnnotationApplications: annotationApplications,
 
 		// CommentBlock:
-		// AnnotationApplications:
 	}, nil
 }
 

@@ -51,6 +51,16 @@ func mapFrom[F any, T any](in []*F, f func(*F) (T, error)) ([]T, error) {
 	return nil, nil
 }
 
+func getProtobufAnnotation(as []*proto.AnnotationApplication, name string) *proto.Value {
+	for _, annotation := range as {
+		typeReference := *(annotation.Annotation.Reference.(*proto.TypeSpecifier_Resolved).Resolved.Reference)
+		if typeReference.ModuleUID == 1 && typeReference.TypeUID == PROTOBUF_TYPE_UIDS[name] {
+			return annotation.Value
+		}
+	}
+	return nil
+}
+
 func (c *imageConverter) fromModule(module *proto.Module) (*descriptorpb.FileDescriptorProto, error) {
 	// TODO 2023.11.03: is it a fatal error to attempt to convert a microglot Module that contains
 	// stuff that cannot be represented in protobuf, e.g. SDKs? Or is this conversion allowed to be
@@ -107,6 +117,23 @@ func (c *imageConverter) fromStruct(struct_ *proto.Struct) (*descriptorpb.Descri
 		return nil, err
 	}
 
+	oneofs, err := mapFrom(struct_.Unions, c.fromUnion)
+	if err != nil {
+		return nil, err
+	}
+	for _, field := range fields {
+		// if proto3Optional
+		if field.Proto3Optional != nil && *field.Proto3Optional {
+			// TODO 2023.11.12: there's presumably a naming convention for these synthetic oneofs.
+			name := "synthetic"
+			oneofs = append(oneofs, &descriptorpb.OneofDescriptorProto{
+				Name: &name,
+			})
+			oneofIndex := (int32)(len(oneofs) - 1)
+			field.OneofIndex = &oneofIndex
+		}
+	}
+
 	return &descriptorpb.DescriptorProto{
 		Name:  &struct_.Name.Name,
 		Field: fields,
@@ -114,9 +141,16 @@ func (c *imageConverter) fromStruct(struct_ *proto.Struct) (*descriptorpb.Descri
 		// NestedType
 		// EnumType
 		// ExtensionRange
-		// OneofDecl
+		OneofDecl: oneofs,
 		// ReservedRange
 		// ReservedName
+	}, nil
+}
+
+func (c *imageConverter) fromUnion(union *proto.Union) (*descriptorpb.OneofDescriptorProto, error) {
+	return &descriptorpb.OneofDescriptorProto{
+		Name: &union.Name,
+		// Options
 	}, nil
 }
 
@@ -128,6 +162,21 @@ func (c *imageConverter) fromField(field *proto.Field) (*descriptorpb.FieldDescr
 		return nil, err
 	}
 
+	var oneofIndex *int32
+	if field.UnionIndex != nil {
+		oneofIndex = new(int32)
+		*oneofIndex = (int32)(*field.UnionIndex)
+	}
+
+	var proto3Optional *bool
+	proto3OptionalValue := getProtobufAnnotation(field.AnnotationApplications, "Proto3Optional")
+	if proto3OptionalValue != nil {
+		if proto3OptionalValue.Kind.(*proto.Value_Bool).Bool.Value {
+			proto3Optional = new(bool)
+			*proto3Optional = true
+		}
+	}
+
 	return &descriptorpb.FieldDescriptorProto{
 		Name:     &field.Name,
 		Number:   &number,
@@ -136,10 +185,11 @@ func (c *imageConverter) fromField(field *proto.Field) (*descriptorpb.FieldDescr
 		TypeName: typeName,
 		// Extendee
 		// DefaultValue
-		// OneofIndex
+		OneofIndex: oneofIndex,
 		// JsonName
 		// Options
-		// Proto3Optional
+
+		Proto3Optional: proto3Optional,
 	}, nil
 }
 
