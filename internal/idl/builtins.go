@@ -1,5 +1,9 @@
 package idl
 
+import (
+	"sync"
+)
+
 var BUILTIN_TYPE_UIDS = map[string]uint64{
 	"Bool":     0,
 	"Text":     1,
@@ -20,14 +24,14 @@ var BUILTIN_TYPE_UIDS = map[string]uint64{
 
 var builtin_uid_types map[uint64]string = nil
 
-func computeBuiltinUidTypes() {
+var computeBuiltinUidTypes = sync.OnceFunc(func() {
 	if builtin_uid_types == nil {
 		builtin_uid_types = make(map[uint64]string)
 		for builtinTypeName, builtinTypeUID := range BUILTIN_TYPE_UIDS {
 			builtin_uid_types[builtinTypeUID] = builtinTypeName
 		}
 	}
-}
+})
 
 func GetBuiltinTypeNameFromUID(uid uint64) (string, bool) {
 	computeBuiltinUidTypes()
