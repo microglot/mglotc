@@ -30,8 +30,22 @@ func link(parsed proto.Module, gsymbols *globalSymbolTable, r exc.Reporter) (*pr
 	}
 
 	// populate all the TypeSpecifiers
+	var promotedSymbolTable map[string]string
 	walkModule(&parsed, func(node interface{}) {
 		switch n := node.(type) {
+		case *proto.Struct:
+			// Each time we walk into a struct, we set up a new mapping from proto3-style nested
+			// type names to the "promoted" type names. This mapping is applied to all of the
+			// TypeSpecifiers inside the struct as we walk into them.
+			promotedSymbolTable = make(map[string]string)
+
+			nestedTypeInfo := idl.GetProtobufAnnotation(n.AnnotationApplications, "NestedTypeInfo")
+			if nestedTypeInfo != nil {
+				elements := nestedTypeInfo.Kind.(*proto.Value_List).List.Elements
+				for i := 0; i < len(elements); i += 2 {
+					promotedSymbolTable[elements[i].Kind.(*proto.Value_Text).Text.Value] = elements[i+1].Kind.(*proto.Value_Text).Text.Value
+				}
+			}
 		case *proto.TypeSpecifier:
 			switch kind := n.Reference.(type) {
 			case *proto.TypeSpecifier_Forward:
@@ -50,14 +64,22 @@ func link(parsed proto.Module, gsymbols *globalSymbolTable, r exc.Reporter) (*pr
 					parameters = reference.Microglot.Name.Parameters
 				case *proto.ForwardReference_Protobuf:
 					fullName = reference.Protobuf
-					sym, ok = gsymbols.packageSearch(parsed.ProtobufPackage, reference.Protobuf)
+
+					// populated as we walk into the surrounding struct, this is
+					// how we resolve protobuf forward references to nested types
+					// that were promoted in conversion.
+					if promotedName, ok := promotedSymbolTable[reference.Protobuf]; ok {
+						fullName = promotedName
+					}
+
+					sym, ok = gsymbols.packageSearch(parsed.ProtobufPackage, fullName)
 
 					// this is how we deal with built-in types in protobuf, for now,
 					// but it definitely feels a little bit off.
-					if (!ok) && (!strings.Contains(reference.Protobuf, ".")) {
+					if (!ok) && (!strings.Contains(fullName, ".")) {
 						sym, ok = symbols.types[localSymbolName{
 							qualifier: "",
-							name:      reference.Protobuf,
+							name:      fullName,
 						}]
 					}
 				}

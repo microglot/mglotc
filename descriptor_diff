@@ -2,9 +2,18 @@
 
 set -e -x
 
-DS=$(mktemp)
-OUT=$(mktemp -d)
+NAME=${1:-descriptor}
 
-go run main.go internal/proto/descriptor.proto --descriptor_set_out=$DS
-protoc --descriptor_set_in=$DS /internal/proto/descriptor.proto --go_out=$OUT --fatal_warnings
-git diff --no-index internal/proto/descriptor.pb.go $OUT/gopkg.microglot.org/compiler.go/internal/proto/descriptor.pb.go
+IN=$(mktemp -d)
+DS=$(mktemp)
+OUT_BASELINE=$(mktemp -d)
+OUT_ROUNDTRIP=$(mktemp -d)
+
+cp test/* $IN
+
+protoc --proto_path=$IN/ $NAME.proto --go_out=$OUT_BASELINE --fatal_warnings
+
+go run main.go --root=$IN/ $NAME.proto --descriptor_set_out=$DS
+protoc --descriptor_set_in=$DS /$NAME.proto --go_out=$OUT_ROUNDTRIP --fatal_warnings
+
+git diff --no-index $OUT_BASELINE/gopkg.microglot.org/compiler.go/internal/proto/$NAME.pb.go $OUT_ROUNDTRIP/gopkg.microglot.org/compiler.go/internal/proto/$NAME.pb.go

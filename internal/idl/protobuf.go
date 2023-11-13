@@ -7,6 +7,7 @@ import (
 var PROTOBUF_TYPE_UIDS = map[string]uint64{
 	"Package":        0,
 	"Proto3Optional": 1,
+	"NestedTypeInfo": 2,
 }
 
 var protobuf_uid_types map[uint64]string = nil

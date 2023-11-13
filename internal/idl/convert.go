@@ -51,7 +51,7 @@ func mapFrom[F any, T any](in []*F, f func(*F) (T, error)) ([]T, error) {
 	return nil, nil
 }
 
-func getProtobufAnnotation(as []*proto.AnnotationApplication, name string) *proto.Value {
+func GetProtobufAnnotation(as []*proto.AnnotationApplication, name string) *proto.Value {
 	for _, annotation := range as {
 		typeReference := *(annotation.Annotation.Reference.(*proto.TypeSpecifier_Resolved).Resolved.Reference)
 		if typeReference.ModuleUID == 1 && typeReference.TypeUID == PROTOBUF_TYPE_UIDS[name] {
@@ -134,14 +134,22 @@ func (c *imageConverter) fromStruct(struct_ *proto.Struct) (*descriptorpb.Descri
 		}
 	}
 
+	var options *descriptorpb.MessageOptions
+	if struct_.IsSynthetic {
+		options = new(descriptorpb.MessageOptions)
+		options.MapEntry = new(bool)
+		*(options.MapEntry) = true
+	}
+
 	return &descriptorpb.DescriptorProto{
-		Name:  &struct_.Name.Name,
-		Field: fields,
+		Name:      &struct_.Name.Name,
+		Field:     fields,
+		OneofDecl: oneofs,
+		Options:   options,
 		// Extension
 		// NestedType
 		// EnumType
 		// ExtensionRange
-		OneofDecl: oneofs,
 		// ReservedRange
 		// ReservedName
 	}, nil
@@ -169,7 +177,7 @@ func (c *imageConverter) fromField(field *proto.Field) (*descriptorpb.FieldDescr
 	}
 
 	var proto3Optional *bool
-	proto3OptionalValue := getProtobufAnnotation(field.AnnotationApplications, "Proto3Optional")
+	proto3OptionalValue := GetProtobufAnnotation(field.AnnotationApplications, "Proto3Optional")
 	if proto3OptionalValue != nil {
 		if proto3OptionalValue.Kind.(*proto.Value_Bool).Bool.Value {
 			proto3Optional = new(bool)

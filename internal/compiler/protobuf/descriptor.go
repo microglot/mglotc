@@ -47,6 +47,36 @@ func appendProtobufAnnotation(as []*proto.AnnotationApplication, name string, va
 	})
 }
 
+// $(Protobuf.NestedTypeInfo()) is encoded as a flattened list of key
+func computeNestedTypeInfo(promoted map[string]string) *proto.Value {
+	elements := make([]*proto.Value, 0)
+	for key, value := range promoted {
+		elements = append(elements, &proto.Value{
+			Kind: &proto.Value_Text{
+				Text: &proto.ValueText{
+					Value:  key,
+					Source: key,
+				},
+			},
+		})
+		elements = append(elements, &proto.Value{
+			Kind: &proto.Value_Text{
+				Text: &proto.ValueText{
+					Value:  value,
+					Source: value,
+				},
+			},
+		})
+	}
+	return &proto.Value{
+		Kind: &proto.Value_List{
+			List: &proto.ValueList{
+				Elements: elements,
+			},
+		},
+	}
+}
+
 func nameCollides(name string, structs *[]*proto.Struct, enums *[]*proto.Enum) bool {
 	if structs != nil {
 		for _, struct_ := range *structs {
@@ -65,11 +95,18 @@ func nameCollides(name string, structs *[]*proto.Struct, enums *[]*proto.Enum) b
 	return false
 }
 
-func promoteNested(structs *[]*proto.Struct, enums *[]*proto.Enum, prefix string, descriptor *descriptorpb.DescriptorProto) error {
+func promoteNested(structs *[]*proto.Struct, enums *[]*proto.Enum, prefix string, descriptor *descriptorpb.DescriptorProto) (map[string]string, error) {
+	var promotions map[string]string
 	for _, descriptorProto := range descriptor.NestedType {
+		// recur
+		promoted, err := promoteNested(structs, enums, prefix+*descriptorProto.Name+"_", descriptorProto)
+		if err != nil {
+			return nil, err
+		}
+
 		struct_, err := fromDescriptorProto(descriptorProto)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		suffix := ""
 		for nameCollides(prefix+struct_.Name.Name+suffix, structs, enums) {
@@ -80,13 +117,20 @@ func promoteNested(structs *[]*proto.Struct, enums *[]*proto.Enum, prefix string
 			// TODO 2023.10.31: emit a warning?
 		}
 
-		// TODO 2023.10.06: annotate with $(Protobuf.NestedTypeInfo({}))
+		if promoted != nil {
+			struct_.AnnotationApplications = appendProtobufAnnotation(struct_.AnnotationApplications, "NestedTypeInfo", computeNestedTypeInfo(promoted))
+		}
 		*structs = append(*structs, struct_)
+
+		if promotions == nil {
+			promotions = make(map[string]string)
+		}
+		promotions[*descriptorProto.Name] = struct_.Name.Name
 	}
 	for _, enumDescriptorProto := range descriptor.EnumType {
 		enum, err := fromEnumDescriptorProto(enumDescriptorProto)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		suffix := ""
 		for nameCollides(prefix+enum.Name+suffix, structs, enums) {
@@ -98,15 +142,13 @@ func promoteNested(structs *[]*proto.Struct, enums *[]*proto.Enum, prefix string
 		}
 		// TODO 2023.10.06: annotate with $(Protobuf.NestedTypeInfo({}))
 		*enums = append(*enums, enum)
-	}
-	// recur
-	for _, descriptorProto := range descriptor.NestedType {
-		err := promoteNested(structs, enums, prefix+*descriptorProto.Name+"_", descriptorProto)
-		if err != nil {
-			return err
+
+		if promotions == nil {
+			promotions = make(map[string]string)
 		}
+		promotions[*enumDescriptorProto.Name] = enum.Name
 	}
-	return nil
+	return promotions, nil
 }
 
 func FromFileDescriptorProto(fileDescriptor *descriptorpb.FileDescriptorProto) (*proto.Module, error) {
@@ -124,21 +166,26 @@ func FromFileDescriptorProto(fileDescriptor *descriptorpb.FileDescriptorProto) (
 		})
 	}
 
-	structs, err := mapFrom(fileDescriptor.MessageType, fromDescriptorProto)
-	if err != nil {
-		return nil, err
+	var structs []*proto.Struct
+	var enums []*proto.Enum
+	for _, descriptorProto := range fileDescriptor.MessageType {
+		promoted, err := promoteNested(&structs, &enums, *descriptorProto.Name+"_", descriptorProto)
+		if err != nil {
+			return nil, err
+		}
+		struct_, err := fromDescriptorProto(descriptorProto)
+		if err != nil {
+			return nil, err
+		}
+
+		if promoted != nil {
+			struct_.AnnotationApplications = appendProtobufAnnotation(struct_.AnnotationApplications, "NestedTypeInfo", computeNestedTypeInfo(promoted))
+		}
+		structs = append(structs, struct_)
 	}
 	enums, err := mapFrom(fileDescriptor.EnumType, fromEnumDescriptorProto)
 	if err != nil {
 		return nil, err
-	}
-
-	// promote nested structs and enums
-	for _, descriptorProto := range fileDescriptor.MessageType {
-		err = promoteNested(&structs, &enums, *descriptorProto.Name+"_", descriptorProto)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	// compute moduleUID
@@ -214,7 +261,12 @@ func fromDescriptorProto(descriptor *descriptorpb.DescriptorProto) (*proto.Struc
 		return nil, err
 	}
 
-	// TODO 2023.10.10: convert Options
+	isSynthetic := false
+	if descriptor.Options != nil && descriptor.Options.MapEntry != nil && *descriptor.Options.MapEntry {
+		isSynthetic = true
+	}
+
+	// TODO 2023.10.10: convert other Options
 
 	return &proto.Struct{
 		Reference: &proto.TypeReference{
@@ -225,12 +277,12 @@ func fromDescriptorProto(descriptor *descriptorpb.DescriptorProto) (*proto.Struc
 			Name:       *descriptor.Name,
 			Parameters: nil,
 		},
-		Fields: fields,
-		Unions: unions,
+		Fields:      fields,
+		Unions:      unions,
+		IsSynthetic: isSynthetic,
 		// Reserved:
 		// CommentBlock:
 		// AnnotationsApplications:
-		// IsSynthetic:
 	}, nil
 }
 

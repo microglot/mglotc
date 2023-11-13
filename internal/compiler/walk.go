@@ -27,6 +27,7 @@ func walkModule(module *proto.Module, f func(interface{})) {
 }
 
 func walkStruct(struct_ *proto.Struct, f func(interface{})) {
+	f(struct_)
 	for _, field := range struct_.Fields {
 		walkField(field, f)
 	}
@@ -36,7 +37,6 @@ func walkStruct(struct_ *proto.Struct, f func(interface{})) {
 	for _, annotation := range struct_.AnnotationApplications {
 		walkAnnotationApplication(annotation, f)
 	}
-	f(struct_)
 }
 
 func walkField(field *proto.Field, f func(interface{})) {

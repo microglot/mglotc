@@ -1,0 +1,380 @@
+syntax = "proto3";
+
+option go_package = "gopkg.microglot.org/compiler.go/internal/proto";
+
+message Image {
+   repeated Module Modules = 1;
+}
+
+message Module {
+   // Usually a file path, relative to some local root. May also be a full URI
+   // including a protocol, etc., such as file:///path/to/file or
+   // https://domain/path/to/file.
+   string URI = 1;
+   uint64 UID = 2;
+   string ProtobufPackage = 3;
+   repeated AnnotationApplication AnnotationApplications = 4;
+   repeated Import Imports = 5;
+   repeated Struct Structs = 6;
+   repeated Enum Enums = 7;
+   repeated API APIs = 8;
+   repeated SDK SDKs = 9;
+   repeated Constant Constants = 10;
+   repeated Annotation Annotations = 11;
+   repeated DotImport DotImports = 12;
+}
+
+message Import {
+   uint64 ModuleUID = 1;
+   string ImportedURI = 2;
+   uint64 ImportedUID = 3;
+   string Alias = 4;
+   bool IsDot = 5;
+   CommentBlock CommentBlock = 6;
+}
+
+message DotImport {
+   // DotImport describe a type that was part of a public import in a protobuf
+   // file. These become part of the module descriptor so that they can appear
+   // as types defined directly in the module using the dot import feature.
+   string Name = 1;
+   TypeReference Reference = 2;
+}
+
+message Struct {
+   TypeReference Reference = 1;
+   TypeName Name = 2;
+   repeated Field Fields = 3;
+   repeated Union Unions = 4;
+   repeated ReservedRange Reserved = 5;
+   CommentBlock CommentBlock = 6;
+   repeated AnnotationApplication AnnotationApplications = 7;
+   bool IsSynthetic = 8;
+}
+message ReservedRange {
+   uint64 Start = 1;
+   uint64 End = 2;
+}
+
+message Field {
+   AttributeReference Reference = 1;
+   string Name = 2;
+   TypeSpecifier Type = 3;
+   Value DefaultValue = 4;
+   // if set, gives the index of a union in the containing struct's Unions list.
+   // This field is a member of that union.
+   optional uint64 UnionIndex = 5;
+   CommentBlock CommentBlock = 6;
+   repeated AnnotationApplication AnnotationApplications = 7;
+}
+
+message Union {
+   AttributeReference Reference = 1;
+   string Name = 2;
+   CommentBlock CommentBlock = 3;
+   repeated AnnotationApplication AnnotationApplications = 4;
+}
+
+message Enum {
+   TypeReference Reference = 1;
+   string Name = 2;
+   repeated Enumerant Enumerants = 3;
+   repeated ReservedRange Reserved = 4;
+   repeated string ReservedNames = 5;
+   CommentBlock CommentBlock = 6;
+   repeated AnnotationApplication AnnotationApplications = 7;
+}
+
+message Enumerant {
+   AttributeReference Reference = 1;
+   string Name = 2;
+   CommentBlock CommentBlock = 3;
+   repeated AnnotationApplication AnnotationApplications = 4;
+}
+
+message API {
+   TypeReference Reference = 1;
+   TypeName Name = 2;
+   repeated APIMethod Methods = 3;
+   repeated TypeSpecifier Extends = 4;
+   repeated ReservedRange Reserved = 5;
+   repeated string ReservedNames = 6;
+   CommentBlock CommentBlock = 7;
+   repeated AnnotationApplication AnnotationApplications = 8;
+}
+
+message APIMethod {
+   AttributeReference Reference = 1;
+   string Name = 2;
+   TypeSpecifier Input = 3;
+   TypeSpecifier Output = 4;
+   CommentBlock CommentBlock = 5;
+   repeated AnnotationApplication AnnotationApplications = 6;
+}
+
+message SDK {
+   TypeReference Reference = 1;
+   TypeName Name = 2;
+   repeated SDKMethod Methods = 3;
+   repeated TypeSpecifier Extends = 4;
+   repeated ReservedRange Reserved = 5;
+   repeated string ReservedNames = 6;
+   CommentBlock CommentBlock = 7;
+   repeated AnnotationApplication AnnotationApplications = 8;
+}
+
+message SDKMethod {
+   AttributeReference Reference = 1;
+   string Name = 2;
+   repeated SDKMethodInput Input = 3;
+   TypeSpecifier Output = 4;
+   bool NoThrows = 5;
+   CommentBlock CommentBlock = 6;
+   repeated AnnotationApplication AnnotationApplications = 7;
+}
+
+message SDKMethodInput {
+   SDKInputReference Reference = 1;
+   string Name = 2;
+   TypeSpecifier Type = 3;
+}
+
+message SDKInputReference {
+   uint64 ModuleUID = 1;
+   uint64 TypeUID = 2;
+   uint64 AttributeUID = 3;
+   uint64 InputUID = 4;
+}
+
+message Annotation { 
+   TypeReference Reference = 1;
+   string Name                                     = 2;
+   repeated AnnotationScope Scopes = 3;
+   TypeSpecifier Type = 4;
+   CommentBlock DescriptorCommentBlock = 5;
+}
+
+enum AnnotationScope { 
+   AnnotationScopeZero      = 0;
+   AnnotationScopeModule    = 1;
+   AnnotationScopeUnion     = 2;
+   AnnotationScopeStruct    = 3;
+   AnnotationScopeField     = 4;
+   AnnotationScopeEnumerant = 5;
+   AnnotationScopeEnum      = 6;
+   AnnotationScopeAPI       = 7;
+   AnnotationScopeAPIMethod = 8;
+   AnnotationScopeSDK       = 9;
+   AnnotationScopeSDKMethod = 10;
+   AnnotationScopeConst     = 11;
+   AnnotationScopeImport    = 12;
+   AnnotationScopeStar      = 13;
+}
+
+message Constant {
+   TypeReference Reference = 1;
+   string Name = 2;
+   TypeSpecifier Type = 3;
+   Value                 Value = 4;
+   repeated AnnotationApplication AnnotationApplications = 5;
+   CommentBlock          CommentBlock = 6;
+}
+
+message AnnotationApplication {
+   TypeSpecifier Annotation = 1;
+   Value Value = 2;
+}
+
+message Value {
+   oneof Kind {
+      ValueBool Bool                  = 2;
+      ValueText Text                  = 3;
+      ValueData Data                  = 4;
+      ValueInt8 Int8                  = 5;
+      ValueInt16 Int16              = 6;
+      ValueInt32 Int32               = 7;
+      ValueInt64 Int64               = 8;
+      ValueUInt8 UInt8             = 9;
+      ValueUInt16 UInt16            = 10;
+      ValueUInt32 UInt32           = 11;
+      ValueUInt64 UInt64           = 12;
+      ValueFloat32 Float32          = 13;
+      ValueFloat64 Float64          = 14;
+      ValueList List                  = 15;
+      ValueStruct Struct             = 17;
+      AttributeReference Enumerant    = 18;
+      ValueIdentifier Identifier      = 19;
+      ValueUnary Unary                = 20;
+      ValueBinary Binary             = 21;
+   }
+}
+
+message ValueBool { 
+   bool Value  = 1;
+   string Source = 2;
+}
+
+message ValueText { 
+   string Value  = 1;
+   string Source = 2;
+} 
+
+message ValueData { 
+   bytes Value  = 1;
+   string Source = 2;
+} 
+
+message ValueInt8 { 
+   int32 Value  = 1;
+   string Source = 2;
+} 
+
+message ValueInt16 { 
+   int32 Value  = 1;
+   string Source = 2;
+} 
+
+message ValueInt32 { 
+   int32 Value  = 1;
+   string Source = 2;
+} 
+
+message ValueInt64 { 
+   int64 Value  = 1;
+   string Source = 2;
+} 
+
+message ValueUInt8 { 
+   uint32 Value  = 1;
+   string Source = 2;
+} 
+
+message ValueUInt16 { 
+   uint32 Value  = 1;
+   string Source = 2;
+} 
+
+message ValueUInt32 { 
+   uint32 Value  = 1;
+   string Source  = 2;
+} 
+
+message ValueUInt64 { 
+   uint64 Value = 1;
+   string Source  = 2;
+} 
+
+message ValueFloat32 { 
+   float Value = 1;
+   string  Source  = 2;
+} 
+
+message ValueFloat64 { 
+   double Value = 1;
+   string Source   = 2;
+} 
+
+message ValueIdentifier { 
+   repeated string Names = 2;
+   oneof Reference {
+      TypeReference Type = 3;
+      AttributeReference Attribute = 4;
+   }
+} 
+
+message ValueList { 
+   repeated Value Elements = 1;
+}
+
+message ValueStruct { 
+   repeated ValueStructField Fields = 1;
+}
+
+message ValueStructField { 
+   string Name  = 1;
+   Value Value = 2;
+}
+
+message ValueUnary {
+   OperationUnary Operation = 1;
+   Value Value = 2;
+}
+
+enum OperationUnary {
+   OperationUnaryZero = 0;
+   OperationUnaryPositive = 1;
+   OperationUnaryNegative = 2;
+   OperationUnaryNot = 3;
+}
+
+message ValueBinary {
+   OperationBinary Operation = 1;
+   Value Left = 2;
+   Value Right = 3;
+}
+
+enum OperationBinary {
+   OperationBinaryZero = 0;
+   OperationBinaryOr = 1;
+   OperationBinaryAnd = 2;
+   OperationBinaryEqual = 3;
+   OperationBinaryNotEqual = 4;
+   OperationBinaryLessThan = 5;
+   OperationBinaryLessThanEqual = 6;
+   OperationBinaryGreaterThan = 7;
+   OperationBinaryGreaterThanEqual = 8;
+   OperationBinaryAdd = 9;
+   OperationBinarySubtract = 10;
+   OperationBinaryBinOr = 11;
+   OperationBinaryBinAnd = 12;
+   OperationBinaryBitXor = 13;
+   OperationBinaryShiftLeft = 14;
+   OperationBinaryShiftRight = 15;
+   OperationBinaryMultiply = 16;
+   OperationBinaryDivide = 17;
+   OperationBinaryModulo = 18;
+}
+
+message TypeReference {
+   uint64 ModuleUID = 1;
+   uint64 TypeUID = 2;
+}
+
+message TypeSpecifier {
+   oneof Reference {
+      ForwardReference Forward = 1;
+      ResolvedReference Resolved = 2;
+   }
+}
+
+message ForwardReference {
+   oneof Reference {
+      MicroglotForwardReference Microglot = 1;
+      string Protobuf = 2;
+   }
+}
+
+message MicroglotForwardReference {
+   string Qualifier = 1;
+   TypeName Name = 2;
+}
+
+message ResolvedReference {
+   TypeReference Reference = 1;
+   repeated TypeSpecifier Parameters = 2;
+}
+
+message AttributeReference {
+   uint64 ModuleUID = 1;
+   uint64 TypeUID = 2;
+   uint64 AttributeUID = 3;
+}
+
+message CommentBlock { 
+   repeated string Lines = 1;
+}
+
+message TypeName {
+   string Name = 1;
+   repeated TypeSpecifier Parameters = 2;
+}
