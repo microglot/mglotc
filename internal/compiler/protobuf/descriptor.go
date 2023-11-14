@@ -140,7 +140,6 @@ func promoteNested(structs *[]*proto.Struct, enums *[]*proto.Enum, prefix string
 		if suffix != "" {
 			// TODO 2023.10.31: emit a warning?
 		}
-		// TODO 2023.10.06: annotate with $(Protobuf.NestedTypeInfo({}))
 		*enums = append(*enums, enum)
 
 		if promotions == nil {
@@ -167,7 +166,10 @@ func FromFileDescriptorProto(fileDescriptor *descriptorpb.FileDescriptorProto) (
 	}
 
 	var structs []*proto.Struct
-	var enums []*proto.Enum
+	enums, err := mapFrom(fileDescriptor.EnumType, fromEnumDescriptorProto)
+	if err != nil {
+		return nil, err
+	}
 	for _, descriptorProto := range fileDescriptor.MessageType {
 		promoted, err := promoteNested(&structs, &enums, *descriptorProto.Name+"_", descriptorProto)
 		if err != nil {
@@ -182,10 +184,6 @@ func FromFileDescriptorProto(fileDescriptor *descriptorpb.FileDescriptorProto) (
 			struct_.AnnotationApplications = appendProtobufAnnotation(struct_.AnnotationApplications, "NestedTypeInfo", computeNestedTypeInfo(promoted))
 		}
 		structs = append(structs, struct_)
-	}
-	enums, err := mapFrom(fileDescriptor.EnumType, fromEnumDescriptorProto)
-	if err != nil {
-		return nil, err
 	}
 
 	// compute moduleUID
@@ -465,22 +463,24 @@ func fromFieldDescriptorProto(fieldDescriptor *descriptorpb.FieldDescriptorProto
 	if fieldDescriptor.Label != nil {
 		switch *fieldDescriptor.Label {
 		case descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL:
-			typeSpecifier = proto.TypeSpecifier{
-				Reference: &proto.TypeSpecifier_Forward{
-					Forward: &proto.ForwardReference{
-						Reference: &proto.ForwardReference_Microglot{
-							Microglot: &proto.MicroglotForwardReference{
-								Qualifier: "",
-								Name: &proto.TypeName{
-									Name: "Presence",
-									Parameters: []*proto.TypeSpecifier{
-										&forwardTypeSpecifier,
+			if fieldDescriptor.Proto3Optional != nil && *fieldDescriptor.Proto3Optional {
+				typeSpecifier = proto.TypeSpecifier{
+					Reference: &proto.TypeSpecifier_Forward{
+						Forward: &proto.ForwardReference{
+							Reference: &proto.ForwardReference_Microglot{
+								Microglot: &proto.MicroglotForwardReference{
+									Qualifier: "",
+									Name: &proto.TypeName{
+										Name: "Presence",
+										Parameters: []*proto.TypeSpecifier{
+											&forwardTypeSpecifier,
+										},
 									},
 								},
 							},
 						},
 					},
-				},
+				}
 			}
 		case descriptorpb.FieldDescriptorProto_LABEL_REPEATED:
 			typeSpecifier = proto.TypeSpecifier{

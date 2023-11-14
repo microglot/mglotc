@@ -8,6 +8,7 @@ import (
 	"github.com/bufbuild/protocompile/reporter"
 	"github.com/stretchr/testify/require"
 
+	"gopkg.microglot.org/compiler.go/internal/idl"
 	"gopkg.microglot.org/compiler.go/internal/proto"
 )
 
@@ -37,10 +38,15 @@ func TestDescriptor(t *testing.T) {
 						Name: &proto.TypeName{
 							Name: "Foo",
 						},
-						Reference: &proto.TypeReference{},
+						Reference: &proto.TypeReference{
+							ModuleUID: idl.Incomplete,
+							TypeUID:   idl.Incomplete,
+						},
 						Fields: []*proto.Field{
 							&proto.Field{
 								Reference: &proto.AttributeReference{
+									ModuleUID:    idl.Incomplete,
+									TypeUID:      idl.Incomplete,
 									AttributeUID: 1,
 								},
 								Name: "X",
@@ -67,24 +73,17 @@ func TestDescriptor(t *testing.T) {
 				Structs: []*proto.Struct{
 					&proto.Struct{
 						Name: &proto.TypeName{
-							Name: "Foo",
-						},
-						Reference: &proto.TypeReference{},
-					},
-					&proto.Struct{
-						Name: &proto.TypeName{
-							Name: "Foo_Bar",
-						},
-						Reference: &proto.TypeReference{},
-					},
-					&proto.Struct{
-						Name: &proto.TypeName{
 							Name: "Foo_Bar_Baz",
 						},
-						Reference: &proto.TypeReference{},
+						Reference: &proto.TypeReference{
+							ModuleUID: idl.Incomplete,
+							TypeUID:   idl.Incomplete,
+						},
 						Fields: []*proto.Field{
 							&proto.Field{
 								Reference: &proto.AttributeReference{
+									ModuleUID:    idl.Incomplete,
+									TypeUID:      idl.Incomplete,
 									AttributeUID: 1,
 								},
 								Name: "X",
@@ -93,6 +92,100 @@ func TestDescriptor(t *testing.T) {
 										Forward: &proto.ForwardReference{
 											Reference: &proto.ForwardReference_Protobuf{
 												Protobuf: "pkg.Barney",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					&proto.Struct{
+						Name: &proto.TypeName{
+							Name: "Foo_Bar",
+						},
+						Reference: &proto.TypeReference{
+							ModuleUID: idl.Incomplete,
+							TypeUID:   idl.Incomplete,
+						},
+						AnnotationApplications: []*proto.AnnotationApplication{
+							&proto.AnnotationApplication{
+								Annotation: &proto.TypeSpecifier{
+									Reference: &proto.TypeSpecifier_Resolved{
+										Resolved: &proto.ResolvedReference{
+											Reference: &proto.TypeReference{
+												ModuleUID: 1,
+												TypeUID:   2,
+											},
+										},
+									},
+								},
+								Value: &proto.Value{
+									Kind: &proto.Value_List{
+										List: &proto.ValueList{
+											Elements: []*proto.Value{
+												&proto.Value{
+													Kind: &proto.Value_Text{
+														Text: &proto.ValueText{
+															Value:  "Baz",
+															Source: "Baz",
+														},
+													},
+												},
+												&proto.Value{
+													Kind: &proto.Value_Text{
+														Text: &proto.ValueText{
+															Value:  "Foo_Bar_Baz",
+															Source: "Foo_Bar_Baz",
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					&proto.Struct{
+						Name: &proto.TypeName{
+							Name: "Foo",
+						},
+						Reference: &proto.TypeReference{
+							ModuleUID: idl.Incomplete,
+							TypeUID:   idl.Incomplete,
+						},
+						AnnotationApplications: []*proto.AnnotationApplication{
+							&proto.AnnotationApplication{
+								Annotation: &proto.TypeSpecifier{
+									Reference: &proto.TypeSpecifier_Resolved{
+										Resolved: &proto.ResolvedReference{
+											Reference: &proto.TypeReference{
+												ModuleUID: 1,
+												TypeUID:   2,
+											},
+										},
+									},
+								},
+								Value: &proto.Value{
+									Kind: &proto.Value_List{
+										List: &proto.ValueList{
+											Elements: []*proto.Value{
+												&proto.Value{
+													Kind: &proto.Value_Text{
+														Text: &proto.ValueText{
+															Value:  "Bar",
+															Source: "Bar",
+														},
+													},
+												},
+												&proto.Value{
+													Kind: &proto.Value_Text{
+														Text: &proto.ValueText{
+															Value:  "Foo_Bar",
+															Source: "Foo_Bar",
+														},
+													},
+												},
 											},
 										},
 									},
@@ -113,19 +206,66 @@ func TestDescriptor(t *testing.T) {
 						Name: &proto.TypeName{
 							Name: "Foo_Bar",
 						},
-						Reference: &proto.TypeReference{},
-					},
-					&proto.Struct{
-						Name: &proto.TypeName{
-							Name: "Foo",
+						Reference: &proto.TypeReference{
+							ModuleUID: idl.Incomplete,
+							TypeUID:   idl.Incomplete,
 						},
-						Reference: &proto.TypeReference{},
 					},
 					&proto.Struct{
 						Name: &proto.TypeName{
 							Name: "Foo_BarX",
 						},
-						Reference: &proto.TypeReference{},
+						Reference: &proto.TypeReference{
+							ModuleUID: idl.Incomplete,
+							TypeUID:   idl.Incomplete,
+						},
+					},
+					&proto.Struct{
+						Name: &proto.TypeName{
+							Name: "Foo",
+						},
+						Reference: &proto.TypeReference{
+							ModuleUID: idl.Incomplete,
+							TypeUID:   idl.Incomplete,
+						},
+						AnnotationApplications: []*proto.AnnotationApplication{
+							&proto.AnnotationApplication{
+								Annotation: &proto.TypeSpecifier{
+									Reference: &proto.TypeSpecifier_Resolved{
+										Resolved: &proto.ResolvedReference{
+											Reference: &proto.TypeReference{
+												ModuleUID: 1,
+												TypeUID:   2,
+											},
+										},
+									},
+								},
+								Value: &proto.Value{
+									Kind: &proto.Value_List{
+										List: &proto.ValueList{
+											Elements: []*proto.Value{
+												&proto.Value{
+													Kind: &proto.Value_Text{
+														Text: &proto.ValueText{
+															Value:  "Bar",
+															Source: "Bar",
+														},
+													},
+												},
+												&proto.Value{
+													Kind: &proto.Value_Text{
+														Text: &proto.ValueText{
+															Value:  "Foo_BarX",
+															Source: "Foo_BarX",
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -140,16 +280,25 @@ func TestDescriptor(t *testing.T) {
 						Name: &proto.TypeName{
 							Name: "Foo",
 						},
-						Reference: &proto.TypeReference{},
+						Reference: &proto.TypeReference{
+							ModuleUID: idl.Incomplete,
+							TypeUID:   idl.Incomplete,
+						},
 						Unions: []*proto.Union{
 							&proto.Union{
-								Reference: &proto.AttributeReference{},
-								Name:      "Bar",
+								Reference: &proto.AttributeReference{
+									ModuleUID:    idl.Incomplete,
+									TypeUID:      idl.Incomplete,
+									AttributeUID: idl.Incomplete,
+								},
+								Name: "Bar",
 							},
 						},
 						Fields: []*proto.Field{
 							&proto.Field{
 								Reference: &proto.AttributeReference{
+									ModuleUID:    idl.Incomplete,
+									TypeUID:      idl.Incomplete,
 									AttributeUID: 1,
 								},
 								Name:       "Baz",
@@ -166,6 +315,8 @@ func TestDescriptor(t *testing.T) {
 							},
 							&proto.Field{
 								Reference: &proto.AttributeReference{
+									ModuleUID:    idl.Incomplete,
+									TypeUID:      idl.Incomplete,
 									AttributeUID: 2,
 								},
 								Name:       "Barney",
@@ -192,11 +343,16 @@ func TestDescriptor(t *testing.T) {
 				UID: 1449310910991872227,
 				Enums: []*proto.Enum{
 					&proto.Enum{
-						Name:      "Foo",
-						Reference: &proto.TypeReference{},
+						Name: "Foo",
+						Reference: &proto.TypeReference{
+							ModuleUID: idl.Incomplete,
+							TypeUID:   idl.Incomplete,
+						},
 						Enumerants: []*proto.Enumerant{
 							&proto.Enumerant{
 								Reference: &proto.AttributeReference{
+									ModuleUID:    idl.Incomplete,
+									TypeUID:      idl.Incomplete,
 									AttributeUID: 0,
 								},
 								Name: "X",
@@ -214,24 +370,111 @@ func TestDescriptor(t *testing.T) {
 				Structs: []*proto.Struct{
 					&proto.Struct{
 						Name: &proto.TypeName{
-							Name: "Foo",
+							Name: "Foo_Bar",
 						},
-						Reference: &proto.TypeReference{},
+						Reference: &proto.TypeReference{
+							ModuleUID: idl.Incomplete,
+							TypeUID:   idl.Incomplete,
+						},
+						AnnotationApplications: []*proto.AnnotationApplication{
+							&proto.AnnotationApplication{
+								Annotation: &proto.TypeSpecifier{
+									Reference: &proto.TypeSpecifier_Resolved{
+										Resolved: &proto.ResolvedReference{
+											Reference: &proto.TypeReference{
+												ModuleUID: 1,
+												TypeUID:   2,
+											},
+										},
+									},
+								},
+								Value: &proto.Value{
+									Kind: &proto.Value_List{
+										List: &proto.ValueList{
+											Elements: []*proto.Value{
+												&proto.Value{
+													Kind: &proto.Value_Text{
+														Text: &proto.ValueText{
+															Value:  "Baz",
+															Source: "Baz",
+														},
+													},
+												},
+												&proto.Value{
+													Kind: &proto.Value_Text{
+														Text: &proto.ValueText{
+															Value:  "Foo_Bar_Baz",
+															Source: "Foo_Bar_Baz",
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
 					},
 					&proto.Struct{
 						Name: &proto.TypeName{
-							Name: "Foo_Bar",
+							Name: "Foo",
 						},
-						Reference: &proto.TypeReference{},
+						Reference: &proto.TypeReference{
+							ModuleUID: idl.Incomplete,
+							TypeUID:   idl.Incomplete,
+						},
+						AnnotationApplications: []*proto.AnnotationApplication{
+							&proto.AnnotationApplication{
+								Annotation: &proto.TypeSpecifier{
+									Reference: &proto.TypeSpecifier_Resolved{
+										Resolved: &proto.ResolvedReference{
+											Reference: &proto.TypeReference{
+												ModuleUID: 1,
+												TypeUID:   2,
+											},
+										},
+									},
+								},
+								Value: &proto.Value{
+									Kind: &proto.Value_List{
+										List: &proto.ValueList{
+											Elements: []*proto.Value{
+												&proto.Value{
+													Kind: &proto.Value_Text{
+														Text: &proto.ValueText{
+															Value:  "Bar",
+															Source: "Bar",
+														},
+													},
+												},
+												&proto.Value{
+													Kind: &proto.Value_Text{
+														Text: &proto.ValueText{
+															Value:  "Foo_Bar",
+															Source: "Foo_Bar",
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 				Enums: []*proto.Enum{
 					&proto.Enum{
-						Name:      "Foo_Bar_Baz",
-						Reference: &proto.TypeReference{},
+						Name: "Foo_Bar_Baz",
+						Reference: &proto.TypeReference{
+							ModuleUID: idl.Incomplete,
+							TypeUID:   idl.Incomplete,
+						},
 						Enumerants: []*proto.Enumerant{
 							&proto.Enumerant{
 								Reference: &proto.AttributeReference{
+									ModuleUID:    idl.Incomplete,
+									TypeUID:      idl.Incomplete,
 									AttributeUID: 0,
 								},
 								Name: "X",
@@ -248,14 +491,21 @@ func TestDescriptor(t *testing.T) {
 				UID: 1449310910991872227,
 				APIs: []*proto.API{
 					&proto.API{
-						Reference: &proto.TypeReference{},
+						Reference: &proto.TypeReference{
+							ModuleUID: idl.Incomplete,
+							TypeUID:   idl.Incomplete,
+						},
 						Name: &proto.TypeName{
 							Name: "Foo",
 						},
 						Methods: []*proto.APIMethod{
 							&proto.APIMethod{
-								Reference: &proto.AttributeReference{},
-								Name:      "Bar",
+								Reference: &proto.AttributeReference{
+									ModuleUID:    idl.Incomplete,
+									TypeUID:      idl.Incomplete,
+									AttributeUID: idl.Incomplete,
+								},
+								Name: "Bar",
 								Input: &proto.TypeSpecifier{
 									Reference: &proto.TypeSpecifier_Forward{
 										Forward: &proto.ForwardReference{
