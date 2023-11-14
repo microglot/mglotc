@@ -515,17 +515,6 @@ func fromFieldDescriptorProto(fieldDescriptor *descriptorpb.FieldDescriptorProto
 
 	var annotationApplications []*proto.AnnotationApplication
 
-	// Proto3Optional needs to be annotated so that we know to regenerate the synthetic
-	// oneof (which doesn't exist in the microglot descriptor!) when calling protoc plugins.
-	if fieldDescriptor.Proto3Optional != nil && *fieldDescriptor.Proto3Optional {
-		unionIndex = nil
-		annotationApplications = appendProtobufAnnotation(
-			annotationApplications,
-			"Proto3Optional",
-			&proto.Value{Kind: &proto.Value_Bool{Bool: &proto.ValueBool{Value: true}}},
-		)
-	}
-
 	return &proto.Field{
 		Reference: &proto.AttributeReference{
 			ModuleUID:    idl.Incomplete,

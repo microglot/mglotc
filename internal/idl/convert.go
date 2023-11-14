@@ -177,12 +177,9 @@ func (c *imageConverter) fromField(field *proto.Field) (*descriptorpb.FieldDescr
 	}
 
 	var proto3Optional *bool
-	proto3OptionalValue := GetProtobufAnnotation(field.AnnotationApplications, "Proto3Optional")
-	if proto3OptionalValue != nil {
-		if proto3OptionalValue.Kind.(*proto.Value_Bool).Bool.Value {
-			proto3Optional = new(bool)
-			*proto3Optional = true
-		}
+	if label != nil && *label == descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL {
+		proto3Optional = new(bool)
+		*proto3Optional = true
 	}
 
 	return &descriptorpb.FieldDescriptorProto{
