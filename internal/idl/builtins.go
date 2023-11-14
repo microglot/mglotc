@@ -5,21 +5,21 @@ import (
 )
 
 var BUILTIN_TYPE_UIDS = map[string]uint64{
-	"Bool":     0,
-	"Text":     1,
-	"Data":     2,
-	"Int8":     3,
-	"Int16":    4,
-	"Int32":    5,
-	"Int64":    6,
-	"UInt8":    7,
-	"UInt16":   8,
-	"UInt32":   9,
-	"UInt64":   10,
-	"Float32":  11,
-	"Float64":  12,
-	"Presence": 13,
-	"List":     14,
+	"Bool":     1,
+	"Text":     2,
+	"Data":     3,
+	"Int8":     4,
+	"Int16":    5,
+	"Int32":    6,
+	"Int64":    7,
+	"UInt8":    8,
+	"UInt16":   9,
+	"UInt32":   10,
+	"UInt64":   11,
+	"Float32":  12,
+	"Float64":  13,
+	"Presence": 14,
+	"List":     15,
 }
 
 var builtin_uid_types map[uint64]string = nil
