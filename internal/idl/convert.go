@@ -61,6 +61,70 @@ func GetProtobufAnnotation(as []*proto.AnnotationApplication, name string) *prot
 	return nil
 }
 
+func GetPromotedSymbolTable(as []*proto.AnnotationApplication) map[string]string {
+	promotedSymbolTable := make(map[string]string)
+	nestedTypeInfo := GetProtobufAnnotation(as, "NestedTypeInfo")
+	if nestedTypeInfo != nil {
+		elements := nestedTypeInfo.Kind.(*proto.Value_List).List.Elements
+		for i := 0; i < len(elements); i += 2 {
+			promotedSymbolTable[elements[i].Kind.(*proto.Value_Text).Text.Value] = elements[i+1].Kind.(*proto.Value_Text).Text.Value
+		}
+	}
+	return promotedSymbolTable
+}
+
+func (c *imageConverter) lookupStruct(moduleUID uint64, structName string) *proto.Struct {
+	for _, module := range c.image.Modules {
+		if module.UID == moduleUID {
+			for _, struct_ := range module.Structs {
+				if struct_.Name.Name == structName {
+					return struct_
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (c *imageConverter) lookupEnum(moduleUID uint64, enumName string) *proto.Enum {
+	for _, module := range c.image.Modules {
+		if module.UID == moduleUID {
+			for _, enum := range module.Enums {
+				if enum.Name == enumName {
+					return enum
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (c *imageConverter) getNestedName(moduleUID uint64, name string) string {
+	for _, module := range c.image.Modules {
+		if module.UID == moduleUID {
+			for _, struct_ := range module.Structs {
+				for nestedName, promotedName := range GetPromotedSymbolTable(struct_.AnnotationApplications) {
+					if promotedName == name {
+						return nestedName
+					}
+				}
+			}
+			for _, enum := range module.Enums {
+				for nestedName, promotedName := range GetPromotedSymbolTable(enum.AnnotationApplications) {
+					if promotedName == name {
+						return nestedName
+					}
+				}
+			}
+		}
+	}
+	return name
+}
+
+func (c *imageConverter) isPromotedType(moduleUID uint64, name string) bool {
+	return c.getNestedName(moduleUID, name) != name
+}
+
 func (c *imageConverter) fromModule(module *proto.Module) (*descriptorpb.FileDescriptorProto, error) {
 	// TODO 2023.11.03: is it a fatal error to attempt to convert a microglot Module that contains
 	// stuff that cannot be represented in protobuf, e.g. SDKs? Or is this conversion allowed to be
@@ -71,14 +135,26 @@ func (c *imageConverter) fromModule(module *proto.Module) (*descriptorpb.FileDes
 		dependencies = append(dependencies, import_.ImportedURI)
 	}
 
-	messageTypes, err := mapFrom(module.Structs, c.fromStruct)
-	if err != nil {
-		return nil, err
+	var messageTypes []*descriptorpb.DescriptorProto
+	for _, struct_ := range module.Structs {
+		if !c.isPromotedType(module.UID, struct_.Name.Name) {
+			messageType, err := c.fromStruct(struct_)
+			if err != nil {
+				return nil, err
+			}
+			messageTypes = append(messageTypes, messageType)
+		}
 	}
 
-	enumTypes, err := mapFrom(module.Enums, c.fromEnum)
-	if err != nil {
-		return nil, err
+	var enumTypes []*descriptorpb.EnumDescriptorProto
+	for _, enum := range module.Enums {
+		if !c.isPromotedType(module.UID, enum.Name) {
+			enumType, err := c.fromEnum(enum)
+			if err != nil {
+				return nil, err
+			}
+			enumTypes = append(enumTypes, enumType)
+		}
 	}
 
 	// TODO 2023.11.03: this is a HUGE HACK. I want to be able to `protoc --descriptor_set_in=... --go_out=...`
@@ -122,7 +198,6 @@ func (c *imageConverter) fromStruct(struct_ *proto.Struct) (*descriptorpb.Descri
 		return nil, err
 	}
 	for _, field := range fields {
-		// if proto3Optional
 		if field.Proto3Optional != nil && *field.Proto3Optional {
 			// TODO 2023.11.12: there's presumably a naming convention for these synthetic oneofs.
 			name := "synthetic"
@@ -141,14 +216,39 @@ func (c *imageConverter) fromStruct(struct_ *proto.Struct) (*descriptorpb.Descri
 		*(options.MapEntry) = true
 	}
 
+	var nestedType []*descriptorpb.DescriptorProto
+	var enumType []*descriptorpb.EnumDescriptorProto
+	for nestedName, promotedName := range GetPromotedSymbolTable(struct_.AnnotationApplications) {
+		maybeStruct := c.lookupStruct(struct_.Reference.ModuleUID, promotedName)
+		if maybeStruct == nil {
+			maybeEnum := c.lookupEnum(struct_.Reference.ModuleUID, promotedName)
+			if maybeEnum == nil {
+				return nil, fmt.Errorf("unexpectedly missing promoted type named '%s'", promotedName)
+			}
+			maybeEnumType, err := c.fromEnum(maybeEnum)
+			if err != nil {
+				return nil, err
+			}
+			maybeEnumType.Name = &nestedName
+			enumType = append(enumType, maybeEnumType)
+		} else {
+			maybeNestedType, err := c.fromStruct(maybeStruct)
+			if err != nil {
+				return nil, err
+			}
+			maybeNestedType.Name = &nestedName
+			nestedType = append(nestedType, maybeNestedType)
+		}
+	}
+
 	return &descriptorpb.DescriptorProto{
-		Name:      &struct_.Name.Name,
-		Field:     fields,
-		OneofDecl: oneofs,
-		Options:   options,
+		Name:       &struct_.Name.Name,
+		Field:      fields,
+		OneofDecl:  oneofs,
+		Options:    options,
+		NestedType: nestedType,
+		EnumType:   enumType,
 		// Extension
-		// NestedType
-		// EnumType
 		// ExtensionRange
 		// ReservedRange
 		// ReservedName
@@ -287,14 +387,16 @@ func (c *imageConverter) fromResolvedReference(resolvedReference *proto.Resolved
 				if struct_.Reference.TypeUID == resolvedReference.Reference.TypeUID {
 					// TODO 2023.11.09: convert to fully-qualified type name
 					type_ := descriptorpb.FieldDescriptorProto_TYPE_MESSAGE
-					return nil, &type_, &struct_.Name.Name, nil
+					typeName := c.getNestedName(struct_.Reference.ModuleUID, struct_.Name.Name)
+					return nil, &type_, &typeName, nil
 				}
 			}
 			for _, enum := range module.Enums {
 				if enum.Reference.TypeUID == resolvedReference.Reference.TypeUID {
 					// TODO 2023.11.09: convert to fully-qualified type name
 					type_ := descriptorpb.FieldDescriptorProto_TYPE_ENUM
-					return nil, &type_, &enum.Name, nil
+					typeName := c.getNestedName(enum.Reference.ModuleUID, enum.Name)
+					return nil, &type_, &typeName, nil
 				}
 			}
 			for _, api := range module.APIs {

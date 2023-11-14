@@ -37,15 +37,7 @@ func link(parsed proto.Module, gsymbols *globalSymbolTable, r exc.Reporter) (*pr
 			// Each time we walk into a struct, we set up a new mapping from proto3-style nested
 			// type names to the "promoted" type names. This mapping is applied to all of the
 			// TypeSpecifiers inside the struct as we walk into them.
-			promotedSymbolTable = make(map[string]string)
-
-			nestedTypeInfo := idl.GetProtobufAnnotation(n.AnnotationApplications, "NestedTypeInfo")
-			if nestedTypeInfo != nil {
-				elements := nestedTypeInfo.Kind.(*proto.Value_List).List.Elements
-				for i := 0; i < len(elements); i += 2 {
-					promotedSymbolTable[elements[i].Kind.(*proto.Value_Text).Text.Value] = elements[i+1].Kind.(*proto.Value_Text).Text.Value
-				}
-			}
+			promotedSymbolTable = idl.GetPromotedSymbolTable(n.AnnotationApplications)
 		case *proto.TypeSpecifier:
 			switch kind := n.Reference.(type) {
 			case *proto.TypeSpecifier_Forward:
