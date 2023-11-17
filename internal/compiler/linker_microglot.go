@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"gopkg.microglot.org/compiler.go/internal/exc"
+	"gopkg.microglot.org/compiler.go/internal/idl"
 	"gopkg.microglot.org/compiler.go/internal/proto"
 )
 
@@ -29,12 +30,19 @@ func link(parsed proto.Module, gsymbols *globalSymbolTable, r exc.Reporter) (*pr
 	}
 
 	// populate all the TypeSpecifiers
+	var promotedSymbolTable map[string]string
 	walkModule(&parsed, func(node interface{}) {
 		switch n := node.(type) {
+		case *proto.Struct:
+			// Each time we walk into a struct, we set up a new mapping from proto3-style nested
+			// type names to the "promoted" type names. This mapping is applied to all of the
+			// TypeSpecifiers inside the struct as we walk into them.
+			promotedSymbolTable = idl.GetPromotedSymbolTable(n.AnnotationApplications)
 		case *proto.TypeSpecifier:
 			switch kind := n.Reference.(type) {
 			case *proto.TypeSpecifier_Forward:
 				var sym proto.TypeReference
+				var parameters []*proto.TypeSpecifier
 				var ok bool
 				var fullName string
 				switch reference := kind.Forward.Reference.(type) {
@@ -44,16 +52,26 @@ func link(parsed proto.Module, gsymbols *globalSymbolTable, r exc.Reporter) (*pr
 						qualifier: reference.Microglot.Qualifier,
 						name:      reference.Microglot.Name.Name,
 					}]
+
+					parameters = reference.Microglot.Name.Parameters
 				case *proto.ForwardReference_Protobuf:
 					fullName = reference.Protobuf
-					sym, ok = gsymbols.packageSearch(parsed.ProtobufPackage, reference.Protobuf)
+
+					// populated as we walk into the surrounding struct, this is
+					// how we resolve protobuf forward references to nested types
+					// that were promoted in conversion.
+					if promotedName, ok := promotedSymbolTable[reference.Protobuf]; ok {
+						fullName = promotedName
+					}
+
+					sym, ok = gsymbols.packageSearch(parsed.ProtobufPackage, fullName)
 
 					// this is how we deal with built-in types in protobuf, for now,
 					// but it definitely feels a little bit off.
-					if (!ok) && (!strings.Contains(reference.Protobuf, ".")) {
+					if (!ok) && (!strings.Contains(fullName, ".")) {
 						sym, ok = symbols.types[localSymbolName{
 							qualifier: "",
-							name:      reference.Protobuf,
+							name:      fullName,
 						}]
 					}
 				}
@@ -66,10 +84,8 @@ func link(parsed proto.Module, gsymbols *globalSymbolTable, r exc.Reporter) (*pr
 				} else {
 					n.Reference = &proto.TypeSpecifier_Resolved{
 						Resolved: &proto.ResolvedReference{
-							Reference: &sym,
-							// IsList:
-							// IsMap:
-							// HasPresence:
+							Reference:  &sym,
+							Parameters: parameters,
 						},
 					}
 				}
@@ -141,34 +157,25 @@ func newLocalSymbols(gsymbols *globalSymbolTable, URI string) *localSymbolTable 
 	symbols.attributes = make(map[localSymbolName]proto.AttributeReference)
 	symbols.inputs = make(map[localSymbolName]proto.SDKInputReference)
 
-	for _, internalTypeName := range []string{
-		"Bool",
-		"Text",
-		"Data",
-		"Int8",
-		"Int16",
-		"Int32",
-		"Int64",
-		"UInt8",
-		"UInt16",
-		"UInt32",
-		"UInt64",
-		"Float32",
-		"Float64",
-		"List",
-		"Map",
-		"Empty",
-		"Presence",
-		"AsyncTask",
-	} {
+	for builtinTypeName, builtinTypeUID := range idl.BUILTIN_TYPE_UIDS {
 		symbols.types[localSymbolName{
 			qualifier: "",
-			name:      internalTypeName,
+			name:      builtinTypeName,
 		}] = proto.TypeReference{
 			// moduleUID 0 is for built-in types
 			ModuleUID: 0,
-			// TODO 2023.09.12: just a shim to allow linking; this will need to be fleshed out
-			TypeUID: 0,
+			TypeUID:   builtinTypeUID,
+		}
+	}
+
+	for protobufTypeName, protobufTypeUID := range idl.PROTOBUF_TYPE_UIDS {
+		symbols.types[localSymbolName{
+			qualifier: "Protobuf",
+			name:      protobufTypeName,
+		}] = proto.TypeReference{
+			// moduleUID 1 is for Protobuf annotations
+			ModuleUID: 1,
+			TypeUID:   protobufTypeUID,
 		}
 	}
 

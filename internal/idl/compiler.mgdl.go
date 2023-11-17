@@ -3,6 +3,7 @@ package idl
 import (
 	"context"
 	"fmt"
+	"math"
 
 	"gopkg.microglot.org/compiler.go/internal/optional"
 	"gopkg.microglot.org/compiler.go/internal/proto"
@@ -38,6 +39,10 @@ type FileBody interface {
 }
 
 type FileKind uint32
+
+// TODO 2023.11.09: this should be derived from the .mgdl descriptor. Right now we're still using the
+// .proto descriptor, which doesn't support consts.
+const Incomplete uint64 = math.MaxUint64
 
 const (
 	FileKindNone FileKind = iota

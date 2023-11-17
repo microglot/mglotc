@@ -5,10 +5,12 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"strconv"
 
 	"google.golang.org/protobuf/types/descriptorpb"
 
+	"gopkg.microglot.org/compiler.go/internal/idl"
 	"gopkg.microglot.org/compiler.go/internal/proto"
 )
 
@@ -26,6 +28,53 @@ func mapFrom[F any, T any](in []*F, f func(*F) (T, error)) ([]T, error) {
 		return out, nil
 	}
 	return nil, nil
+}
+
+func appendProtobufAnnotation(as []*proto.AnnotationApplication, name string, value *proto.Value) []*proto.AnnotationApplication {
+	return append(as, &proto.AnnotationApplication{
+		Annotation: &proto.TypeSpecifier{
+			Reference: &proto.TypeSpecifier_Resolved{
+				Resolved: &proto.ResolvedReference{
+					Reference: &proto.TypeReference{
+						// moduleUID 1 is for Protobuf annotations
+						ModuleUID: 1,
+						TypeUID:   idl.PROTOBUF_TYPE_UIDS[name],
+					},
+				},
+			},
+		},
+		Value: value,
+	})
+}
+
+// $(Protobuf.NestedTypeInfo()) is encoded as a flattened list of key
+func computeNestedTypeInfo(promoted map[string]string) *proto.Value {
+	elements := make([]*proto.Value, 0)
+	for key, value := range promoted {
+		elements = append(elements, &proto.Value{
+			Kind: &proto.Value_Text{
+				Text: &proto.ValueText{
+					Value:  key,
+					Source: key,
+				},
+			},
+		})
+		elements = append(elements, &proto.Value{
+			Kind: &proto.Value_Text{
+				Text: &proto.ValueText{
+					Value:  value,
+					Source: value,
+				},
+			},
+		})
+	}
+	return &proto.Value{
+		Kind: &proto.Value_List{
+			List: &proto.ValueList{
+				Elements: elements,
+			},
+		},
+	}
 }
 
 func nameCollides(name string, structs *[]*proto.Struct, enums *[]*proto.Enum) bool {
@@ -46,11 +95,18 @@ func nameCollides(name string, structs *[]*proto.Struct, enums *[]*proto.Enum) b
 	return false
 }
 
-func promoteNested(structs *[]*proto.Struct, enums *[]*proto.Enum, prefix string, descriptor *descriptorpb.DescriptorProto) error {
+func promoteNested(structs *[]*proto.Struct, enums *[]*proto.Enum, prefix string, descriptor *descriptorpb.DescriptorProto) (map[string]string, error) {
+	var promotions map[string]string
 	for _, descriptorProto := range descriptor.NestedType {
+		// recur
+		promoted, err := promoteNested(structs, enums, prefix+*descriptorProto.Name+"_", descriptorProto)
+		if err != nil {
+			return nil, err
+		}
+
 		struct_, err := fromDescriptorProto(descriptorProto)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		suffix := ""
 		for nameCollides(prefix+struct_.Name.Name+suffix, structs, enums) {
@@ -61,13 +117,20 @@ func promoteNested(structs *[]*proto.Struct, enums *[]*proto.Enum, prefix string
 			// TODO 2023.10.31: emit a warning?
 		}
 
-		// TODO 2023.10.06: annotate with $(Protobuf.NestedTypeInfo({}))
+		if promoted != nil {
+			struct_.AnnotationApplications = appendProtobufAnnotation(struct_.AnnotationApplications, "NestedTypeInfo", computeNestedTypeInfo(promoted))
+		}
 		*structs = append(*structs, struct_)
+
+		if promotions == nil {
+			promotions = make(map[string]string)
+		}
+		promotions[*descriptorProto.Name] = struct_.Name.Name
 	}
 	for _, enumDescriptorProto := range descriptor.EnumType {
 		enum, err := fromEnumDescriptorProto(enumDescriptorProto)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		suffix := ""
 		for nameCollides(prefix+enum.Name+suffix, structs, enums) {
@@ -77,17 +140,14 @@ func promoteNested(structs *[]*proto.Struct, enums *[]*proto.Enum, prefix string
 		if suffix != "" {
 			// TODO 2023.10.31: emit a warning?
 		}
-		// TODO 2023.10.06: annotate with $(Protobuf.NestedTypeInfo({}))
 		*enums = append(*enums, enum)
-	}
-	// recur
-	for _, descriptorProto := range descriptor.NestedType {
-		err := promoteNested(structs, enums, prefix+*descriptorProto.Name+"_", descriptorProto)
-		if err != nil {
-			return err
+
+		if promotions == nil {
+			promotions = make(map[string]string)
 		}
+		promotions[*enumDescriptorProto.Name] = enum.Name
 	}
-	return nil
+	return promotions, nil
 }
 
 func FromFileDescriptorProto(fileDescriptor *descriptorpb.FileDescriptorProto) (*proto.Module, error) {
@@ -105,21 +165,25 @@ func FromFileDescriptorProto(fileDescriptor *descriptorpb.FileDescriptorProto) (
 		})
 	}
 
-	structs, err := mapFrom(fileDescriptor.MessageType, fromDescriptorProto)
-	if err != nil {
-		return nil, err
-	}
+	var structs []*proto.Struct
 	enums, err := mapFrom(fileDescriptor.EnumType, fromEnumDescriptorProto)
 	if err != nil {
 		return nil, err
 	}
-
-	// promote nested structs and enums
 	for _, descriptorProto := range fileDescriptor.MessageType {
-		err = promoteNested(&structs, &enums, *descriptorProto.Name+"_", descriptorProto)
+		promoted, err := promoteNested(&structs, &enums, *descriptorProto.Name+"_", descriptorProto)
 		if err != nil {
 			return nil, err
 		}
+		struct_, err := fromDescriptorProto(descriptorProto)
+		if err != nil {
+			return nil, err
+		}
+
+		if promoted != nil {
+			struct_.AnnotationApplications = appendProtobufAnnotation(struct_.AnnotationApplications, "NestedTypeInfo", computeNestedTypeInfo(promoted))
+		}
+		structs = append(structs, struct_)
 	}
 
 	// compute moduleUID
@@ -167,17 +231,27 @@ func FromFileDescriptorProto(fileDescriptor *descriptorpb.FileDescriptorProto) (
 
 func fromDescriptorProto(descriptor *descriptorpb.DescriptorProto) (*proto.Struct, error) {
 	var unions []*proto.Union
-	for _, oneofDescriptor := range descriptor.OneofDecl {
-		unions = append(unions, &proto.Union{
-			Reference: &proto.AttributeReference{
-				// ModuleUID:
-				// TypeUID:
-				// AttributeUID:
-			},
-			Name: *oneofDescriptor.Name,
-			// CommentBlock:
-			// AnnotationApplications:
-		})
+	for index, oneofDescriptor := range descriptor.OneofDecl {
+		isSynthetic := false
+		for _, fieldDescriptor := range descriptor.Field {
+			if fieldDescriptor.Proto3Optional != nil && *fieldDescriptor.Proto3Optional {
+				if *fieldDescriptor.OneofIndex == (int32)(index) {
+					isSynthetic = true
+				}
+			}
+		}
+		if !isSynthetic {
+			unions = append(unions, &proto.Union{
+				Reference: &proto.AttributeReference{
+					ModuleUID:    idl.Incomplete,
+					TypeUID:      idl.Incomplete,
+					AttributeUID: idl.Incomplete,
+				},
+				Name: *oneofDescriptor.Name,
+				// CommentBlock:
+				// AnnotationApplications:
+			})
+		}
 	}
 
 	fields, err := mapFrom(descriptor.Field, fromFieldDescriptorProto)
@@ -185,22 +259,28 @@ func fromDescriptorProto(descriptor *descriptorpb.DescriptorProto) (*proto.Struc
 		return nil, err
 	}
 
-	// TODO 2023.10.10: convert Options
+	isSynthetic := false
+	if descriptor.Options != nil && descriptor.Options.MapEntry != nil && *descriptor.Options.MapEntry {
+		isSynthetic = true
+	}
 
-	// TODO 2023.10.29: deal with Proto3Optional
+	// TODO 2023.10.10: convert other Options
 
 	return &proto.Struct{
-		Reference: &proto.TypeReference{},
+		Reference: &proto.TypeReference{
+			ModuleUID: idl.Incomplete,
+			TypeUID:   idl.Incomplete,
+		},
 		Name: &proto.TypeName{
 			Name:       *descriptor.Name,
 			Parameters: nil,
 		},
-		Fields: fields,
-		Unions: unions,
+		Fields:      fields,
+		Unions:      unions,
+		IsSynthetic: isSynthetic,
 		// Reserved:
 		// CommentBlock:
 		// AnnotationsApplications:
-		// IsSynthetic:
 	}, nil
 }
 
@@ -369,33 +449,85 @@ func fromFieldDescriptorProto(fieldDescriptor *descriptorpb.FieldDescriptorProto
 
 	// TODO 2023.10.10: convert Options
 
+	forwardTypeSpecifier := proto.TypeSpecifier{
+		Reference: &proto.TypeSpecifier_Forward{
+			Forward: &proto.ForwardReference{
+				Reference: &proto.ForwardReference_Protobuf{
+					Protobuf: typeName,
+				},
+			},
+		},
+	}
+
+	typeSpecifier := forwardTypeSpecifier
+	if fieldDescriptor.Label != nil {
+		switch *fieldDescriptor.Label {
+		case descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL:
+			if fieldDescriptor.Proto3Optional != nil && *fieldDescriptor.Proto3Optional {
+				typeSpecifier = proto.TypeSpecifier{
+					Reference: &proto.TypeSpecifier_Forward{
+						Forward: &proto.ForwardReference{
+							Reference: &proto.ForwardReference_Microglot{
+								Microglot: &proto.MicroglotForwardReference{
+									Qualifier: "",
+									Name: &proto.TypeName{
+										Name: "Presence",
+										Parameters: []*proto.TypeSpecifier{
+											&forwardTypeSpecifier,
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			}
+		case descriptorpb.FieldDescriptorProto_LABEL_REPEATED:
+			typeSpecifier = proto.TypeSpecifier{
+				Reference: &proto.TypeSpecifier_Forward{
+					Forward: &proto.ForwardReference{
+						Reference: &proto.ForwardReference_Microglot{
+							Microglot: &proto.MicroglotForwardReference{
+								Qualifier: "",
+								Name: &proto.TypeName{
+									Name: "List",
+									Parameters: []*proto.TypeSpecifier{
+										&forwardTypeSpecifier,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+		default:
+			return nil, fmt.Errorf("unimplemented protobuf label %s", *fieldDescriptor.Label)
+		}
+	}
+
+	// TODO 2023.11.09: how are protobuf maps represented in the descriptor?
+
 	var unionIndex *uint64
 	if fieldDescriptor.OneofIndex != nil {
 		unionIndex = new(uint64)
 		*unionIndex = (uint64)(*fieldDescriptor.OneofIndex)
 	}
 
+	var annotationApplications []*proto.AnnotationApplication
+
 	return &proto.Field{
 		Reference: &proto.AttributeReference{
-			// ModuleUID:
-			// TypeUID:
+			ModuleUID:    idl.Incomplete,
+			TypeUID:      idl.Incomplete,
 			AttributeUID: (uint64)(*fieldDescriptor.Number),
 		},
-		Name: *fieldDescriptor.Name,
-		Type: &proto.TypeSpecifier{
-			Reference: &proto.TypeSpecifier_Forward{
-				Forward: &proto.ForwardReference{
-					Reference: &proto.ForwardReference_Protobuf{
-						Protobuf: typeName,
-					},
-				},
-			},
-		},
-		DefaultValue: defaultValue,
-		UnionIndex:   unionIndex,
+		Name:                   *fieldDescriptor.Name,
+		Type:                   &typeSpecifier,
+		DefaultValue:           defaultValue,
+		UnionIndex:             unionIndex,
+		AnnotationApplications: annotationApplications,
 
 		// CommentBlock:
-		// AnnotationApplications:
 	}, nil
 }
 
@@ -408,7 +540,10 @@ func fromEnumDescriptorProto(enumDescriptor *descriptorpb.EnumDescriptorProto) (
 	// TODO 2023.10.10: convert Options
 
 	return &proto.Enum{
-		Reference:  &proto.TypeReference{},
+		Reference: &proto.TypeReference{
+			ModuleUID: idl.Incomplete,
+			TypeUID:   idl.Incomplete,
+		},
 		Name:       *enumDescriptor.Name,
 		Enumerants: enumerants,
 		// Reserved:
@@ -423,8 +558,8 @@ func fromEnumValueDescriptorProto(enumValueDescriptor *descriptorpb.EnumValueDes
 
 	return &proto.Enumerant{
 		Reference: &proto.AttributeReference{
-			// ModuleUID:
-			// TypeUID:
+			ModuleUID:    idl.Incomplete,
+			TypeUID:      idl.Incomplete,
 			AttributeUID: uint64(*enumValueDescriptor.Number),
 		},
 		Name: *enumValueDescriptor.Name,
@@ -442,7 +577,10 @@ func fromServiceDescriptorProto(serviceDescriptor *descriptorpb.ServiceDescripto
 	// TODO 2023.10.10: convert Options
 
 	return &proto.API{
-		Reference: &proto.TypeReference{},
+		Reference: &proto.TypeReference{
+			ModuleUID: idl.Incomplete,
+			TypeUID:   idl.Incomplete,
+		},
 		Name: &proto.TypeName{
 			Name:       *serviceDescriptor.Name,
 			Parameters: nil,
@@ -466,8 +604,12 @@ func fromMethodDescriptorProto(methodDescriptor *descriptorpb.MethodDescriptorPr
 	// TODO 2023.10.10: convert Options
 
 	return &proto.APIMethod{
-		Reference: &proto.AttributeReference{},
-		Name:      *methodDescriptor.Name,
+		Reference: &proto.AttributeReference{
+			ModuleUID:    idl.Incomplete,
+			TypeUID:      idl.Incomplete,
+			AttributeUID: idl.Incomplete,
+		},
+		Name: *methodDescriptor.Name,
 		Input: &proto.TypeSpecifier{
 			Reference: &proto.TypeSpecifier_Forward{
 				Forward: &proto.ForwardReference{

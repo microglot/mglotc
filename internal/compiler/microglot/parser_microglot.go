@@ -1888,7 +1888,16 @@ func (p *parserMicroglotTokens) parseUID() *astValueLiteralInt {
 	if p.expectOne(idl.TokenTypeAt) == nil {
 		return nil
 	}
-	return p.parseValueLiteralInt()
+	maybeUid := p.parseValueLiteralInt()
+	if maybeUid == nil {
+		return nil
+	}
+	// The compiler reserves MaxUint64 (a.k.a. Incomplete) to mean "generate a value at compile-time",
+	// so it's not allowed to be explicitly used as a uid.
+	if (*maybeUid).val == idl.Incomplete {
+		return nil
+	}
+	return maybeUid
 }
 
 // Enumerant = identifier Metadata .
