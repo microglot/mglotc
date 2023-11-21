@@ -13,7 +13,6 @@ cp test/* $IN
 
 protoc --proto_path=$IN/ $NAME.proto --go_out=$OUT_BASELINE --fatal_warnings
 
-go run main.go --root=$IN/ $NAME.proto --descriptor_set_out=$DS
-protoc --descriptor_set_in=$DS /$NAME.proto --go_out=$OUT_ROUNDTRIP --fatal_warnings
+go run main.go --root=$IN/ $NAME.proto --output=$OUT_ROUNDTRIP --plugin=$PWD/.bin/protoc-gen-go
 
 git diff --no-index $OUT_BASELINE/gopkg.microglot.org/compiler.go/internal/proto/$NAME.pb.go $OUT_ROUNDTRIP/gopkg.microglot.org/compiler.go/internal/proto/$NAME.pb.go

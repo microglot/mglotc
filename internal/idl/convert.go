@@ -3,6 +3,7 @@ package idl
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"google.golang.org/protobuf/types/descriptorpb"
 
@@ -165,8 +166,11 @@ func (c *imageConverter) fromModule(module *proto.Module) (*descriptorpb.FileDes
 
 	syntax := "proto3"
 
+	// TODO 2023.11.20: this is a little bit suspicious, and very possibly wrong.
+	name := strings.TrimLeft(module.URI, "/")
+
 	return &descriptorpb.FileDescriptorProto{
-		Name:       &module.URI,
+		Name:       &name,
 		Package:    &module.ProtobufPackage,
 		Dependency: dependencies,
 		// PublicDependency
@@ -387,7 +391,7 @@ func (c *imageConverter) fromResolvedReference(resolvedReference *proto.Resolved
 				if struct_.Reference.TypeUID == resolvedReference.Reference.TypeUID {
 					// TODO 2023.11.09: convert to fully-qualified type name
 					type_ := descriptorpb.FieldDescriptorProto_TYPE_MESSAGE
-					typeName := c.getNestedName(struct_.Reference.ModuleUID, struct_.Name.Name)
+					typeName := fmt.Sprintf(".%s", c.getNestedName(struct_.Reference.ModuleUID, struct_.Name.Name))
 					return nil, &type_, &typeName, nil
 				}
 			}
@@ -395,7 +399,7 @@ func (c *imageConverter) fromResolvedReference(resolvedReference *proto.Resolved
 				if enum.Reference.TypeUID == resolvedReference.Reference.TypeUID {
 					// TODO 2023.11.09: convert to fully-qualified type name
 					type_ := descriptorpb.FieldDescriptorProto_TYPE_ENUM
-					typeName := c.getNestedName(enum.Reference.ModuleUID, enum.Name)
+					typeName := fmt.Sprintf(".%s", c.getNestedName(enum.Reference.ModuleUID, enum.Name))
 					return nil, &type_, &typeName, nil
 				}
 			}
