@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/pflag"
 
@@ -26,7 +27,7 @@ type opts struct {
 	DumpTokens       bool
 	DumpTree         bool
 	DescriptorSetOut string
-	Plugin           string
+	Plugins          []string
 }
 
 func main() {
@@ -40,7 +41,7 @@ func main() {
 	flags.BoolVar(&op.DumpTokens, "dump-tokens", false, "Output the token stream as it is processed")
 	flags.BoolVar(&op.DumpTree, "dump-tree", false, "Output the parse tree after parsing")
 	flags.StringVar(&op.DescriptorSetOut, "descriptor_set_out", "", "Writes a protobuf FileDescriptorSet containing all the input to FILE")
-	flags.StringVar(&op.Plugin, "plugin", "", "Specifies a plugin executable to use.")
+	flags.StringSliceVar(&op.Plugins, "plugin", []string{}, "Specifies a plugin executable to use.")
 	_ = flags.Parse(os.Args[1:])
 	targets := flags.Args()
 
@@ -110,7 +111,9 @@ func main() {
 		}
 	}
 
-	if op.Plugin != "" {
+	for _, plugin := range op.Plugins {
+		binary, parameters, _ := strings.Cut(plugin, ":")
+
 		fds, err := out.Image.ToFileDescriptorSet()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
@@ -120,6 +123,7 @@ func main() {
 			ProtoFile:       fds.File,
 			FileToGenerate:  targets,
 			CompilerVersion: &pluginpb.Version{},
+			Parameter:       &parameters,
 		}
 		requestBytes, err := proto.Marshal(&request)
 		if err != nil {
@@ -130,7 +134,12 @@ func main() {
 		var pluginOut bytes.Buffer
 		var pluginErr bytes.Buffer
 
-		cmd := exec.Command(op.Plugin)
+		binary, err = exec.LookPath(binary)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
+		cmd := exec.Command(binary)
 		cmd.Stdin = bytes.NewReader(requestBytes)
 		cmd.Stdout = &pluginOut
 		cmd.Stderr = &pluginErr
