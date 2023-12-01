@@ -183,7 +183,7 @@ func (c *imageChecker) check() {
 			c.checkAnnotationApplications(api.AnnotationApplications)
 			c.checkTypeName(api.Name)
 			for _, extends := range api.Extends {
-				c.checkTypeSpecifier(extends, []typeKind{typeKindAPI, typeKindSDK})
+				c.checkTypeSpecifier(extends, []typeKind{typeKindAPI})
 			}
 			for _, apiMethod := range api.Methods {
 				c.checkAnnotationApplications(apiMethod.AnnotationApplications)
@@ -195,7 +195,7 @@ func (c *imageChecker) check() {
 			c.checkAnnotationApplications(sdk.AnnotationApplications)
 			c.checkTypeName(sdk.Name)
 			for _, extends := range sdk.Extends {
-				c.checkTypeSpecifier(extends, []typeKind{typeKindAPI, typeKindSDK})
+				c.checkTypeSpecifier(extends, []typeKind{typeKindSDK})
 			}
 			for _, sdkMethod := range sdk.Methods {
 				c.checkAnnotationApplications(sdkMethod.AnnotationApplications)
