@@ -200,9 +200,9 @@ func (c *imageChecker) check() {
 			for _, sdkMethod := range sdk.Methods {
 				c.checkAnnotationApplications(sdkMethod.AnnotationApplications)
 				for _, sdkMethodInput := range sdkMethod.Input {
-					c.checkTypeSpecifier(sdkMethodInput.Type, []typeKind{typeKindStruct})
+					c.checkTypeSpecifier(sdkMethodInput.Type, []typeKind{typeKindPrimitive, typeKindStruct, typeKindEnum})
 				}
-				c.checkTypeSpecifier(sdkMethod.Output, []typeKind{typeKindStruct})
+				c.checkTypeSpecifier(sdkMethod.Output, []typeKind{typeKindPrimitive, typeKindStruct, typeKindEnum})
 			}
 		}
 		for _, annotation := range module.Annotations {
@@ -212,7 +212,7 @@ func (c *imageChecker) check() {
 			c.checkAnnotationApplications(constant.AnnotationApplications)
 			c.checkTypeSpecifier(constant.Type, []typeKind{typeKindPrimitive, typeKindStruct, typeKindEnum})
 
-                        // TODO 2023.11.26: constant.Value vs. constant.Type
+			// TODO 2023.11.26: constant.Value vs. constant.Type
 		}
 	}
 }
