@@ -182,6 +182,9 @@ func (self *compiler) Compile(ctx context.Context, req *idl.CompileRequest) (*id
 		included[mod.URI] = true
 		final.Modules = append(final.Modules, mod)
 	}
+
+	check(final, self.Reporter)
+
 	caught := self.Reporter.Reported()
 	if len(caught) > 0 {
 		return &idl.CompileResponse{
