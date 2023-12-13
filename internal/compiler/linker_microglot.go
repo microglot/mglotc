@@ -157,10 +157,10 @@ func newLocalSymbols(gsymbols *globalSymbolTable, URI string) *localSymbolTable 
 	symbols.attributes = make(map[localSymbolName]proto.AttributeReference)
 	symbols.inputs = make(map[localSymbolName]proto.SDKInputReference)
 
-	for builtinTypeName, builtinTypeUID := range idl.BUILTIN_TYPE_UIDS {
+	for builtinTypeUID, builtinTypeName := range idl.BUILTIN_UID_TYPENAMES {
 		symbols.types[localSymbolName{
 			qualifier: "",
-			name:      builtinTypeName,
+			name:      builtinTypeName.Name,
 		}] = proto.TypeReference{
 			// moduleUID 0 is for built-in types
 			ModuleUID: 0,
@@ -168,18 +168,12 @@ func newLocalSymbols(gsymbols *globalSymbolTable, URI string) *localSymbolTable 
 		}
 	}
 
-	for protobufTypeName, protobufTypeUID := range idl.PROTOBUF_TYPE_UIDS {
-		symbols.types[localSymbolName{
-			qualifier: "Protobuf",
-			name:      protobufTypeName,
-		}] = proto.TypeReference{
-			// moduleUID 1 is for Protobuf annotations
-			ModuleUID: 1,
-			TypeUID:   protobufTypeUID,
-		}
+	ok := symbols.alias(gsymbols, "/protobuf.mgdl", "Protobuf", false)
+	if !ok {
+		return nil
 	}
 
-	ok := symbols.alias(gsymbols, URI, "", false)
+	ok = symbols.alias(gsymbols, URI, "", false)
 	if !ok {
 		return nil
 	}

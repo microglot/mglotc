@@ -5,6 +5,9 @@ import (
 )
 
 func walkModule(module *proto.Module, f func(interface{})) {
+	for _, annotation := range module.AnnotationApplications {
+		walkAnnotationApplication(annotation, f)
+	}
 	for _, struct_ := range module.Structs {
 		walkStruct(struct_, f)
 	}

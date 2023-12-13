@@ -266,6 +266,9 @@ func TestLinker(t *testing.T) {
 				files = append(files, fs.NewFileString(f.uri, f.contents, f.kind))
 			}
 
+			protobufDescriptor, err := subcompilers[idl.FileKindMicroglot].CompileFile(ctx, r, fs.NewFileString("/protobuf.mgdl", idl.PROTOBUF_IDL, idl.FileKindMicroglot), false, false)
+			require.NoError(t, err, "/protobuf.mgdl", r.Reported())
+
 			parsedDescriptors := make([]*proto.Module, 0, len(testCase.files))
 			for i, f := range files {
 				d, err := subcompilers[f.Kind(ctx)].CompileFile(ctx, r, f, false, false)
@@ -275,6 +278,8 @@ func TestLinker(t *testing.T) {
 
 			symbols := globalSymbolTable{}
 			completedDescriptors := make([]*proto.Module, 0, len(parsedDescriptors))
+			err = symbols.collect(*protobufDescriptor, r)
+			require.NoError(t, err, "/protobuf.mgdl", r.Reported())
 			for i, parsedDescriptor := range parsedDescriptors {
 				completedDescriptor := completeUIDs(*parsedDescriptor)
 				err := symbols.collect(*completedDescriptor, r)
