@@ -173,7 +173,12 @@ func (self *compiler) Compile(ctx context.Context, req *idl.CompileRequest) (*id
 			return nil, ctx.Err()
 		case result := <-linkResults:
 			if result.err != nil {
-				return nil, result.err
+				caught := self.Reporter.Reported()
+				if len(caught) > 0 {
+					return nil, MultiException(caught)
+				} else {
+					return nil, result.err
+				}
 			}
 			linked_modules = append(linked_modules, result.module)
 		}
@@ -189,6 +194,7 @@ func (self *compiler) Compile(ctx context.Context, req *idl.CompileRequest) (*id
 		final.Modules = append(final.Modules, mod)
 	}
 
+	optimize(final)
 	check(final, self.Reporter)
 
 	caught := self.Reporter.Reported()

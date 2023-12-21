@@ -141,9 +141,12 @@ func TestChecker(t *testing.T) {
 
 			linkedDescriptors = append(linkedDescriptors, protobufDescriptor)
 
-			check(&idl.Image{
+			image := idl.Image{
 				Modules: linkedDescriptors,
-			}, r)
+			}
+
+			optimize(&image)
+			check(&image, r)
 			if testCase.expectCheckError {
 				require.NotEmpty(t, r.Reported())
 			} else {
