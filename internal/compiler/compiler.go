@@ -14,6 +14,7 @@ import (
 	"sync"
 
 	"gopkg.microglot.org/compiler.go/internal/exc"
+	"gopkg.microglot.org/compiler.go/internal/fs"
 	"gopkg.microglot.org/compiler.go/internal/idl"
 	"gopkg.microglot.org/compiler.go/internal/proto"
 )
@@ -108,8 +109,13 @@ func (self *compiler) Compile(ctx context.Context, req *idl.CompileRequest) (*id
 	modules := make([]*proto.Module, 0, len(files))
 	loaded := &sync.Map{}
 	results := make(chan fileResult)
-	expectedResults := len(files)
+	expectedResults := len(files) + 1
 	symbols := globalSymbolTable{}
+
+	go func() {
+		image, err := self.compileFile(ctx, fs.NewFileString("/protobuf.mgdl", idl.PROTOBUF_IDL, idl.FileKindMicroglot), loaded, &symbols, req.DumpTokens, req.DumpTree)
+		results <- fileResult{image, err}
+	}()
 
 	for _, file := range files {
 		go func(file idl.File) {
@@ -167,7 +173,12 @@ func (self *compiler) Compile(ctx context.Context, req *idl.CompileRequest) (*id
 			return nil, ctx.Err()
 		case result := <-linkResults:
 			if result.err != nil {
-				return nil, MultiException(self.Reporter.Reported())
+				caught := self.Reporter.Reported()
+				if len(caught) > 0 {
+					return nil, MultiException(caught)
+				} else {
+					return nil, result.err
+				}
 			}
 			linked_modules = append(linked_modules, result.module)
 		}
@@ -183,6 +194,7 @@ func (self *compiler) Compile(ctx context.Context, req *idl.CompileRequest) (*id
 		final.Modules = append(final.Modules, mod)
 	}
 
+	optimize(final)
 	check(final, self.Reporter)
 
 	caught := self.Reporter.Reported()

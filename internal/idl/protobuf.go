@@ -1,7 +1,7 @@
 package idl
 
 import (
-	"sync"
+	"fmt"
 )
 
 var PROTOBUF_TYPE_UIDS = map[string]uint64{
@@ -9,19 +9,13 @@ var PROTOBUF_TYPE_UIDS = map[string]uint64{
 	"NestedTypeInfo": 2,
 }
 
-var protobuf_uid_types map[uint64]string = nil
+var PROTOBUF_IDL = fmt.Sprintf(`
+syntax = "microglot0"
 
-var computeProtobufUidTypes = sync.OnceFunc(func() {
-	if protobuf_uid_types == nil {
-		protobuf_uid_types = make(map[uint64]string)
-		for protobufTypeName, protobufTypeUID := range PROTOBUF_TYPE_UIDS {
-			protobuf_uid_types[protobufTypeUID] = protobufTypeName
-		}
-	}
-})
+module = @2
 
-func GetProtobufTypeNameFromUID(uid uint64) (string, bool) {
-	computeProtobufUidTypes()
-	v, ok := protobuf_uid_types[uid]
-	return v, ok
-}
+annotation Package(module) :Text @%d
+annotation NestedTypeInfo(struct, enum) :Text @%d
+`, PROTOBUF_TYPE_UIDS["Package"],
+	PROTOBUF_TYPE_UIDS["NestedTypeInfo"],
+)

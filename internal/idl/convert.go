@@ -54,7 +54,11 @@ func mapFrom[F any, T any](in []*F, f func(*F) (T, error)) ([]T, error) {
 
 func GetProtobufAnnotation(as []*proto.AnnotationApplication, name string) *proto.Value {
 	for _, annotation := range as {
-		typeReference := *(annotation.Annotation.Reference.(*proto.TypeSpecifier_Resolved).Resolved.Reference)
+		resolvedReference, ok := annotation.Annotation.Reference.(*proto.TypeSpecifier_Resolved)
+		if !ok {
+			continue
+		}
+		typeReference := *(resolvedReference.Resolved.Reference)
 		if typeReference.ModuleUID == 1 && typeReference.TypeUID == PROTOBUF_TYPE_UIDS[name] {
 			return annotation.Value
 		}
@@ -326,7 +330,7 @@ func (c *imageConverter) fromResolvedReference(resolvedReference *proto.Resolved
 
 		// TODO 2023.11.09: respect $(Protobuf.FieldType())
 
-		switch builtinTypeName {
+		switch builtinTypeName.Name {
 		case "Bool":
 			type_ := descriptorpb.FieldDescriptorProto_TYPE_BOOL
 			return nil, &type_, nil, nil

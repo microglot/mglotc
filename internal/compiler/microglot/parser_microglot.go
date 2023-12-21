@@ -266,32 +266,65 @@ func (p *parserMicroglotTokens) ParseModule() *astModule {
 		var maybeStatement statement
 		switch maybeToken.Type {
 		case idl.TokenTypeKeywordModule:
-			maybeStatement = p.parseStatementModuleMeta()
+			maybeStatementModuleMeta := p.parseStatementModuleMeta()
+			if maybeStatementModuleMeta == nil {
+				return nil
+			}
+			maybeStatement = maybeStatementModuleMeta
 		case idl.TokenTypeKeywordImport:
-			maybeStatement = p.parseStatementImport()
+			maybeStatementImport := p.parseStatementImport()
+			if maybeStatementImport == nil {
+				return nil
+			}
+			maybeStatement = maybeStatementImport
 		case idl.TokenTypeKeywordAnnotation:
-			maybeStatement = p.parseStatementAnnotation()
+			maybeStatementAnnotation := p.parseStatementAnnotation()
+			if maybeStatementAnnotation == nil {
+				return nil
+			}
+			maybeStatement = maybeStatementAnnotation
 		case idl.TokenTypeKeywordConst:
-			maybeStatement = p.parseStatementConst()
+			maybeStatementConst := p.parseStatementConst()
+			if maybeStatementConst == nil {
+				return nil
+			}
+			maybeStatement = maybeStatementConst
 		case idl.TokenTypeKeywordEnum:
-			maybeStatement = p.parseStatementEnum()
+			maybeStatementEnum := p.parseStatementEnum()
+			if maybeStatementEnum == nil {
+				return nil
+			}
+			maybeStatement = maybeStatementEnum
 		case idl.TokenTypeKeywordStruct:
-			maybeStatement = p.parseStatementStruct()
+			maybeStatementStruct := p.parseStatementStruct()
+			if maybeStatementStruct == nil {
+				return nil
+			}
+			maybeStatement = maybeStatementStruct
 		case idl.TokenTypeKeywordAPI:
-			maybeStatement = p.parseStatementAPI()
+			maybeStatementAPI := p.parseStatementAPI()
+			if maybeStatementAPI == nil {
+				return nil
+			}
+			maybeStatement = maybeStatementAPI
 		case idl.TokenTypeKeywordSDK:
-			maybeStatement = p.parseStatementSDK()
+			maybeStatementSDK := p.parseStatementSDK()
+			if maybeStatementSDK == nil {
+				return nil
+			}
+			maybeStatement = maybeStatementSDK
 		case idl.TokenTypeKeywordImpl:
-			maybeStatement = p.parseStatementImpl()
+			maybeStatementImpl := p.parseStatementImpl()
+			if maybeStatementImpl == nil {
+				return nil
+			}
+			maybeStatement = maybeStatementImpl
 		default:
 			// TODO 2023.08.21: replace CodeUnknownFatal with something meaningful
 			p.report(exc.CodeUnknownFatal, fmt.Sprintf("unexpected %s (expecting a statement)", maybeToken.Value))
 			return nil
 		}
 
-		if maybeStatement == nil {
-			return nil
-		}
 		this.statements = append(this.statements, maybeStatement)
 	}
 

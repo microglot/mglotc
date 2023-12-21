@@ -5,6 +5,9 @@ import (
 )
 
 func walkModule(module *proto.Module, f func(interface{})) {
+	for _, annotation := range module.AnnotationApplications {
+		walkAnnotationApplication(annotation, f)
+	}
 	for _, struct_ := range module.Structs {
 		walkStruct(struct_, f)
 	}
@@ -158,7 +161,13 @@ func walkTypeSpecifier(typeSpecifier *proto.TypeSpecifier, f func(interface{})) 
 
 func walkValue(value *proto.Value, f func(interface{})) {
 	switch v := value.Kind.(type) {
+	case *proto.Value_Unary:
+		walkValue(v.Unary.Value, f)
+	case *proto.Value_Binary:
+		walkValue(v.Binary.Left, f)
+		walkValue(v.Binary.Right, f)
 	case *proto.Value_Identifier:
 		f(v.Identifier)
 	}
+	f(value)
 }
