@@ -99,7 +99,7 @@ func TestChecker(t *testing.T) {
 				{
 					kind:     idl.FileKindMicroglot,
 					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nannotation Foo(struct) :List<:Text>\nstruct Bar {} $(Foo([]))\n",
+					contents: "syntax = \"microglot0\"\nstruct FooArgument { l :List<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({l: []}))\n",
 				},
 			},
 			expectCheckError: false,
@@ -110,7 +110,7 @@ func TestChecker(t *testing.T) {
 				{
 					kind:     idl.FileKindMicroglot,
 					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nannotation Foo(struct) :List<:Text>\nstruct Bar {} $(Foo(32))\n",
+					contents: "syntax = \"microglot0\"\nstruct FooArgument { l :List<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({l: 32}))\n",
 				},
 			},
 			expectCheckError: true,
@@ -121,7 +121,41 @@ func TestChecker(t *testing.T) {
 				{
 					kind:     idl.FileKindMicroglot,
 					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nannotation Foo(struct) :List<:Text>\nstruct Bar {} $(Foo([32]))\n",
+					contents: "syntax = \"microglot0\"\nstruct FooArgument { l :List<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({l: [32]}))\n",
+				},
+			},
+			expectCheckError: true,
+		},
+
+		{
+			name: "presence literals in annotation applications (present)",
+			files: []CheckerTestFile{
+				{
+					kind:     idl.FileKindMicroglot,
+					uri:      "/test.mgdl",
+					contents: "syntax = \"microglot0\"\nstruct FooArgument { p :Presence<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({p: \"present\"}))\n",
+				},
+			},
+			expectCheckError: false,
+		},
+		{
+			name: "presence literals in annotation applications (absent)",
+			files: []CheckerTestFile{
+				{
+					kind:     idl.FileKindMicroglot,
+					uri:      "/test.mgdl",
+					contents: "syntax = \"microglot0\"\nstruct FooArgument { p :Presence<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({}))\n",
+				},
+			},
+			expectCheckError: false,
+		},
+		{
+			name: "presence literals in annotation applications (present but wrong type)",
+			files: []CheckerTestFile{
+				{
+					kind:     idl.FileKindMicroglot,
+					uri:      "/test.mgdl",
+					contents: "syntax = \"microglot0\"\nstruct FooArgument { p :Presence<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({p: 32}))\n",
 				},
 			},
 			expectCheckError: true,
@@ -147,7 +181,7 @@ func TestChecker(t *testing.T) {
 					contents: "syntax = \"microglot0\"\nstruct Foo { bar :Text }\nannotation Bar(struct) :Foo\nstruct Baz {} $(Bar({ }))\n",
 				},
 			},
-			expectCheckError: true,
+			expectCheckError: false,
 		},
 		{
 			name: "struct literals in annotation applications (spurious field)",

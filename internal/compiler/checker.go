@@ -190,10 +190,7 @@ func (c *imageChecker) checkValueList(value *proto.Value, expectedTypeSpecifier 
 
 // typecheck a value used in a Presence context
 func (c *imageChecker) checkValuePresence(value *proto.Value, expectedTypeSpecifier *proto.TypeSpecifier) {
-	// TODO 2023.12.27: literal presence?
-	c.reporter.Report(exc.New(exc.Location{
-		// TODO 2023.12.12: location?
-	}, exc.CodeUnknownFatal, fmt.Sprintf("expecting Presence, found %s", value.Kind)))
+	c.checkValue(value, expectedTypeSpecifier)
 }
 
 // typecheck a value used in a Struct context
@@ -207,20 +204,6 @@ func (c *imageChecker) checkValueStruct(value *proto.Value, context *proto.Struc
 
 	switch struct_ := value.Kind.(type) {
 	case *proto.Value_Struct:
-		for _, field := range context.Fields {
-			found := false
-			for _, valueStructField := range struct_.Struct.Fields {
-				if field.Name == valueStructField.Name {
-					found = true
-					break
-				}
-			}
-			if !found {
-				c.reporter.Report(exc.New(exc.Location{
-					// TODO 2023.12.12: location?
-				}, exc.CodeUnknownFatal, fmt.Sprintf("struct %s literal missing required field: %s", context.Name.Name, field.Name)))
-			}
-		}
 		for _, valueStructField := range struct_.Struct.Fields {
 			found := false
 			for _, field := range context.Fields {
@@ -329,7 +312,7 @@ func (c *imageChecker) check() {
 			}
 		}
 		for _, annotation := range module.Annotations {
-			c.checkTypeSpecifier(annotation.Type, []idl.TypeKind{idl.TypeKindPrimitive, idl.TypeKindData, idl.TypeKindVirtual, idl.TypeKindStruct, idl.TypeKindEnum})
+			c.checkTypeSpecifier(annotation.Type, []idl.TypeKind{idl.TypeKindPrimitive, idl.TypeKindData, idl.TypeKindStruct})
 		}
 		for _, constant := range module.Constants {
 			c.checkAnnotationApplications(constant.AnnotationApplications)
