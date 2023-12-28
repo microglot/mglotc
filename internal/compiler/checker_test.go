@@ -92,6 +92,119 @@ func TestChecker(t *testing.T) {
 			},
 			expectCheckError: true,
 		},
+
+		{
+			name: "list literals in annotation applications",
+			files: []CheckerTestFile{
+				{
+					kind:     idl.FileKindMicroglot,
+					uri:      "/test.mgdl",
+					contents: "syntax = \"microglot0\"\nstruct FooArgument { l :List<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({l: []}))\n",
+				},
+			},
+			expectCheckError: false,
+		},
+		{
+			name: "list literals in annotation applications (non-list literal)",
+			files: []CheckerTestFile{
+				{
+					kind:     idl.FileKindMicroglot,
+					uri:      "/test.mgdl",
+					contents: "syntax = \"microglot0\"\nstruct FooArgument { l :List<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({l: 32}))\n",
+				},
+			},
+			expectCheckError: true,
+		},
+		{
+			name: "list literals in annotation applications (list literal of wrong type)",
+			files: []CheckerTestFile{
+				{
+					kind:     idl.FileKindMicroglot,
+					uri:      "/test.mgdl",
+					contents: "syntax = \"microglot0\"\nstruct FooArgument { l :List<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({l: [32]}))\n",
+				},
+			},
+			expectCheckError: true,
+		},
+
+		{
+			name: "presence literals in annotation applications (present)",
+			files: []CheckerTestFile{
+				{
+					kind:     idl.FileKindMicroglot,
+					uri:      "/test.mgdl",
+					contents: "syntax = \"microglot0\"\nstruct FooArgument { p :Presence<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({p: \"present\"}))\n",
+				},
+			},
+			expectCheckError: false,
+		},
+		{
+			name: "presence literals in annotation applications (absent)",
+			files: []CheckerTestFile{
+				{
+					kind:     idl.FileKindMicroglot,
+					uri:      "/test.mgdl",
+					contents: "syntax = \"microglot0\"\nstruct FooArgument { p :Presence<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({}))\n",
+				},
+			},
+			expectCheckError: false,
+		},
+		{
+			name: "presence literals in annotation applications (present but wrong type)",
+			files: []CheckerTestFile{
+				{
+					kind:     idl.FileKindMicroglot,
+					uri:      "/test.mgdl",
+					contents: "syntax = \"microglot0\"\nstruct FooArgument { p :Presence<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({p: 32}))\n",
+				},
+			},
+			expectCheckError: true,
+		},
+
+		{
+			name: "struct literals in annotation applications",
+			files: []CheckerTestFile{
+				{
+					kind:     idl.FileKindMicroglot,
+					uri:      "/test.mgdl",
+					contents: "syntax = \"microglot0\"\nstruct Foo { bar :Text }\nannotation Bar(struct) :Foo\nstruct Baz {} $(Bar({ bar: \"ASDF\" }))\n",
+				},
+			},
+			expectCheckError: false,
+		},
+		{
+			name: "struct literals in annotation applications (missing field)",
+			files: []CheckerTestFile{
+				{
+					kind:     idl.FileKindMicroglot,
+					uri:      "/test.mgdl",
+					contents: "syntax = \"microglot0\"\nstruct Foo { bar :Text }\nannotation Bar(struct) :Foo\nstruct Baz {} $(Bar({ }))\n",
+				},
+			},
+			expectCheckError: false,
+		},
+		{
+			name: "struct literals in annotation applications (spurious field)",
+			files: []CheckerTestFile{
+				{
+					kind:     idl.FileKindMicroglot,
+					uri:      "/test.mgdl",
+					contents: "syntax = \"microglot0\"\nstruct Foo { bar :Text }\nannotation Bar(struct) :Foo\nstruct Baz {} $(Bar({ barney: \"ASDF\", bar: \"ASDF\" }))\n",
+				},
+			},
+			expectCheckError: true,
+		},
+		{
+			name: "struct literals in annotation applications (field value has wrong type)",
+			files: []CheckerTestFile{
+				{
+					kind:     idl.FileKindMicroglot,
+					uri:      "/test.mgdl",
+					contents: "syntax = \"microglot0\"\nstruct Foo { bar :Text }\nannotation Bar(struct) :Foo\nstruct Baz {} $(Bar({ bar: 99 }))\n",
+				},
+			},
+			expectCheckError: true,
+		},
 	}
 
 	subcompilers := DefaultSubCompilers()

@@ -78,6 +78,154 @@ func (c *imageChecker) checkTypeSpecifier(ts *proto.TypeSpecifier, expectedKinds
 	}
 }
 
+// typecheck a Value used in a Primitive context
+func (c *imageChecker) checkValuePrimitive(value *proto.Value, context *proto.Struct) {
+	primitiveTypeName := context.Name.Name
+
+	switch value.Kind.(type) {
+	case *proto.Value_Bool:
+		if primitiveTypeName != "Bool" {
+			c.reporter.Report(exc.New(exc.Location{
+				// TODO 2023.12.12: location?
+			}, exc.CodeUnknownFatal, fmt.Sprintf("expecting %s, found boolean", primitiveTypeName)))
+		}
+	case *proto.Value_Text:
+		if primitiveTypeName != "Text" {
+			c.reporter.Report(exc.New(exc.Location{
+				// TODO 2023.12.12: location?
+			}, exc.CodeUnknownFatal, fmt.Sprintf("expecting %s, found text", primitiveTypeName)))
+		}
+	case *proto.Value_Int8:
+		if primitiveTypeName != "Int8" && primitiveTypeName != "Int16" && primitiveTypeName != "Int32" && primitiveTypeName != "Int64" {
+			c.reporter.Report(exc.New(exc.Location{
+				// TODO 2023.12.12: location?
+			}, exc.CodeUnknownFatal, fmt.Sprintf("expecting %s, found int8", primitiveTypeName)))
+		}
+	case *proto.Value_Int16:
+		if primitiveTypeName != "Int16" && primitiveTypeName != "Int32" && primitiveTypeName != "Int64" {
+			c.reporter.Report(exc.New(exc.Location{
+				// TODO 2023.12.12: location?
+			}, exc.CodeUnknownFatal, fmt.Sprintf("expecting %s, found int16", primitiveTypeName)))
+		}
+	case *proto.Value_Int32:
+		if primitiveTypeName != "Int32" && primitiveTypeName != "Int64" {
+			c.reporter.Report(exc.New(exc.Location{
+				// TODO 2023.12.12: location?
+			}, exc.CodeUnknownFatal, fmt.Sprintf("expecting %s, found int32", primitiveTypeName)))
+		}
+	case *proto.Value_Int64:
+		if primitiveTypeName != "Int64" {
+			c.reporter.Report(exc.New(exc.Location{
+				// TODO 2023.12.12: location?
+			}, exc.CodeUnknownFatal, fmt.Sprintf("expecting %s, found int64", primitiveTypeName)))
+		}
+	case *proto.Value_UInt8:
+		if primitiveTypeName != "UInt8" && primitiveTypeName != "UInt16" && primitiveTypeName != "UInt32" && primitiveTypeName != "UInt64" && primitiveTypeName != "Int16" && primitiveTypeName != "Int32" && primitiveTypeName != "Int64" {
+			c.reporter.Report(exc.New(exc.Location{
+				// TODO 2023.12.12: location?
+			}, exc.CodeUnknownFatal, fmt.Sprintf("expecting %s, found uint8", primitiveTypeName)))
+		}
+	case *proto.Value_UInt16:
+		if primitiveTypeName != "UInt16" && primitiveTypeName != "UInt32" && primitiveTypeName != "UInt64" && primitiveTypeName != "Int32" && primitiveTypeName != "Int64" {
+			c.reporter.Report(exc.New(exc.Location{
+				// TODO 2023.12.12: location?
+			}, exc.CodeUnknownFatal, fmt.Sprintf("expecting %s, found uint16", primitiveTypeName)))
+		}
+	case *proto.Value_UInt32:
+		if primitiveTypeName != "UInt32" && primitiveTypeName != "UInt64" && primitiveTypeName != "Int64" {
+			c.reporter.Report(exc.New(exc.Location{
+				// TODO 2023.12.12: location?
+			}, exc.CodeUnknownFatal, fmt.Sprintf("expecting %s, found uint32", primitiveTypeName)))
+		}
+	case *proto.Value_UInt64:
+		if primitiveTypeName != "UInt64" {
+			c.reporter.Report(exc.New(exc.Location{
+				// TODO 2023.12.12: location?
+			}, exc.CodeUnknownFatal, fmt.Sprintf("expecting %s, found uint64", primitiveTypeName)))
+		}
+	case *proto.Value_Float32:
+		if primitiveTypeName != "Float32" && primitiveTypeName != "Float64" {
+			c.reporter.Report(exc.New(exc.Location{
+				// TODO 2023.12.12: location?
+			}, exc.CodeUnknownFatal, fmt.Sprintf("expecting %s, found float32", primitiveTypeName)))
+		}
+	case *proto.Value_Float64:
+		if primitiveTypeName != "Float64" {
+			c.reporter.Report(exc.New(exc.Location{
+				// TODO 2023.12.12: location?
+			}, exc.CodeUnknownFatal, fmt.Sprintf("expecting %s, found float64", primitiveTypeName)))
+		}
+
+	default:
+		c.reporter.Report(exc.New(exc.Location{
+			// TODO 2023.12.12: location?
+		}, exc.CodeUnknownFatal, fmt.Sprintf("expecting %s, found %s", primitiveTypeName, value)))
+	}
+}
+
+// typecheck a value used in a Data context
+func (c *imageChecker) checkValueData(value *proto.Value) {
+	switch value.Kind.(type) {
+	case *proto.Value_Data:
+	default:
+		c.reporter.Report(exc.New(exc.Location{
+			// TODO 2023.12.12: location?
+		}, exc.CodeUnknownFatal, fmt.Sprintf("expecting Data, found %s", value.Kind)))
+	}
+}
+
+// typecheck a value used in a List context
+func (c *imageChecker) checkValueList(value *proto.Value, expectedTypeSpecifier *proto.TypeSpecifier) {
+	switch list := value.Kind.(type) {
+	case *proto.Value_List:
+		for _, element := range list.List.Elements {
+			c.checkValue(element, expectedTypeSpecifier)
+		}
+	default:
+		c.reporter.Report(exc.New(exc.Location{
+			// TODO 2023.12.12: location?
+		}, exc.CodeUnknownFatal, fmt.Sprintf("expecting List, found %s", value.Kind)))
+	}
+}
+
+// typecheck a value used in a Presence context
+func (c *imageChecker) checkValuePresence(value *proto.Value, expectedTypeSpecifier *proto.TypeSpecifier) {
+	c.checkValue(value, expectedTypeSpecifier)
+}
+
+// typecheck a value used in a Struct context
+func (c *imageChecker) checkValueStruct(value *proto.Value, context *proto.Struct, parameters []*proto.TypeSpecifier) {
+	if parameters != nil {
+		c.reporter.Report(exc.New(exc.Location{
+			// TODO 2023.12.12: location?
+		}, exc.CodeUnknownFatal, fmt.Sprintf("parameterized struct literals aren't supported yet")))
+		return
+	}
+
+	switch struct_ := value.Kind.(type) {
+	case *proto.Value_Struct:
+		for _, valueStructField := range struct_.Struct.Fields {
+			found := false
+			for _, field := range context.Fields {
+				if field.Name == valueStructField.Name {
+					c.checkValue(valueStructField.Value, field.Type)
+					found = true
+					break
+				}
+			}
+			if !found {
+				c.reporter.Report(exc.New(exc.Location{
+					// TODO 2023.12.12: location?
+				}, exc.CodeUnknownFatal, fmt.Sprintf("struct %s literal has unknown field: %s", context.Name.Name, valueStructField.Name)))
+			}
+		}
+	default:
+		c.reporter.Report(exc.New(exc.Location{
+			// TODO 2023.12.12: location?
+		}, exc.CodeUnknownFatal, fmt.Sprintf("expecting Struct, found %s", value.Kind)))
+	}
+}
+
 func (c *imageChecker) checkValue(value *proto.Value, expectedTypeSpecifier *proto.TypeSpecifier) {
 	resolved, ok := expectedTypeSpecifier.Reference.(*proto.TypeSpecifier_Resolved)
 	if !ok {
@@ -89,117 +237,26 @@ func (c *imageChecker) checkValue(value *proto.Value, expectedTypeSpecifier *pro
 
 		switch expectedKind {
 		case idl.TypeKindPrimitive:
-			primitiveTypeName := expectedDeclaration.(*proto.Struct).Name.Name
-			switch value.Kind.(type) {
-			case *proto.Value_Bool:
-				if primitiveTypeName != "Bool" {
-					c.reporter.Report(exc.New(exc.Location{
-						// TODO 2023.12.12: location?
-					}, exc.CodeUnknownFatal, fmt.Sprintf("attempted to assign boolean value to constant of type %s", primitiveTypeName)))
-				}
-			case *proto.Value_Text:
-				if primitiveTypeName != "Text" {
-					c.reporter.Report(exc.New(exc.Location{
-						// TODO 2023.12.12: location?
-					}, exc.CodeUnknownFatal, fmt.Sprintf("attempted to assign text value to constant of type %s", primitiveTypeName)))
-				}
-			case *proto.Value_Int8:
-				if primitiveTypeName != "Int8" && primitiveTypeName != "Int16" && primitiveTypeName != "Int32" && primitiveTypeName != "Int64" {
-					c.reporter.Report(exc.New(exc.Location{
-						// TODO 2023.12.12: location?
-					}, exc.CodeUnknownFatal, fmt.Sprintf("attempted to assign int8 value to constant of type %s", primitiveTypeName)))
-				}
-			case *proto.Value_Int16:
-				if primitiveTypeName != "Int16" && primitiveTypeName != "Int32" && primitiveTypeName != "Int64" {
-					c.reporter.Report(exc.New(exc.Location{
-						// TODO 2023.12.12: location?
-					}, exc.CodeUnknownFatal, fmt.Sprintf("attempted to assign int16 value to constant of type %s", primitiveTypeName)))
-				}
-			case *proto.Value_Int32:
-				if primitiveTypeName != "Int32" && primitiveTypeName != "Int64" {
-					c.reporter.Report(exc.New(exc.Location{
-						// TODO 2023.12.12: location?
-					}, exc.CodeUnknownFatal, fmt.Sprintf("attempted to assign int32 value to constant of type %s", primitiveTypeName)))
-				}
-			case *proto.Value_Int64:
-				if primitiveTypeName != "Int64" {
-					c.reporter.Report(exc.New(exc.Location{
-						// TODO 2023.12.12: location?
-					}, exc.CodeUnknownFatal, fmt.Sprintf("attempted to assign int64 value to constant of type %s", primitiveTypeName)))
-				}
-			case *proto.Value_UInt8:
-				if primitiveTypeName != "UInt8" && primitiveTypeName != "UInt16" && primitiveTypeName != "UInt32" && primitiveTypeName != "UInt64" && primitiveTypeName != "Int16" && primitiveTypeName != "Int32" && primitiveTypeName != "Int64" {
-					c.reporter.Report(exc.New(exc.Location{
-						// TODO 2023.12.12: location?
-					}, exc.CodeUnknownFatal, fmt.Sprintf("attempted to assign uint8 value to constant of type %s", primitiveTypeName)))
-				}
-			case *proto.Value_UInt16:
-				if primitiveTypeName != "UInt16" && primitiveTypeName != "UInt32" && primitiveTypeName != "UInt64" && primitiveTypeName != "Int32" && primitiveTypeName != "Int64" {
-					c.reporter.Report(exc.New(exc.Location{
-						// TODO 2023.12.12: location?
-					}, exc.CodeUnknownFatal, fmt.Sprintf("attempted to assign uint16 value to constant of type %s", primitiveTypeName)))
-				}
-			case *proto.Value_UInt32:
-				if primitiveTypeName != "UInt32" && primitiveTypeName != "UInt64" && primitiveTypeName != "Int64" {
-					c.reporter.Report(exc.New(exc.Location{
-						// TODO 2023.12.12: location?
-					}, exc.CodeUnknownFatal, fmt.Sprintf("attempted to assign uint32 value to constant of type %s", primitiveTypeName)))
-				}
-			case *proto.Value_UInt64:
-				if primitiveTypeName != "UInt64" {
-					c.reporter.Report(exc.New(exc.Location{
-						// TODO 2023.12.12: location?
-					}, exc.CodeUnknownFatal, fmt.Sprintf("attempted to assign uint64 value to constant of type %s", primitiveTypeName)))
-				}
-			case *proto.Value_Float32:
-				if primitiveTypeName != "Float32" && primitiveTypeName != "Float64" {
-					c.reporter.Report(exc.New(exc.Location{
-						// TODO 2023.12.12: location?
-					}, exc.CodeUnknownFatal, fmt.Sprintf("attempted to assign float32 value to constant of type %s", primitiveTypeName)))
-				}
-			case *proto.Value_Float64:
-				if primitiveTypeName != "Float64" {
-					c.reporter.Report(exc.New(exc.Location{
-						// TODO 2023.12.12: location?
-					}, exc.CodeUnknownFatal, fmt.Sprintf("attempted to assign float64 value to constant of type %s", primitiveTypeName)))
-				}
-
-			case *proto.Value_Identifier:
-				c.reporter.Report(exc.New(exc.Location{
-					// TODO 2023.12.12: location?
-				}, exc.CodeUnknownFatal, fmt.Sprintf("constants derived from non-constant identifiers are not supported")))
-
-			case *proto.Value_Data:
-				c.reporter.Report(exc.New(exc.Location{
-					// TODO 2023.12.12: location?
-				}, exc.CodeUnknownFatal, fmt.Sprintf("data constants are not supported")))
-			case *proto.Value_List:
-				c.reporter.Report(exc.New(exc.Location{
-					// TODO 2023.12.12: location?
-				}, exc.CodeUnknownFatal, fmt.Sprintf("list constants are not supported")))
-			case *proto.Value_Struct:
-				c.reporter.Report(exc.New(exc.Location{
-					// TODO 2023.12.12: location?
-				}, exc.CodeUnknownFatal, fmt.Sprintf("struct constants are not supported")))
-
-			case *proto.Value_Unary:
-				c.reporter.Report(exc.New(exc.Location{
-					// TODO 2023.12.12: location?
-				}, exc.CodeUnknownFatal, fmt.Sprintf("constants can't be composed from unary operations on non-constant values")))
-
-			case *proto.Value_Binary:
-				c.reporter.Report(exc.New(exc.Location{
-					// TODO 2023.12.12: location?
-				}, exc.CodeUnknownFatal, fmt.Sprintf("constants can't be composed from binary operations on non-constant values")))
-			}
+			c.checkValuePrimitive(value, expectedDeclaration.(*proto.Struct))
+		case idl.TypeKindData:
+			c.checkValueData(value)
 		case idl.TypeKindVirtual:
-			// TODO 2023.12.20: type check literal virtuals (lists, presences)
+			virtualTypeName := expectedDeclaration.(*proto.Struct).Name.Name
+			if virtualTypeName == "List" {
+				c.checkValueList(value, resolved.Resolved.Parameters[0])
+			} else if virtualTypeName == "Presence" {
+				c.checkValuePresence(value, resolved.Resolved.Parameters[0])
+			} else {
+				c.reporter.Report(exc.New(exc.Location{
+					// TODO 2023.12.12: location?
+				}, exc.CodeUnknownFatal, fmt.Sprintf("unknown virtual type %s (can't happen!)", virtualTypeName)))
+			}
 		case idl.TypeKindStruct:
-			// TODO 2023.12.20: type check literal structs
+			c.checkValueStruct(value, expectedDeclaration.(*proto.Struct), resolved.Resolved.Parameters)
 		default:
 			c.reporter.Report(exc.New(exc.Location{
 				// TODO 2023.12.12: location?
-			}, exc.CodeUnknownFatal, fmt.Sprintf("Constant assignment to unsupported type %d", expectedKind)))
+			}, exc.CodeUnknownFatal, fmt.Sprintf("expecting a %d, which isn't supported by the language", expectedKind)))
 		}
 	}
 }
@@ -255,7 +312,7 @@ func (c *imageChecker) check() {
 			}
 		}
 		for _, annotation := range module.Annotations {
-			c.checkTypeSpecifier(annotation.Type, []idl.TypeKind{idl.TypeKindPrimitive, idl.TypeKindData, idl.TypeKindVirtual, idl.TypeKindStruct, idl.TypeKindEnum})
+			c.checkTypeSpecifier(annotation.Type, []idl.TypeKind{idl.TypeKindPrimitive, idl.TypeKindData, idl.TypeKindStruct})
 		}
 		for _, constant := range module.Constants {
 			c.checkAnnotationApplications(constant.AnnotationApplications)
