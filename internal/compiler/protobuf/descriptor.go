@@ -36,14 +36,24 @@ func appendProtobufAnnotation(as []*proto.AnnotationApplication, name string, va
 			Reference: &proto.TypeSpecifier_Resolved{
 				Resolved: &proto.ResolvedReference{
 					Reference: &proto.TypeReference{
-						// moduleUID 1 is for Protobuf annotations
-						ModuleUID: 1,
+						// moduleUID 2 is for Protobuf annotations
+						ModuleUID: 2,
 						TypeUID:   idl.PROTOBUF_TYPE_UIDS[name],
 					},
 				},
 			},
 		},
 		Value: value,
+	})
+}
+
+func appendProtobufAnnotationString(as []*proto.AnnotationApplication, name string, value string) []*proto.AnnotationApplication {
+	return appendProtobufAnnotation(as, name, &proto.Value{
+		Kind: &proto.Value_Text{
+			Text: &proto.ValueText{
+				Value: value,
+			},
+		},
 	})
 }
 
@@ -198,10 +208,13 @@ func FromFileDescriptorProto(fileDescriptor *descriptorpb.FileDescriptorProto) (
 		return nil, err
 	}
 
+	var annotationApplications []*proto.AnnotationApplication
+
 	// compute protobufPackage
 	var protobufPackage string
 	if fileDescriptor.Package != nil {
 		protobufPackage = *fileDescriptor.Package
+		annotationApplications = appendProtobufAnnotationString(annotationApplications, "Package", protobufPackage)
 	}
 
 	apis, err := mapFrom(fileDescriptor.Service, fromServiceDescriptorProto)
@@ -209,19 +222,22 @@ func FromFileDescriptorProto(fileDescriptor *descriptorpb.FileDescriptorProto) (
 		return nil, err
 	}
 
-	// TODO 2023.10.06: annotate with $(Protobuf.Package("")) if there's a package name
-
-	// TODO 2023.10.10: convert Options
+	if fileDescriptor.Options != nil {
+		if fileDescriptor.Options.GoPackage != nil {
+			annotationApplications = appendProtobufAnnotationString(annotationApplications, "FileOptionsGoPackage", *fileDescriptor.Options.GoPackage)
+		}
+		// TODO 2023.12.30: ... convert remaining Options
+	}
 
 	return &proto.Module{
-		URI:             *fileDescriptor.Name,
-		UID:             moduleUID,
-		ProtobufPackage: protobufPackage,
-		// AnnotationApplications:
-		Imports: imports,
-		Structs: structs,
-		Enums:   enums,
-		APIs:    apis,
+		URI:                    *fileDescriptor.Name,
+		UID:                    moduleUID,
+		ProtobufPackage:        protobufPackage,
+		AnnotationApplications: annotationApplications,
+		Imports:                imports,
+		Structs:                structs,
+		Enums:                  enums,
+		APIs:                   apis,
 		// SDKs
 		// Constants
 		// Annotations
