@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/bufbuild/protocompile/options"
 	"github.com/bufbuild/protocompile/parser"
 	"github.com/bufbuild/protocompile/reporter"
 
@@ -36,6 +37,11 @@ func (self *SubCompilerProtobuf) CompileFile(ctx context.Context, r exc.Reporter
 		fmt.Println(node)
 	}
 	result, err := parser.ResultFromAST(node, true, h)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = options.InterpretUnlinkedOptions(result)
 	if err != nil {
 		return nil, err
 	}

@@ -19,6 +19,7 @@ import (
 	"gopkg.microglot.org/compiler.go/internal/compiler"
 	"gopkg.microglot.org/compiler.go/internal/fs"
 	"gopkg.microglot.org/compiler.go/internal/idl"
+	"gopkg.microglot.org/compiler.go/internal/mgdl_gen_go"
 )
 
 type opts struct {
@@ -27,6 +28,7 @@ type opts struct {
 	DumpTokens       bool
 	DumpTree         bool
 	DescriptorSetOut string
+	ProtobufPlugins  []string
 	Plugins          []string
 }
 
@@ -41,6 +43,7 @@ func main() {
 	flags.BoolVar(&op.DumpTokens, "dump-tokens", false, "Output the token stream as it is processed")
 	flags.BoolVar(&op.DumpTree, "dump-tree", false, "Output the parse tree after parsing")
 	flags.StringVar(&op.DescriptorSetOut, "descriptor_set_out", "", "Writes a protobuf FileDescriptorSet containing all the input to FILE")
+	flags.StringSliceVar(&op.ProtobufPlugins, "pbplugin", []string{}, "Specifies a protobuf plugin executable to use.")
 	flags.StringSliceVar(&op.Plugins, "plugin", []string{}, "Specifies a plugin executable to use.")
 	_ = flags.Parse(os.Args[1:])
 	targets := flags.Args()
@@ -111,7 +114,7 @@ func main() {
 		}
 	}
 
-	for _, plugin := range op.Plugins {
+	for _, plugin := range op.ProtobufPlugins {
 		binary, parameters, _ := strings.Cut(plugin, ":")
 
 		fds, err := out.Image.ToFileDescriptorSet()
@@ -158,7 +161,40 @@ func main() {
 			os.Exit(1)
 		}
 
+		if response.Error != nil {
+			fmt.Fprintln(os.Stderr, response.Error)
+			os.Exit(1)
+		}
+
 		for _, responseFile := range response.File {
+			filename := path.Join(output, *responseFile.Name)
+			if err = os.MkdirAll(filepath.Dir(filename), 0770); err != nil {
+				fmt.Fprintln(os.Stderr, err.Error())
+				os.Exit(1)
+			}
+			if err = os.WriteFile(path.Join(output, *responseFile.Name), []byte(*responseFile.Content), 0o644); err != nil {
+				fmt.Fprintln(os.Stderr, err.Error())
+				os.Exit(1)
+			}
+		}
+	}
+
+	for _, plugin := range op.Plugins {
+		name, parameters, _ := strings.Cut(plugin, ":")
+
+		if name != "mgdl-gen-go" {
+			fmt.Fprintln(os.Stderr, "Only the mgdl-gen-go plugin is supported, for now")
+			os.Exit(1)
+		}
+
+		// TODO 2023.12.30: an executable interface like the protobuf one, but passing an idl.Image
+		files, err := mgdl_gen_go.Embed(parameters, out.Image, targets)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
+
+		for _, responseFile := range files {
 			filename := path.Join(output, *responseFile.Name)
 			if err = os.MkdirAll(filepath.Dir(filename), 0770); err != nil {
 				fmt.Fprintln(os.Stderr, err.Error())
