@@ -2,6 +2,7 @@ package microglot
 
 import (
 	"errors"
+        "fmt"
 	"net/url"
 	"strings"
 
@@ -51,6 +52,10 @@ func FromModule(module *astModule) (*proto.Module, error) {
 			return nil, errors.New("unknown statement type")
 		}
 	}
+
+        if this.UID == 0 {
+           return nil, fmt.Errorf("you must specify a UID for module %s", module.URI)
+        }
 
 	pkg, err := protobufPackage(this.AnnotationApplications, module.URI)
 	if err != nil {
