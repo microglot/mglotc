@@ -308,7 +308,9 @@ func (c *imageChecker) check() {
 				for _, sdkMethodInput := range sdkMethod.Input {
 					c.checkTypeSpecifier(sdkMethodInput.Type, []idl.TypeKind{idl.TypeKindPrimitive, idl.TypeKindData, idl.TypeKindVirtual, idl.TypeKindStruct, idl.TypeKindEnum})
 				}
-				c.checkTypeSpecifier(sdkMethod.Output, []idl.TypeKind{idl.TypeKindPrimitive, idl.TypeKindData, idl.TypeKindVirtual, idl.TypeKindStruct, idl.TypeKindEnum})
+				if sdkMethod.Output != nil {
+					c.checkTypeSpecifier(sdkMethod.Output, []idl.TypeKind{idl.TypeKindPrimitive, idl.TypeKindData, idl.TypeKindVirtual, idl.TypeKindStruct, idl.TypeKindEnum})
+				}
 			}
 		}
 		for _, annotation := range module.Annotations {

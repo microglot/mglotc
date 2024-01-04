@@ -2,7 +2,7 @@ package microglot
 
 import (
 	"errors"
-        "fmt"
+	"fmt"
 	"net/url"
 	"strings"
 
@@ -53,9 +53,9 @@ func FromModule(module *astModule) (*proto.Module, error) {
 		}
 	}
 
-        if this.UID == 0 {
-           return nil, fmt.Errorf("you must specify a UID for module %s", module.URI)
-        }
+	if this.UID == 0 {
+		return nil, fmt.Errorf("you must specify a UID for module %s", module.URI)
+	}
 
 	pkg, err := protobufPackage(this.AnnotationApplications, module.URI)
 	if err != nil {
@@ -229,11 +229,16 @@ func fromAPIMethod(apiMethod *astAPIMethod) *proto.APIMethod {
 }
 
 func fromSDKMethod(sdkMethod *astSDKMethod) *proto.SDKMethod {
+	var output *proto.TypeSpecifier
+	if sdkMethod.methodReturns != nil {
+		output = fromTypeSpecifier(&sdkMethod.methodReturns.typeSpecifier)
+	}
+
 	return &proto.SDKMethod{
 		Reference:              fromAttributeUID(sdkMethod.meta.uid),
 		Name:                   sdkMethod.identifier.Value,
 		Input:                  mapFrom(sdkMethod.methodInput.parameters, fromSDKMethodParameter),
-		Output:                 fromTypeSpecifier(&sdkMethod.methodReturns.typeSpecifier),
+		Output:                 output,
 		NoThrows:               sdkMethod.nothrows,
 		CommentBlock:           fromCommentBlock(sdkMethod.meta.comments),
 		AnnotationApplications: fromAnnotationApplication(sdkMethod.meta.annotationApplication),
