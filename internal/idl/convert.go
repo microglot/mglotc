@@ -404,17 +404,15 @@ func (c *imageConverter) fromResolvedReference(resolvedReference *proto.Resolved
 		if module.UID == resolvedReference.Reference.ModuleUID {
 			for _, struct_ := range module.Structs {
 				if struct_.Reference.TypeUID == resolvedReference.Reference.TypeUID {
-					// TODO 2023.11.09: convert to fully-qualified type name
 					type_ := descriptorpb.FieldDescriptorProto_TYPE_MESSAGE
-					typeName := fmt.Sprintf(".%s", c.getNestedName(struct_.Reference.ModuleUID, struct_.Name.Name))
+					typeName := fmt.Sprintf("%s.%s", module.ProtobufPackage, c.getNestedName(struct_.Reference.ModuleUID, struct_.Name.Name))
 					return nil, &type_, &typeName, nil
 				}
 			}
 			for _, enum := range module.Enums {
 				if enum.Reference.TypeUID == resolvedReference.Reference.TypeUID {
-					// TODO 2023.11.09: convert to fully-qualified type name
 					type_ := descriptorpb.FieldDescriptorProto_TYPE_ENUM
-					typeName := fmt.Sprintf(".%s", c.getNestedName(enum.Reference.ModuleUID, enum.Name))
+					typeName := fmt.Sprintf("%s.%s", module.ProtobufPackage, c.getNestedName(enum.Reference.ModuleUID, enum.Name))
 					return nil, &type_, &typeName, nil
 				}
 			}
