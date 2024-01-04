@@ -1,0 +1,35 @@
+syntax = "microglot1"
+module = @12309 $(Protobuf.FileOptionsGoPackage("asdf.asdf"))
+
+struct Argument {}
+
+struct Return {}
+
+api TestAPI {
+        APIMethod(:Argument) returns (:Return)
+}
+
+const zeroi8   :Int8   = -1
+const zeroi16  :Int16  = 0
+const zeroi32  :Int32  = 0
+const zeroi64  :Int64  = 0
+const zeroui8  :UInt8  = 0
+const zeroui16 :UInt16 = 0
+const zeroui32 :UInt32 = 0
+const zeroui64 :UInt64 = 0
+
+const zerof32 :Float32 = 0.0
+const zerof64 :Float64 = 0.0
+
+const empty :Text = ""
+
+const t :Bool = true
+const f :Bool = false
+
+sdk TestSDK {
+        M0()
+        M1(argument :Argument) returns (:Return)
+        M2(x :Text)
+}
+
+

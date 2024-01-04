@@ -122,7 +122,9 @@ func walkSDKMethod(method *proto.SDKMethod, f func(interface{})) {
 	for _, input := range method.Input {
 		walkTypeSpecifier(input.Type, f)
 	}
-	walkTypeSpecifier(method.Output, f)
+	if method.Output != nil {
+		walkTypeSpecifier(method.Output, f)
+	}
 	for _, annotation := range method.AnnotationApplications {
 		walkAnnotationApplication(annotation, f)
 	}
