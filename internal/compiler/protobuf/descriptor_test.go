@@ -113,7 +113,7 @@ func TestDescriptor(t *testing.T) {
 									Reference: &proto.TypeSpecifier_Resolved{
 										Resolved: &proto.ResolvedReference{
 											Reference: &proto.TypeReference{
-												ModuleUID: 1,
+												ModuleUID: 2,
 												TypeUID:   2,
 											},
 										},
@@ -160,7 +160,7 @@ func TestDescriptor(t *testing.T) {
 									Reference: &proto.TypeSpecifier_Resolved{
 										Resolved: &proto.ResolvedReference{
 											Reference: &proto.TypeReference{
-												ModuleUID: 1,
+												ModuleUID: 2,
 												TypeUID:   2,
 											},
 										},
@@ -234,7 +234,7 @@ func TestDescriptor(t *testing.T) {
 									Reference: &proto.TypeSpecifier_Resolved{
 										Resolved: &proto.ResolvedReference{
 											Reference: &proto.TypeReference{
-												ModuleUID: 1,
+												ModuleUID: 2,
 												TypeUID:   2,
 											},
 										},
@@ -382,7 +382,7 @@ func TestDescriptor(t *testing.T) {
 									Reference: &proto.TypeSpecifier_Resolved{
 										Resolved: &proto.ResolvedReference{
 											Reference: &proto.TypeReference{
-												ModuleUID: 1,
+												ModuleUID: 2,
 												TypeUID:   2,
 											},
 										},
@@ -429,7 +429,7 @@ func TestDescriptor(t *testing.T) {
 									Reference: &proto.TypeSpecifier_Resolved{
 										Resolved: &proto.ResolvedReference{
 											Reference: &proto.TypeReference{
-												ModuleUID: 1,
+												ModuleUID: 2,
 												TypeUID:   2,
 											},
 										},
@@ -520,6 +520,144 @@ func TestDescriptor(t *testing.T) {
 										Forward: &proto.ForwardReference{
 											Reference: &proto.ForwardReference_Protobuf{
 												Protobuf: "Barney",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:  "map<string,string> field -> list of synthetic structs",
+			input: "syntax = \"proto3\";message Foo { map<string,string> Bar = 1; }",
+			expected: &proto.Module{
+				UID: 1449310910991872227,
+				Structs: []*proto.Struct{
+					&proto.Struct{
+						IsSynthetic: true,
+						Name: &proto.TypeName{
+							Name: "Foo_BarEntry",
+						},
+						Reference: &proto.TypeReference{
+							ModuleUID: idl.Incomplete,
+							TypeUID:   idl.Incomplete,
+						},
+						Fields: []*proto.Field{
+							&proto.Field{
+								Reference: &proto.AttributeReference{
+									ModuleUID:    idl.Incomplete,
+									TypeUID:      idl.Incomplete,
+									AttributeUID: 1,
+								},
+								Name: "key",
+								Type: &proto.TypeSpecifier{
+									Reference: &proto.TypeSpecifier_Forward{
+										Forward: &proto.ForwardReference{
+											Reference: &proto.ForwardReference_Protobuf{
+												Protobuf: "Text",
+											},
+										},
+									},
+								},
+							},
+							&proto.Field{
+								Reference: &proto.AttributeReference{
+									ModuleUID:    idl.Incomplete,
+									TypeUID:      idl.Incomplete,
+									AttributeUID: 2,
+								},
+								Name: "value",
+								Type: &proto.TypeSpecifier{
+									Reference: &proto.TypeSpecifier_Forward{
+										Forward: &proto.ForwardReference{
+											Reference: &proto.ForwardReference_Protobuf{
+												Protobuf: "Text",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					&proto.Struct{
+						Name: &proto.TypeName{
+							Name: "Foo",
+						},
+						Reference: &proto.TypeReference{
+							ModuleUID: idl.Incomplete,
+							TypeUID:   idl.Incomplete,
+						},
+
+						AnnotationApplications: []*proto.AnnotationApplication{
+							&proto.AnnotationApplication{
+								Annotation: &proto.TypeSpecifier{
+									Reference: &proto.TypeSpecifier_Resolved{
+										Resolved: &proto.ResolvedReference{
+											Reference: &proto.TypeReference{
+												ModuleUID: 2,
+												TypeUID:   2,
+											},
+										},
+									},
+								},
+								Value: &proto.Value{
+									Kind: &proto.Value_List{
+										List: &proto.ValueList{
+											Elements: []*proto.Value{
+												&proto.Value{
+													Kind: &proto.Value_Text{
+														Text: &proto.ValueText{
+															Value:  "BarEntry",
+															Source: "BarEntry",
+														},
+													},
+												},
+												&proto.Value{
+													Kind: &proto.Value_Text{
+														Text: &proto.ValueText{
+															Value:  "Foo_BarEntry",
+															Source: "Foo_BarEntry",
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+
+						Fields: []*proto.Field{
+							&proto.Field{
+								Reference: &proto.AttributeReference{
+									ModuleUID:    idl.Incomplete,
+									TypeUID:      idl.Incomplete,
+									AttributeUID: 1,
+								},
+								Name: "Bar",
+								Type: &proto.TypeSpecifier{
+									Reference: &proto.TypeSpecifier_Forward{
+										Forward: &proto.ForwardReference{
+											Reference: &proto.ForwardReference_Microglot{
+												Microglot: &proto.MicroglotForwardReference{
+													Name: &proto.TypeName{
+														Name: "List",
+														Parameters: []*proto.TypeSpecifier{
+															&proto.TypeSpecifier{
+																Reference: &proto.TypeSpecifier_Forward{
+																	Forward: &proto.ForwardReference{
+																		Reference: &proto.ForwardReference_Protobuf{
+																			Protobuf: "BarEntry",
+																		},
+																	},
+																},
+															},
+														},
+													},
+												},
 											},
 										},
 									},
