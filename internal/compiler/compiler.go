@@ -139,7 +139,6 @@ func (self *compiler) Compile(ctx context.Context, req *idl.CompileRequest) (*id
 				} else {
 					return nil, result.err
 				}
-				return nil, result.err
 			}
 			if result.module != nil {
 				modules = append(modules, result.module)

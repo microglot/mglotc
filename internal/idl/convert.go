@@ -78,9 +78,11 @@ func GetPromotedSymbolTable(as []*proto.AnnotationApplication) map[string]string
 	promotedSymbolTable := make(map[string]string)
 	nestedTypeInfo := GetProtobufAnnotation(as, "NestedTypeInfo")
 	if nestedTypeInfo != nil {
-		elements := nestedTypeInfo.Kind.(*proto.Value_List).List.Elements
-		for i := 0; i < len(elements); i += 2 {
-			promotedSymbolTable[elements[i].Kind.(*proto.Value_Text).Text.Value] = elements[i+1].Kind.(*proto.Value_Text).Text.Value
+		elements := nestedTypeInfo.Kind.(*proto.Value_Struct).Struct.Fields[0].Value.Kind.(*proto.Value_List).List.Elements
+		for _, element := range elements {
+			from := element.Kind.(*proto.Value_Struct).Struct.Fields[0].Value.Kind.(*proto.Value_Text).Text.Value
+			to := element.Kind.(*proto.Value_Struct).Struct.Fields[1].Value.Kind.(*proto.Value_Text).Text.Value
+			promotedSymbolTable[from] = to
 		}
 	}
 	return promotedSymbolTable

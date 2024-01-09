@@ -114,28 +114,53 @@ func TestDescriptor(t *testing.T) {
 										Resolved: &proto.ResolvedReference{
 											Reference: &proto.TypeReference{
 												ModuleUID: 2,
-												TypeUID:   2,
+												TypeUID:   idl.PROTOBUF_TYPE_UIDS["NestedTypeInfo"],
 											},
 										},
 									},
 								},
 								Value: &proto.Value{
-									Kind: &proto.Value_List{
-										List: &proto.ValueList{
-											Elements: []*proto.Value{
-												&proto.Value{
-													Kind: &proto.Value_Text{
-														Text: &proto.ValueText{
-															Value:  "Baz",
-															Source: "Baz",
-														},
-													},
-												},
-												&proto.Value{
-													Kind: &proto.Value_Text{
-														Text: &proto.ValueText{
-															Value:  "Foo_Bar_Baz",
-															Source: "Foo_Bar_Baz",
+									Kind: &proto.Value_Struct{
+										Struct: &proto.ValueStruct{
+											Fields: []*proto.ValueStructField{
+												&proto.ValueStructField{
+													Name: "NestedTypes",
+													Value: &proto.Value{
+														Kind: &proto.Value_List{
+															List: &proto.ValueList{
+																Elements: []*proto.Value{
+																	&proto.Value{
+																		Kind: &proto.Value_Struct{
+																			Struct: &proto.ValueStruct{
+																				Fields: []*proto.ValueStructField{
+																					&proto.ValueStructField{
+																						Name: "From",
+																						Value: &proto.Value{
+																							Kind: &proto.Value_Text{
+																								Text: &proto.ValueText{
+																									Value:  "Baz",
+																									Source: "Baz",
+																								},
+																							},
+																						},
+																					},
+																					&proto.ValueStructField{
+																						Name: "To",
+																						Value: &proto.Value{
+																							Kind: &proto.Value_Text{
+																								Text: &proto.ValueText{
+																									Value:  "Foo_Bar_Baz",
+																									Source: "Foo_Bar_Baz",
+																								},
+																							},
+																						},
+																					},
+																				},
+																			},
+																		},
+																	},
+																},
+															},
 														},
 													},
 												},
@@ -161,28 +186,53 @@ func TestDescriptor(t *testing.T) {
 										Resolved: &proto.ResolvedReference{
 											Reference: &proto.TypeReference{
 												ModuleUID: 2,
-												TypeUID:   2,
+												TypeUID:   idl.PROTOBUF_TYPE_UIDS["NestedTypeInfo"],
 											},
 										},
 									},
 								},
 								Value: &proto.Value{
-									Kind: &proto.Value_List{
-										List: &proto.ValueList{
-											Elements: []*proto.Value{
-												&proto.Value{
-													Kind: &proto.Value_Text{
-														Text: &proto.ValueText{
-															Value:  "Bar",
-															Source: "Bar",
-														},
-													},
-												},
-												&proto.Value{
-													Kind: &proto.Value_Text{
-														Text: &proto.ValueText{
-															Value:  "Foo_Bar",
-															Source: "Foo_Bar",
+									Kind: &proto.Value_Struct{
+										Struct: &proto.ValueStruct{
+											Fields: []*proto.ValueStructField{
+												&proto.ValueStructField{
+													Name: "NestedTypes",
+													Value: &proto.Value{
+														Kind: &proto.Value_List{
+															List: &proto.ValueList{
+																Elements: []*proto.Value{
+																	&proto.Value{
+																		Kind: &proto.Value_Struct{
+																			Struct: &proto.ValueStruct{
+																				Fields: []*proto.ValueStructField{
+																					&proto.ValueStructField{
+																						Name: "From",
+																						Value: &proto.Value{
+																							Kind: &proto.Value_Text{
+																								Text: &proto.ValueText{
+																									Value:  "Bar",
+																									Source: "Bar",
+																								},
+																							},
+																						},
+																					},
+																					&proto.ValueStructField{
+																						Name: "To",
+																						Value: &proto.Value{
+																							Kind: &proto.Value_Text{
+																								Text: &proto.ValueText{
+																									Value:  "Foo_Bar",
+																									Source: "Foo_Bar",
+																								},
+																							},
+																						},
+																					},
+																				},
+																			},
+																		},
+																	},
+																},
+															},
 														},
 													},
 												},
@@ -235,28 +285,53 @@ func TestDescriptor(t *testing.T) {
 										Resolved: &proto.ResolvedReference{
 											Reference: &proto.TypeReference{
 												ModuleUID: 2,
-												TypeUID:   2,
+												TypeUID:   idl.PROTOBUF_TYPE_UIDS["NestedTypeInfo"],
 											},
 										},
 									},
 								},
 								Value: &proto.Value{
-									Kind: &proto.Value_List{
-										List: &proto.ValueList{
-											Elements: []*proto.Value{
-												&proto.Value{
-													Kind: &proto.Value_Text{
-														Text: &proto.ValueText{
-															Value:  "Bar",
-															Source: "Bar",
-														},
-													},
-												},
-												&proto.Value{
-													Kind: &proto.Value_Text{
-														Text: &proto.ValueText{
-															Value:  "Foo_BarX",
-															Source: "Foo_BarX",
+									Kind: &proto.Value_Struct{
+										Struct: &proto.ValueStruct{
+											Fields: []*proto.ValueStructField{
+												&proto.ValueStructField{
+													Name: "NestedTypes",
+													Value: &proto.Value{
+														Kind: &proto.Value_List{
+															List: &proto.ValueList{
+																Elements: []*proto.Value{
+																	&proto.Value{
+																		Kind: &proto.Value_Struct{
+																			Struct: &proto.ValueStruct{
+																				Fields: []*proto.ValueStructField{
+																					&proto.ValueStructField{
+																						Name: "From",
+																						Value: &proto.Value{
+																							Kind: &proto.Value_Text{
+																								Text: &proto.ValueText{
+																									Value:  "Bar",
+																									Source: "Bar",
+																								},
+																							},
+																						},
+																					},
+																					&proto.ValueStructField{
+																						Name: "To",
+																						Value: &proto.Value{
+																							Kind: &proto.Value_Text{
+																								Text: &proto.ValueText{
+																									Value:  "Foo_BarX",
+																									Source: "Foo_BarX",
+																								},
+																							},
+																						},
+																					},
+																				},
+																			},
+																		},
+																	},
+																},
+															},
 														},
 													},
 												},
@@ -383,28 +458,53 @@ func TestDescriptor(t *testing.T) {
 										Resolved: &proto.ResolvedReference{
 											Reference: &proto.TypeReference{
 												ModuleUID: 2,
-												TypeUID:   2,
+												TypeUID:   idl.PROTOBUF_TYPE_UIDS["NestedTypeInfo"],
 											},
 										},
 									},
 								},
 								Value: &proto.Value{
-									Kind: &proto.Value_List{
-										List: &proto.ValueList{
-											Elements: []*proto.Value{
-												&proto.Value{
-													Kind: &proto.Value_Text{
-														Text: &proto.ValueText{
-															Value:  "Baz",
-															Source: "Baz",
-														},
-													},
-												},
-												&proto.Value{
-													Kind: &proto.Value_Text{
-														Text: &proto.ValueText{
-															Value:  "Foo_Bar_Baz",
-															Source: "Foo_Bar_Baz",
+									Kind: &proto.Value_Struct{
+										Struct: &proto.ValueStruct{
+											Fields: []*proto.ValueStructField{
+												&proto.ValueStructField{
+													Name: "NestedTypes",
+													Value: &proto.Value{
+														Kind: &proto.Value_List{
+															List: &proto.ValueList{
+																Elements: []*proto.Value{
+																	&proto.Value{
+																		Kind: &proto.Value_Struct{
+																			Struct: &proto.ValueStruct{
+																				Fields: []*proto.ValueStructField{
+																					&proto.ValueStructField{
+																						Name: "From",
+																						Value: &proto.Value{
+																							Kind: &proto.Value_Text{
+																								Text: &proto.ValueText{
+																									Value:  "Baz",
+																									Source: "Baz",
+																								},
+																							},
+																						},
+																					},
+																					&proto.ValueStructField{
+																						Name: "To",
+																						Value: &proto.Value{
+																							Kind: &proto.Value_Text{
+																								Text: &proto.ValueText{
+																									Value:  "Foo_Bar_Baz",
+																									Source: "Foo_Bar_Baz",
+																								},
+																							},
+																						},
+																					},
+																				},
+																			},
+																		},
+																	},
+																},
+															},
 														},
 													},
 												},
@@ -430,28 +530,53 @@ func TestDescriptor(t *testing.T) {
 										Resolved: &proto.ResolvedReference{
 											Reference: &proto.TypeReference{
 												ModuleUID: 2,
-												TypeUID:   2,
+												TypeUID:   idl.PROTOBUF_TYPE_UIDS["NestedTypeInfo"],
 											},
 										},
 									},
 								},
 								Value: &proto.Value{
-									Kind: &proto.Value_List{
-										List: &proto.ValueList{
-											Elements: []*proto.Value{
-												&proto.Value{
-													Kind: &proto.Value_Text{
-														Text: &proto.ValueText{
-															Value:  "Bar",
-															Source: "Bar",
-														},
-													},
-												},
-												&proto.Value{
-													Kind: &proto.Value_Text{
-														Text: &proto.ValueText{
-															Value:  "Foo_Bar",
-															Source: "Foo_Bar",
+									Kind: &proto.Value_Struct{
+										Struct: &proto.ValueStruct{
+											Fields: []*proto.ValueStructField{
+												&proto.ValueStructField{
+													Name: "NestedTypes",
+													Value: &proto.Value{
+														Kind: &proto.Value_List{
+															List: &proto.ValueList{
+																Elements: []*proto.Value{
+																	&proto.Value{
+																		Kind: &proto.Value_Struct{
+																			Struct: &proto.ValueStruct{
+																				Fields: []*proto.ValueStructField{
+																					&proto.ValueStructField{
+																						Name: "From",
+																						Value: &proto.Value{
+																							Kind: &proto.Value_Text{
+																								Text: &proto.ValueText{
+																									Value:  "Bar",
+																									Source: "Bar",
+																								},
+																							},
+																						},
+																					},
+																					&proto.ValueStructField{
+																						Name: "To",
+																						Value: &proto.Value{
+																							Kind: &proto.Value_Text{
+																								Text: &proto.ValueText{
+																									Value:  "Foo_Bar",
+																									Source: "Foo_Bar",
+																								},
+																							},
+																						},
+																					},
+																				},
+																			},
+																		},
+																	},
+																},
+															},
 														},
 													},
 												},
@@ -598,28 +723,53 @@ func TestDescriptor(t *testing.T) {
 										Resolved: &proto.ResolvedReference{
 											Reference: &proto.TypeReference{
 												ModuleUID: 2,
-												TypeUID:   2,
+												TypeUID:   idl.PROTOBUF_TYPE_UIDS["NestedTypeInfo"],
 											},
 										},
 									},
 								},
 								Value: &proto.Value{
-									Kind: &proto.Value_List{
-										List: &proto.ValueList{
-											Elements: []*proto.Value{
-												&proto.Value{
-													Kind: &proto.Value_Text{
-														Text: &proto.ValueText{
-															Value:  "BarEntry",
-															Source: "BarEntry",
-														},
-													},
-												},
-												&proto.Value{
-													Kind: &proto.Value_Text{
-														Text: &proto.ValueText{
-															Value:  "Foo_BarEntry",
-															Source: "Foo_BarEntry",
+									Kind: &proto.Value_Struct{
+										Struct: &proto.ValueStruct{
+											Fields: []*proto.ValueStructField{
+												&proto.ValueStructField{
+													Name: "NestedTypes",
+													Value: &proto.Value{
+														Kind: &proto.Value_List{
+															List: &proto.ValueList{
+																Elements: []*proto.Value{
+																	&proto.Value{
+																		Kind: &proto.Value_Struct{
+																			Struct: &proto.ValueStruct{
+																				Fields: []*proto.ValueStructField{
+																					&proto.ValueStructField{
+																						Name: "From",
+																						Value: &proto.Value{
+																							Kind: &proto.Value_Text{
+																								Text: &proto.ValueText{
+																									Value:  "BarEntry",
+																									Source: "BarEntry",
+																								},
+																							},
+																						},
+																					},
+																					&proto.ValueStructField{
+																						Name: "To",
+																						Value: &proto.Value{
+																							Kind: &proto.Value_Text{
+																								Text: &proto.ValueText{
+																									Value:  "Foo_BarEntry",
+																									Source: "Foo_BarEntry",
+																								},
+																							},
+																						},
+																					},
+																				},
+																			},
+																		},
+																	},
+																},
+															},
 														},
 													},
 												},

@@ -314,7 +314,7 @@ func (c *imageChecker) check() {
 			}
 		}
 		for _, annotation := range module.Annotations {
-			c.checkTypeSpecifier(annotation.Type, []idl.TypeKind{idl.TypeKindPrimitive, idl.TypeKindData, idl.TypeKindVirtual, idl.TypeKindStruct})
+			c.checkTypeSpecifier(annotation.Type, []idl.TypeKind{idl.TypeKindPrimitive, idl.TypeKindData, idl.TypeKindStruct})
 		}
 		for _, constant := range module.Constants {
 			c.checkAnnotationApplications(constant.AnnotationApplications)
