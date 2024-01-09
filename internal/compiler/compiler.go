@@ -130,6 +130,12 @@ func (self *compiler) Compile(ctx context.Context, req *idl.CompileRequest) (*id
 			return nil, ctx.Err()
 		case result := <-results:
 			if result.err != nil {
+				caught := self.Reporter.Reported()
+				if len(caught) > 0 {
+					return nil, MultiException(caught)
+				} else {
+					return nil, result.err
+				}
 				return nil, result.err
 			}
 			if result.module != nil {
