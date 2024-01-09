@@ -138,6 +138,14 @@ func (c *imageConverter) isPromotedType(moduleUID uint64, name string) bool {
 	return c.getNestedName(moduleUID, name) != name
 }
 
+func (c *imageConverter) getQualifiedName(protobufPackage string, moduleUID uint64, name string) string {
+   nestedName := c.getNestedName(moduleUID, name)
+   if nestedName != name {
+      return nestedName
+   }
+   return fmt.Sprintf("%s.%s", protobufPackage, name)
+}
+
 func (c *imageConverter) fromModule(module *proto.Module) (*descriptorpb.FileDescriptorProto, error) {
 	// TODO 2023.11.03: is it a fatal error to attempt to convert a microglot Module that contains
 	// stuff that cannot be represented in protobuf, e.g. SDKs? Or is this conversion allowed to be
@@ -405,14 +413,14 @@ func (c *imageConverter) fromResolvedReference(resolvedReference *proto.Resolved
 			for _, struct_ := range module.Structs {
 				if struct_.Reference.TypeUID == resolvedReference.Reference.TypeUID {
 					type_ := descriptorpb.FieldDescriptorProto_TYPE_MESSAGE
-					typeName := fmt.Sprintf("%s.%s", module.ProtobufPackage, c.getNestedName(struct_.Reference.ModuleUID, struct_.Name.Name))
+					typeName := c.getQualifiedName(module.ProtobufPackage, struct_.Reference.ModuleUID, struct_.Name.Name)
 					return nil, &type_, &typeName, nil
 				}
 			}
 			for _, enum := range module.Enums {
 				if enum.Reference.TypeUID == resolvedReference.Reference.TypeUID {
 					type_ := descriptorpb.FieldDescriptorProto_TYPE_ENUM
-					typeName := fmt.Sprintf("%s.%s", module.ProtobufPackage, c.getNestedName(enum.Reference.ModuleUID, enum.Name))
+					typeName := c.getQualifiedName(module.ProtobufPackage, enum.Reference.ModuleUID, enum.Name)
 					return nil, &type_, &typeName, nil
 				}
 			}
