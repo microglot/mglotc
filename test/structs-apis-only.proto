@@ -1,0 +1,469 @@
+syntax = "proto3";
+
+package microglot.framework.v1;
+
+option go_package = "gopkg.microglot.org/framework.go/idl/microglot/framework/v1;framework";
+
+message Exception {
+  // The exception status code. In most cases, this should be one of the
+  // pre-defined constant values. This field is an integer rather than an
+  // enum to allow for cases where custom codes are required.
+  uint32 Code = 1;
+  string Message = 2;
+  // A set of wrapped errors. These generally indicate that the exception was
+  // caused by one or more other, underlying exceptions.
+  repeated Exception Wrapped = 255;
+  // An optional list of details related to the exception.
+  repeated ExceptionDetail Detials = 254;
+}
+
+// Exception details more deeply describe the error or error recovery conditions
+// of an exception.
+message ExceptionDetail {
+  oneof Kind {
+    ExceptionDetailInvalidArgument InvalidArgument = 1;
+    // TODO: Add an Any equivalent to allow expansion.
+    // TODO: See https://github.com/googleapis/googleapis/blob/master/google/rpc/error_details.proto for ideas on augmenting errors
+  }
+}
+
+// This describes a single invalid field from a given input body.
+message ExceptionDetailInvalidArgument {
+  // Path is a dot separated address of the field within the input that failed
+  // validation. The format matches that of the FieldAccessor text format.
+  // TODO: Create and document FieldAccessor. A.B.0.*.C, etc.
+  string Path = 1;
+  // A human friendly description of the validation failure.
+  string Description = 2;
+}
+
+// Configuration is used by factories to declare any required configuration.
+// This supports displaying configuration options to users, validating user
+// given configuration, and managing configuration based lifecycls for factory
+// producted instances.
+message Configuration {
+  repeated ConfigurationPath Paths = 1;
+}
+
+// ConfigurationPath is an individual configuration option.
+message ConfigurationPath {
+  // Path is a dot separated name that identifies the location of the value
+  // within a graph. Each dot represents a parent/child relationship such that
+  // a.b.c identifies a value c which is the child of b which is, in turn, the
+  // child of a.
+  string Path = 1;
+  // All configuration is strongly typed. The type may be either a scalar or a
+  // composite. In the case of a composit then the Element field must also be
+  // set.
+  ConfigurationType Type = 2;
+  // Element is an optional sub-type that is only present when the Type is a
+  // composite.
+  ConfigurationElementType Element = 3;
+  // DefaultValue is an optional default for the configuration. The value, if
+  // present, must be a string representing a valid protobuf default value or
+  // microglot scalar value.
+  string DefaultValue = 5;
+  // ExampleValue is an optional example of a valid value. This is displayed
+  // to a user if present.
+  string ExampleValue = 6;
+  // If Required is set to true then the configuration must be present.
+  bool Required = 7;
+  // Static identifies the value as being statically set in any instances of a
+  // factory. This tells the dependency orchestration system that an instance
+  // must be re-built when the value of this configuration changes. Non-static
+  // configurations are those that are always read through the
+  // ConfigurationReader service rather than being stored out of band.
+  bool Static = 8;
+  // Help is an optional message to display to the user that explains what the
+  // configuration value represents.
+  string Help = 9;
+}
+
+// ConfigurationType is the set of supported value types.
+enum ConfigurationType {
+  TYPE_UNKNOWN = 0;
+  TYPE_BOOL = 1;
+  TYPE_TEXT = 2;
+  TYPE_DATA = 3;
+  TYPE_INT32 = 6;
+  TYPE_INT64 = 7;
+  TYPE_UINT32 = 10;
+  TYPE_UINT64 = 11;
+  TYPE_FLOAT32 = 12;
+  TYPE_FLOAT64 = 13;
+  TYPE_LIST = 14;
+  // Map allows for an arbitrary set of key/value pairs in a configuration. All
+  // map keys are treated as text. The value type must be identified by the
+  // associated ConfigurationElementType.
+  TYPE_MAP = 15;
+  // Schema identifies a message or struct type of value.
+  TYPE_SCHEMA = 16;
+}
+
+// ConfigurationElementType is the set of support sub-element types that can be
+// used with composite configuration types such as list and map.
+enum ConfigurationElementType {
+  ELEMENT_TYPE_UNKNOWN = 0;
+  ELEMENT_TYPE_BOOL = 1;
+  ELEMENT_TYPE_TEXT = 2;
+  ELEMENT_TYPE_DATA = 3;
+  ELEMENT_TYPE_INT32 = 6;
+  ELEMENT_TYPE_INT64 = 7;
+  ELEMENT_TYPE_UINT32 = 10;
+  ELEMENT_TYPE_UINT64 = 11;
+  ELEMENT_TYPE_FLOAT32 = 12;
+  ELEMENT_TYPE_FLOAT64 = 13;
+  ELEMENT_TYPE_SCHEMA = 14;
+}
+
+// FactoryDescription is a set of metadata that describes a factory.
+message FactoryDescription {
+  // RuntimeURI always matches the URI of the runtime that hosts the factory.
+  string RuntimeURI = 1;
+  // UID is an arbitrary, unique identifier for the factory. This value must
+  // be unique within the runtime that hosts the factory.
+  string UID = 2;
+  // Provides is a set of type specifiers that represent the interfaces that
+  // factory instances implement. These are used for an optional and lightweight
+  // form of type checking during dependency orchestration.
+  repeated TypeSpecifier Provides = 3;
+  // Drivers identifies a set of named dependencies for which only one
+  // implementation may be given when constructing an instance.
+  map<string, TypeSpecifier> Drivers = 4;
+  // Extensions identifies a set of named dependencies for which multiple
+  // implementations may be given when constructing an instance.
+  map<string, TypeSpecifier> Extensions = 5;
+  // Configuration is an optional description of the values required by the
+  // factory to correctly produce an instance. While technically optional, any
+  // factory that does not provide a configuration, or provides an incomplete
+  // configuration, will result in instances that are not correctly integrated
+  // into the configuration driven lifecycle management.
+  Configuration Configuration = 6;
+}
+
+// TypeSpecifier identifies an interface that is either implemented by an
+// instance or required by a factory.
+message TypeSpecifier {
+  oneof Type {
+    TypeSpecifierProtobuf Protobuf = 1;
+    TypeSpecifierMicroglot Microglot = 2;
+    TypeSpecifierVirtual Virtual = 3;
+  }
+}
+
+// TypeSpecifierProtobuf identifies a protobuf service.
+message TypeSpecifierProtobuf {
+  // Name is the full path of the protobuf service.
+  string Name = 1;
+}
+
+// TypeSpecifierMicroglot identifies a microglot API or SDK value.
+message TypeSpecifierMicroglot {
+  uint64 ModuleUID = 1;
+  uint64 TypeUID = 2;
+  // Name is the human friendly name of the microglot interface as it appears
+  // in the IDL.
+  string Name = 3;
+}
+
+// TypeSpecifierVirtual identifies an interface that exists only in code. These
+// have arbitrary names defined by the developer.
+message TypeSpecifierVirtual {
+  string Name = 1;
+}
+
+// InstanceDescription is a set of metadata about a constructed instance.
+message InstanceDescription {
+  // RuntimeURI always matches the URI of the runtime that hosts the factory used
+  // to construct this instance.
+  string RuntimeURI = 1;
+  // FactoryUID identifies the factory that created this instance.
+  string FactoryUID = 2;
+  // UID is a globally unique identifier for the instance. These values are
+  // generated by the system during construction and, while often based on user
+  // intput, are not guaranteed to be human friendly. Unlike factory UIDs, these
+  // values are unique across an entire runtime and not only unique within the
+  // runtime in which they were created.
+  string UID = 3;
+  // Provides is a set of type specifiers that represent the interfaces that
+  // the instance implements. Generally, this list matches the list of the same
+  // name from FactoryDescription.
+  repeated TypeSpecifier Provides = 4;
+  // Drivers is a list of instances that have been attached as drivers.
+  repeated RuntimeDependency Drivers = 5;
+  // Extensions is a list of instances that have been attached as extensions.
+  repeated RuntimeDependency Extensions = 6;
+  // Configuration identifies the configuration paths associated with the
+  // instance. While this mostly matches the contents presented by the field of
+  // the same name in FactoryDescription, the exact paths may be modified to
+  // provide, for example, per-instance paths to separate configurations of
+  // multiple instances produced by the same factory.
+  Configuration Configuration = 7;
+}
+
+// RuntimeDependency represents a resolved dependency that is currently in use
+// by an instance.
+message RuntimeDependency {
+  // Name matches the map key value of a driver or dependency defined by a
+  // factory. This identifies which driver or extension set the dependency is
+  // associated with.
+  string Name = 1;
+  // UID identifies the instance that is resolving the dependency.
+  string UID = 2;
+  // Key is an optional value that identifies the resolved dependency within a
+  // a set of others. This is mostly used to add an extra identifier to an
+  // extension for configuration or functional purposes. This value is expected
+  // to be empty in the common case but exists to support some specialized use
+  // cases such as per-extension configuration.
+  string Key = 3;
+}
+
+// A runtime in the context of this framework is an individual collection of
+// factories. The scope and size of a runtime is flexible but should generally
+// represent a programming language or process boundary. Instances created
+// within a runtime can only be shared with other runtimes through a network.
+//
+// This interface is intentionally "recursive" in the sense that runtimes can
+// load additional runtimes. The primary purpose of this is to unify the
+// interfaces of managing a single runtime and managing an encapsulated set.
+// The expected common case is for a single runtime to act as the primary and
+// manage any additional runtimes from within.
+service Runtime {
+  // Get a description of the runtime.
+  rpc Description(RuntimeDescriptionRequest) returns (RuntimeDescriptionResponse) {}
+  // Get a list of all encapsulated runtimes.
+  rpc Runtimes(RuntimePluginsRequest) returns (RuntimePluginsResponse) {}
+  // List all factories available through the runtime. This includes all
+  // factories of encapsulated runtimes.
+  rpc Factories(RuntimeFactoriesRequest) returns (RuntimeFactoriesResponse) {}
+  // Fetch a specific factory description.
+  rpc Factory(RuntimeFactoryRequest) returns (RuntimeFactoryResponse) {}
+  // List all instances created through the runtime. This includes all instances
+  // of encapsulated runtimes.
+  rpc Instances(RuntimeInstancesRequest) returns (RuntimeInstancesResponse) {}
+  // Fetch a specific instance description.
+  rpc Instance(RuntimeInstanceRequest) returns (RuntimeInstanceResponse) {}
+  // Load and encapsulate the specified runtime.
+  rpc LoadRuntime(RuntimeLoadPluginRequest) returns (RuntimeLoadPluginResponse) {}
+  // Create an instance from the specified runtime and factory.
+  rpc CreateInstance(RuntimeCreateInstanceRequest) returns (RuntimeCreateInstanceResponse) {}
+  // Destroy an instance by UID.
+  rpc DestroyInstance(RuntimeDestroyInstanceRequest) returns (RuntimeDestroyInstanceResponse) {}
+  // Unload the runtime and any encapsulated runtimes.
+  rpc Destroy(RuntimeDestroyRequest) returns (RuntimeDestroyResponse) {}
+}
+
+// RuntimeDescription is a set of metadata that describes a runtime.
+message RuntimeDescription {
+  // URI is both a unique identifier and address of a runtime executable. The
+  // address determines how the runtime is loaded and may be either a file path
+  // on the local system or a full URI. For example, both "/a/b/c" and
+  // "file:///a/b/c" are equivalent and identify a runtime exectuable on the
+  // local system.
+  string URI = 1;
+}
+
+message RuntimeDescriptionRequest {}
+
+message RuntimeDescriptionResponse {
+  RuntimeDescription Description = 1;
+}
+
+message RuntimePluginsRequest {}
+
+message RuntimePluginsResponse {
+  repeated RuntimeDescription Runtimes = 1;
+}
+
+message RuntimeLoadPluginRequest {
+  string URI = 1;
+}
+
+message RuntimeLoadPluginResponse {}
+
+message RuntimeFactoriesRequest {}
+
+message RuntimeFactoriesResponse {
+  repeated FactoryDescription Factories = 1;
+}
+
+message RuntimeFactoryRequest {
+  string RuntimeURI = 1;
+  string UID = 2;
+}
+
+message RuntimeFactoryResponse {
+  FactoryDescription Description = 1;
+}
+
+message RuntimeInstancesRequest {}
+
+message RuntimeInstancesResponse {
+  repeated InstanceDescription Instances = 1;
+}
+
+message RuntimeInstanceRequest {
+  string UID = 1;
+}
+
+message RuntimeInstanceResponse {
+  InstanceDescription Description = 1;
+}
+
+message RuntimeCreateInstanceRequest {
+  string RuntimeURI = 1;
+  string FactoryUID = 2;
+  string UID = 3;
+  repeated RuntimeDependency Drivers = 4;
+  repeated RuntimeDependency Extensions = 5;
+}
+
+message RuntimeCreateInstanceResponse {
+  InstanceDescription Description = 1;
+}
+
+message RuntimeDestroyInstanceRequest {
+  string UID = 1;
+}
+
+message RuntimeDestroyInstanceResponse {}
+
+message RuntimeDestroyRequest {}
+message RuntimeDestroyResponse {}
+
+// ConfigurationSource represents a graph or tree of configuration values. This
+// interface is intended to be broadly applicable so it is constrained to a
+// small set of operations and types.
+//
+// All path inputs must be in the same form as that from ConfigurationPath. Each
+// path is a dot separated name that identifies a location within the graph.
+// Each dot represents a parent/child relationship such that a.b.c identifies a
+// value c which is the child of b which is, in turn, the child of a.
+service ConfigurationSource {
+  // Read the given path. All values are returned as strings to be interpreted.
+  rpc Read(SourceReadRequest) returns (SourceReadResponse) {}
+  // Get a list of all paths that are hierarchically below the given path.
+  rpc Children(SourceChildrenRequest) returns (SourceChildrenResponse) {}
+  // Get a list of any paths that have been updated since the last call to this
+  // method.
+  rpc Updates(SourceUpdatesRequest) returns (SourceUpdatesResponse) {}
+}
+
+message SourceReadRequest {
+  string Path = 1;
+}
+
+message SourceReadResponse {
+  string Value = 1;
+}
+
+message SourceChildrenRequest {
+  string Path = 1;
+}
+
+message SourceChildrenResponse {
+  repeated string Paths = 1;
+}
+
+message SourceUpdatesRequest {}
+
+message SourceUpdatesResponse {
+  repeated string Paths = 1;
+}
+
+// ConfigurationReader is a type safe interface intended to layer on top of the
+// ConfigurationSource interface. Where ConfigurationSource provides lower level
+// access to the graph contents, ConfigurationReader is inteded to be the
+// primary method of loading configuration values within factories and
+// instances.
+service ConfigurationReader {
+  rpc ReadBool(ReadRequest) returns (ReadBoolResponse) {}
+  rpc ReadText(ReadRequest) returns (ReadTextResponse) {}
+  rpc ReadData(ReadRequest) returns (ReadDataResponse) {}
+  rpc ReadInt32(ReadRequest) returns (ReadInt32Response) {}
+  rpc ReadInt64(ReadRequest) returns (ReadInt64Response) {}
+  rpc ReadUInt32(ReadRequest) returns (ReadUInt32Response) {}
+  rpc ReadUInt64(ReadRequest) returns (ReadUInt64Response) {}
+  rpc ReadFloat32(ReadRequest) returns (ReadFloat32Response) {}
+  rpc ReadFloat64(ReadRequest) returns (ReadFloat64Response) {}
+  rpc ReadChildren(ReadRequest) returns (ReadChildrenResponse) {}
+}
+
+message ReadRequest {
+  string Name = 1;
+}
+
+message ReadBoolResponse {
+  string Name = 1;
+  bool Value = 2;
+}
+
+message ReadTextResponse {
+  string Name = 1;
+  string Value = 2;
+}
+
+message ReadDataResponse {
+  string Name = 1;
+  bytes Value = 2;
+}
+
+message ReadInt32Response {
+  string Name = 1;
+  int32 Value = 2;
+}
+
+message ReadInt64Response {
+  string Name = 1;
+  int64 Value = 2;
+}
+
+message ReadUInt32Response {
+  string Name = 1;
+  uint32 Value = 2;
+}
+
+message ReadUInt64Response {
+  string Name = 1;
+  uint64 Value = 2;
+}
+
+message ReadFloat32Response {
+  string Name = 1;
+  float Value = 2;
+}
+
+message ReadFloat64Response {
+  string Name = 1;
+  double Value = 2;
+}
+
+message ReadChildrenResponse {
+  repeated string Paths = 1;
+}
+
+// ConfigurationPathModifier is a mostly internal framework interface that is
+// used to manipulate configuration paths. This is used, for example, to
+// transform factory defined configuration paths into per-instance paths to
+// allow for per-instance configuration.
+service ConfigurationPathModifier {
+  rpc Modify(ConfigurationPathModifyRequest) returns (ConfigurationPathModifyResponse) {}
+  rpc Unmodify(ConfigurationPathModifyRequest) returns (ConfigurationPathModifyResponse) {}
+}
+
+message ConfigurationPathModifyRequest {
+  string Path = 1;
+  InstanceDescription Instance = 2;
+}
+
+message ConfigurationPathModifyResponse {
+  string Path = 1;
+}
+
+// DependencyNode is a mostly internal structure used by the framework when
+// generating and evaluating dependency graphs.
+message DependencyNode {
+  string UID = 2;
+  repeated string DependsOn = 3;
+  repeated string Attributes = 4;
+}
