@@ -57,7 +57,7 @@ func appendProtobufAnnotationString(as []*proto.AnnotationApplication, name stri
 	})
 }
 
-// $(Protobuf.NestedTypeInfo()) is encoded as a flattened list of key
+// $(Protobuf.NestedTypeInfo()) is encoded as a flattened list of key/value pairs
 func computeNestedTypeInfo(promoted map[string]string) *proto.Value {
 	elements := make([]*proto.Value, 0)
 	for key, value := range promoted {

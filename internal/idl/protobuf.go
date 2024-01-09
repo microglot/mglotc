@@ -16,7 +16,7 @@ syntax = "microglot0"
 module = @2 $(Protobuf.FileOptionsGoPackage("not.importable"))
 
 annotation Package(module) :Text @%d
-annotation NestedTypeInfo(struct, enum) :Text @%d
+annotation NestedTypeInfo(struct, enum) :List<:Text> @%d
 annotation FileOptionsGoPackage(module) :Text @%d
 `, PROTOBUF_TYPE_UIDS["Package"],
 	PROTOBUF_TYPE_UIDS["NestedTypeInfo"],
