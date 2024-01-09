@@ -124,6 +124,9 @@ func (self *compiler) Compile(ctx context.Context, req *idl.CompileRequest) (*id
 		}(file)
 	}
 
+	// TODO 2024.01.08: the racing here means that reported errors can vary from run to run,
+	// which can be surprising/off-putting. Waiting for all of the raced goroutines before
+	// returning errors might be better?
 	for x := 0; x < expectedResults; x = x + 1 {
 		select {
 		case <-ctx.Done():
@@ -173,6 +176,9 @@ func (self *compiler) Compile(ctx context.Context, req *idl.CompileRequest) (*id
 		}(*mod)
 	}
 
+	// TODO 2024.01.08: the racing here means that reported errors can vary from run to run,
+	// which can be surprising/off-putting. Waiting for all of the raced goroutines before
+	// returning errors might be better?
 	for x := 0; x < expectedLinkResults; x = x + 1 {
 		select {
 		case <-ctx.Done():
