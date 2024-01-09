@@ -139,11 +139,11 @@ func (c *imageConverter) isPromotedType(moduleUID uint64, name string) bool {
 }
 
 func (c *imageConverter) getQualifiedName(protobufPackage string, moduleUID uint64, name string) string {
-   nestedName := c.getNestedName(moduleUID, name)
-   if nestedName != name {
-      return nestedName
-   }
-   return fmt.Sprintf("%s.%s", protobufPackage, name)
+	nestedName := c.getNestedName(moduleUID, name)
+	if nestedName != name {
+		return nestedName
+	}
+	return fmt.Sprintf("%s.%s", protobufPackage, name)
 }
 
 func (c *imageConverter) fromModule(module *proto.Module) (*descriptorpb.FileDescriptorProto, error) {
@@ -256,14 +256,14 @@ func (c *imageConverter) fromStruct(struct_ *proto.Struct) (*descriptorpb.Descri
 			if err != nil {
 				return nil, err
 			}
-			maybeEnumType.Name = &nestedName
+			*maybeEnumType.Name = nestedName
 			enumType = append(enumType, maybeEnumType)
 		} else {
 			maybeNestedType, err := c.fromStruct(maybeStruct)
 			if err != nil {
 				return nil, err
 			}
-			maybeNestedType.Name = &nestedName
+			*maybeNestedType.Name = nestedName
 			nestedType = append(nestedType, maybeNestedType)
 		}
 	}
