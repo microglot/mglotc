@@ -148,7 +148,7 @@ func (s *globalSymbolTable) addType(r exc.Reporter, moduleURI string, name strin
 		_ = r.Report(exc.New(exc.Location{
 			URI: moduleURI,
 			// TODO 2023.09.14: getting Location here would be nice!
-		}, exc.CodeUnknownFatal, fmt.Sprintf("there is already a declaration with the uid '%d' in '%s'", typeReference.TypeUID, typeUIDs[typeReference.TypeUID])))
+		}, exc.CodeUnknownFatal, fmt.Sprintf("there is already a type with the uid '%d' in '%s'", typeReference.TypeUID, typeUIDs[typeReference.TypeUID])))
 	}
 	typeUIDs[typeReference.TypeUID] = moduleURI
 
@@ -157,7 +157,7 @@ func (s *globalSymbolTable) addType(r exc.Reporter, moduleURI string, name strin
 		_ = r.Report(exc.New(exc.Location{
 			URI: moduleURI,
 			// TODO 2023.09.12: getting Location here would be nice!
-		}, exc.CodeUnknownFatal, fmt.Sprintf("there is already a declaration of '%s' in '%s'", name, moduleURI)))
+		}, exc.CodeUnknownFatal, fmt.Sprintf("there is already a type named '%s' in '%s'", name, moduleURI)))
 	}
 
 	// We consider it an error to have the more than one declaration of the same typename in a given
@@ -188,7 +188,7 @@ func (s *globalSymbolTable) addAttribute(r exc.Reporter, moduleURI string, typeN
 		_ = r.Report(exc.New(exc.Location{
 			URI: moduleURI,
 			// TODO 2023.09.14: getting Location here would be nice!
-		}, exc.CodeUnknownFatal, fmt.Sprintf("there is already a declaration with the uid '%d' in '%s'", attributeReference.AttributeUID, attributeUIDs[attributeReference.AttributeUID])))
+		}, exc.CodeUnknownFatal, fmt.Sprintf("there is already an attribute with the uid '%d' in '%s'", attributeReference.AttributeUID, attributeUIDs[attributeReference.AttributeUID])))
 	}
 	attributeUIDs[attributeReference.AttributeUID] = typeName
 
@@ -201,7 +201,7 @@ func (s *globalSymbolTable) addAttribute(r exc.Reporter, moduleURI string, typeN
 		_ = r.Report(exc.New(exc.Location{
 			URI: moduleURI,
 			// TODO 2023.09.12: getting Location here would be nice!
-		}, exc.CodeUnknownFatal, fmt.Sprintf("there is already a declaration of '%s' in '%s'", name, typeName)))
+		}, exc.CodeUnknownFatal, fmt.Sprintf("there is already an attribute named '%s' in '%s'", name, typeName)))
 	} else {
 		s.attributes[moduleURI][typeName][name] = *attributeReference
 	}
@@ -215,9 +215,9 @@ func (s *globalSymbolTable) addSDKMethodInput(r exc.Reporter, moduleURI string, 
 		_ = r.Report(exc.New(exc.Location{
 			URI: moduleURI,
 			// TODO 2023.09.14: getting Location here would be nice!
-		}, exc.CodeUnknownFatal, fmt.Sprintf("there is already a declaration with the uid '%d' in '%s'", sdkInputReference.AttributeUID, sdkMethodInputUIDs[sdkInputReference.AttributeUID])))
+		}, exc.CodeUnknownFatal, fmt.Sprintf("there is already a method input with the uid '%d' in '%s'", sdkInputReference.AttributeUID, sdkMethodInputUIDs[sdkInputReference.AttributeUID])))
 	}
-	sdkMethodInputUIDs[sdkInputReference.AttributeUID] = typeName
+	sdkMethodInputUIDs[sdkInputReference.InputUID] = typeName
 
 	if s.inputs[moduleURI][typeName] == nil {
 		s.inputs[moduleURI][typeName] = make(map[string]map[string]proto.SDKInputReference)
@@ -231,7 +231,7 @@ func (s *globalSymbolTable) addSDKMethodInput(r exc.Reporter, moduleURI string, 
 		_ = r.Report(exc.New(exc.Location{
 			URI: moduleURI,
 			// TODO 2023.09.12: getting Location here would be nice!
-		}, exc.CodeUnknownFatal, fmt.Sprintf("there is already a declaration of '%s' in '%s'", name, typeName)))
+		}, exc.CodeUnknownFatal, fmt.Sprintf("there is already a method input named '%s' in '%s'", name, typeName)))
 	} else {
 		s.inputs[moduleURI][typeName][sdkMethodName][name] = *sdkInputReference
 	}

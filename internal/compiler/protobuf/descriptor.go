@@ -57,31 +57,56 @@ func appendProtobufAnnotationString(as []*proto.AnnotationApplication, name stri
 	})
 }
 
-// $(Protobuf.NestedTypeInfo()) is encoded as a flattened list of key
+// $(Protobuf.NestedTypeInfo()) is encoded as a Protobuf.NestedTypes struct
 func computeNestedTypeInfo(promoted map[string]string) *proto.Value {
 	elements := make([]*proto.Value, 0)
 	for key, value := range promoted {
 		elements = append(elements, &proto.Value{
-			Kind: &proto.Value_Text{
-				Text: &proto.ValueText{
-					Value:  key,
-					Source: key,
-				},
-			},
-		})
-		elements = append(elements, &proto.Value{
-			Kind: &proto.Value_Text{
-				Text: &proto.ValueText{
-					Value:  value,
-					Source: value,
+			Kind: &proto.Value_Struct{
+				Struct: &proto.ValueStruct{
+					Fields: []*proto.ValueStructField{
+						&proto.ValueStructField{
+							Name: "From",
+							Value: &proto.Value{
+								Kind: &proto.Value_Text{
+									Text: &proto.ValueText{
+										Value:  key,
+										Source: key,
+									},
+								},
+							},
+						},
+						&proto.ValueStructField{
+							Name: "To",
+							Value: &proto.Value{
+								Kind: &proto.Value_Text{
+									Text: &proto.ValueText{
+										Value:  value,
+										Source: value,
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		})
 	}
 	return &proto.Value{
-		Kind: &proto.Value_List{
-			List: &proto.ValueList{
-				Elements: elements,
+		Kind: &proto.Value_Struct{
+			Struct: &proto.ValueStruct{
+				Fields: []*proto.ValueStructField{
+					&proto.ValueStructField{
+						Name: "NestedTypes",
+						Value: &proto.Value{
+							Kind: &proto.Value_List{
+								List: &proto.ValueList{
+									Elements: elements,
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 	}

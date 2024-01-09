@@ -78,9 +78,11 @@ func GetPromotedSymbolTable(as []*proto.AnnotationApplication) map[string]string
 	promotedSymbolTable := make(map[string]string)
 	nestedTypeInfo := GetProtobufAnnotation(as, "NestedTypeInfo")
 	if nestedTypeInfo != nil {
-		elements := nestedTypeInfo.Kind.(*proto.Value_List).List.Elements
-		for i := 0; i < len(elements); i += 2 {
-			promotedSymbolTable[elements[i].Kind.(*proto.Value_Text).Text.Value] = elements[i+1].Kind.(*proto.Value_Text).Text.Value
+		elements := nestedTypeInfo.Kind.(*proto.Value_Struct).Struct.Fields[0].Value.Kind.(*proto.Value_List).List.Elements
+		for _, element := range elements {
+			from := element.Kind.(*proto.Value_Struct).Struct.Fields[0].Value.Kind.(*proto.Value_Text).Text.Value
+			to := element.Kind.(*proto.Value_Struct).Struct.Fields[1].Value.Kind.(*proto.Value_Text).Text.Value
+			promotedSymbolTable[from] = to
 		}
 	}
 	return promotedSymbolTable
@@ -136,6 +138,14 @@ func (c *imageConverter) getNestedName(moduleUID uint64, name string) string {
 
 func (c *imageConverter) isPromotedType(moduleUID uint64, name string) bool {
 	return c.getNestedName(moduleUID, name) != name
+}
+
+func (c *imageConverter) getQualifiedName(protobufPackage string, moduleUID uint64, name string) string {
+	nestedName := c.getNestedName(moduleUID, name)
+	if nestedName != name {
+		return nestedName
+	}
+	return fmt.Sprintf("%s.%s", protobufPackage, name)
 }
 
 func (c *imageConverter) fromModule(module *proto.Module) (*descriptorpb.FileDescriptorProto, error) {
@@ -248,14 +258,14 @@ func (c *imageConverter) fromStruct(struct_ *proto.Struct) (*descriptorpb.Descri
 			if err != nil {
 				return nil, err
 			}
-			maybeEnumType.Name = &nestedName
+			*maybeEnumType.Name = nestedName
 			enumType = append(enumType, maybeEnumType)
 		} else {
 			maybeNestedType, err := c.fromStruct(maybeStruct)
 			if err != nil {
 				return nil, err
 			}
-			maybeNestedType.Name = &nestedName
+			*maybeNestedType.Name = nestedName
 			nestedType = append(nestedType, maybeNestedType)
 		}
 	}
@@ -405,14 +415,14 @@ func (c *imageConverter) fromResolvedReference(resolvedReference *proto.Resolved
 			for _, struct_ := range module.Structs {
 				if struct_.Reference.TypeUID == resolvedReference.Reference.TypeUID {
 					type_ := descriptorpb.FieldDescriptorProto_TYPE_MESSAGE
-					typeName := fmt.Sprintf("%s.%s", module.ProtobufPackage, c.getNestedName(struct_.Reference.ModuleUID, struct_.Name.Name))
+					typeName := c.getQualifiedName(module.ProtobufPackage, struct_.Reference.ModuleUID, struct_.Name.Name)
 					return nil, &type_, &typeName, nil
 				}
 			}
 			for _, enum := range module.Enums {
 				if enum.Reference.TypeUID == resolvedReference.Reference.TypeUID {
 					type_ := descriptorpb.FieldDescriptorProto_TYPE_ENUM
-					typeName := fmt.Sprintf("%s.%s", module.ProtobufPackage, c.getNestedName(enum.Reference.ModuleUID, enum.Name))
+					typeName := c.getQualifiedName(module.ProtobufPackage, enum.Reference.ModuleUID, enum.Name)
 					return nil, &type_, &typeName, nil
 				}
 			}

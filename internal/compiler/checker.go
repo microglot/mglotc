@@ -306,10 +306,10 @@ func (c *imageChecker) check() {
 			for _, sdkMethod := range sdk.Methods {
 				c.checkAnnotationApplications(sdkMethod.AnnotationApplications)
 				for _, sdkMethodInput := range sdkMethod.Input {
-					c.checkTypeSpecifier(sdkMethodInput.Type, []idl.TypeKind{idl.TypeKindPrimitive, idl.TypeKindData, idl.TypeKindVirtual, idl.TypeKindStruct, idl.TypeKindEnum})
+					c.checkTypeSpecifier(sdkMethodInput.Type, []idl.TypeKind{idl.TypeKindPrimitive, idl.TypeKindData, idl.TypeKindVirtual, idl.TypeKindStruct, idl.TypeKindEnum, idl.TypeKindAPI, idl.TypeKindSDK})
 				}
 				if sdkMethod.Output != nil {
-					c.checkTypeSpecifier(sdkMethod.Output, []idl.TypeKind{idl.TypeKindPrimitive, idl.TypeKindData, idl.TypeKindVirtual, idl.TypeKindStruct, idl.TypeKindEnum})
+					c.checkTypeSpecifier(sdkMethod.Output, []idl.TypeKind{idl.TypeKindPrimitive, idl.TypeKindData, idl.TypeKindVirtual, idl.TypeKindStruct, idl.TypeKindEnum, idl.TypeKindAPI, idl.TypeKindSDK})
 				}
 			}
 		}
