@@ -63,7 +63,7 @@ func (c *imageChecker) checkTypeSpecifier(ts *proto.TypeSpecifier, expectedKinds
 							c.reporter.Report(exc.New(exc.Location{}, exc.CodeUnknownFatal, fmt.Sprintf("wrong number of parameters")))
 						} else {
 							for _, parameter := range resolved.Resolved.Parameters {
-								c.checkTypeSpecifier(parameter, []idl.TypeKind{idl.TypeKindPrimitive, idl.TypeKindData, idl.TypeKindVirtual, idl.TypeKindStruct, idl.TypeKindEnum})
+								c.checkTypeSpecifier(parameter, []idl.TypeKind{idl.TypeKindPrimitive, idl.TypeKindData, idl.TypeKindVirtual, idl.TypeKindStruct, idl.TypeKindEnum, idl.TypeKindAPI, idl.TypeKindSDK})
 							}
 						}
 					}
@@ -75,6 +75,29 @@ func (c *imageChecker) checkTypeSpecifier(ts *proto.TypeSpecifier, expectedKinds
 		c.reporter.Report(exc.New(exc.Location{
 			// TODO 2023.11.26: location?
 		}, exc.CodeUnknownFatal, fmt.Sprintf("unexpected %d (expecting %v)", kind, expectedKinds)))
+	}
+}
+
+// additional typechecks for structs used as API input/output
+func (c *imageChecker) checkTypeSpecifierForAPI(ts *proto.TypeSpecifier) {
+	resolved, ok := ts.Reference.(*proto.TypeSpecifier_Resolved)
+	if ok {
+		kind, declaration := c.lookup(resolved.Resolved.Reference)
+		switch kind {
+		case idl.TypeKindStruct:
+			struct_ := declaration.(*proto.Struct)
+			for _, field := range struct_.Fields {
+				c.checkTypeSpecifierForAPI(field.Type)
+			}
+		case idl.TypeKindAPI, idl.TypeKindSDK:
+			c.reporter.Report(exc.New(exc.Location{
+				// TODO 2023.11.26: location?
+			}, exc.CodeUnknownFatal, fmt.Sprintf("structs which transitively include API, SDK or Impl fields can't be passed as API method input or output")))
+		}
+
+		for _, parameter := range resolved.Resolved.Parameters {
+			c.checkTypeSpecifierForAPI(parameter)
+		}
 	}
 }
 
@@ -270,7 +293,7 @@ func (c *imageChecker) check() {
 			c.checkTypeName(struct_.Name)
 			for _, field := range struct_.Fields {
 				c.checkAnnotationApplications(field.AnnotationApplications)
-				c.checkTypeSpecifier(field.Type, []idl.TypeKind{idl.TypeKindPrimitive, idl.TypeKindData, idl.TypeKindVirtual, idl.TypeKindStruct, idl.TypeKindEnum})
+				c.checkTypeSpecifier(field.Type, []idl.TypeKind{idl.TypeKindPrimitive, idl.TypeKindData, idl.TypeKindVirtual, idl.TypeKindStruct, idl.TypeKindEnum, idl.TypeKindAPI, idl.TypeKindSDK})
 				if field.DefaultValue != nil {
 					c.checkValue(field.DefaultValue, field.Type)
 				}
@@ -294,7 +317,9 @@ func (c *imageChecker) check() {
 			for _, apiMethod := range api.Methods {
 				c.checkAnnotationApplications(apiMethod.AnnotationApplications)
 				c.checkTypeSpecifier(apiMethod.Input, []idl.TypeKind{idl.TypeKindStruct})
+				c.checkTypeSpecifierForAPI(apiMethod.Input)
 				c.checkTypeSpecifier(apiMethod.Output, []idl.TypeKind{idl.TypeKindStruct})
+				c.checkTypeSpecifierForAPI(apiMethod.Output)
 			}
 		}
 		for _, sdk := range module.SDKs {

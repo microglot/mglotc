@@ -32,7 +32,7 @@ func TestLinker(t *testing.T) {
 				{
 					kind:               idl.FileKindMicroglot,
 					uri:                "/test.mgdl",
-					contents:           `syntax = "microglot0"`,
+					contents:           "syntax = \"microglot0\"\nmodule = @13",
 					expectCollectError: false,
 					expectLinkError:    false,
 				},
@@ -44,7 +44,7 @@ func TestLinker(t *testing.T) {
 				{
 					kind:               idl.FileKindMicroglot,
 					uri:                "/test.mgdl",
-					contents:           "syntax = \"microglot0\"\nconst foo :Bool = true",
+					contents:           "syntax = \"microglot0\"\nmodule = @13\nconst foo :Bool = true",
 					expectCollectError: false,
 					expectLinkError:    false,
 				},
@@ -56,7 +56,7 @@ func TestLinker(t *testing.T) {
 				{
 					kind:               idl.FileKindMicroglot,
 					uri:                "/test.mgdl",
-					contents:           "syntax = \"microglot0\"\nconst foo :Bool = true\nconst foo :String = \"asdf\"\n",
+					contents:           "syntax = \"microglot0\"\nmodule = @13\nconst foo :Bool = true\nconst foo :String = \"asdf\"\n",
 					expectCollectError: true,
 					expectLinkError:    false,
 				},
@@ -87,7 +87,7 @@ func TestLinker(t *testing.T) {
 				{
 					kind:               idl.FileKindMicroglot,
 					uri:                "/test.mgdl",
-					contents:           "syntax = \"microglot0\"\nconst boo :Boolean = bar",
+					contents:           "syntax = \"microglot0\"\nmodule = @13\nconst boo :Boolean = bar",
 					expectCollectError: false,
 					expectLinkError:    true,
 				},
@@ -99,7 +99,7 @@ func TestLinker(t *testing.T) {
 				{
 					kind:               idl.FileKindMicroglot,
 					uri:                "/test.mgdl",
-					contents:           "syntax = \"microglot0\"\nimport \"/nonexistent.mgdl\" as n",
+					contents:           "syntax = \"microglot0\"\nmodule = @13\nimport \"/nonexistent.mgdl\" as n",
 					expectCollectError: false,
 					expectLinkError:    true,
 				},
@@ -130,7 +130,7 @@ func TestLinker(t *testing.T) {
 				{
 					kind:               idl.FileKindMicroglot,
 					uri:                "/test.mgdl",
-					contents:           "syntax = \"microglot0\"\nconst x :Bool = true @10\nconst y :Bool = false @10",
+					contents:           "syntax = \"microglot0\"\nmodule = @13\nconst x :Bool = true @10\nconst y :Bool = false @10",
 					expectCollectError: true,
 					expectLinkError:    false,
 				},
@@ -142,7 +142,7 @@ func TestLinker(t *testing.T) {
 				{
 					kind:               idl.FileKindMicroglot,
 					uri:                "/test.mgdl",
-					contents:           "syntax = \"microglot0\"\nconst x :Bool = true\nconst y :Bool = x",
+					contents:           "syntax = \"microglot0\"\nmodule = @13\nconst x :Bool = true\nconst y :Bool = x",
 					expectCollectError: false,
 					expectLinkError:    false,
 				},
@@ -154,7 +154,7 @@ func TestLinker(t *testing.T) {
 				{
 					kind:               idl.FileKindMicroglot,
 					uri:                "/test.mgdl",
-					contents:           "syntax = \"microglot0\"\nconst y :Bool = x",
+					contents:           "syntax = \"microglot0\"\nmodule = @13\nconst y :Bool = x",
 					expectCollectError: false,
 					expectLinkError:    true,
 				},
@@ -166,7 +166,7 @@ func TestLinker(t *testing.T) {
 				{
 					kind:               idl.FileKindMicroglot,
 					uri:                "/test.mgdl",
-					contents:           "syntax = \"microglot0\"\nenum x { y }\nconst z :Bool = x.y",
+					contents:           "syntax = \"microglot0\"\nmodule = @13\nenum x { y }\nconst z :Bool = x.y",
 					expectCollectError: false,
 					expectLinkError:    false,
 				},
@@ -178,7 +178,7 @@ func TestLinker(t *testing.T) {
 				{
 					kind:               idl.FileKindMicroglot,
 					uri:                "/test.mgdl",
-					contents:           "syntax = \"microglot0\"\nenum x { y }\nconst z :Bool = x.a",
+					contents:           "syntax = \"microglot0\"\nmodule = @13\nenum x { y }\nconst z :Bool = x.a",
 					expectCollectError: false,
 					expectLinkError:    true,
 				},
@@ -209,7 +209,7 @@ func TestLinker(t *testing.T) {
 				{
 					kind:               idl.FileKindMicroglot,
 					uri:                "/test.mgdl",
-					contents:           "syntax = \"microglot0\"\nimport \"/test.proto\" as p\nconst z :p.Foo = 0",
+					contents:           "syntax = \"microglot0\"\nmodule = @13\nimport \"/test.proto\" as p\nconst z :p.Foo = 0",
 					expectCollectError: false,
 					expectLinkError:    false,
 				},
@@ -221,7 +221,7 @@ func TestLinker(t *testing.T) {
 				{
 					kind:               idl.FileKindMicroglot,
 					uri:                "/test.mgdl",
-					contents:           "syntax = \"microglot0\"\nstruct Foo {}",
+					contents:           "syntax = \"microglot0\"\nmodule = @13\nstruct Foo {}",
 					expectCollectError: false,
 					expectLinkError:    false,
 				},
@@ -277,9 +277,13 @@ func TestLinker(t *testing.T) {
 			}
 
 			symbols := globalSymbolTable{}
-			completedDescriptors := make([]*proto.Module, 0, len(parsedDescriptors))
+			protobufDescriptor = completeUIDs(*protobufDescriptor)
 			err = symbols.collect(*protobufDescriptor, r)
 			require.NoError(t, err, "/protobuf.mgdl", r.Reported())
+			protobufDescriptor, err = link(*protobufDescriptor, &symbols, r)
+			require.NoError(t, err, "/protobuf.mgdl", r.Reported())
+
+			completedDescriptors := make([]*proto.Module, 0, len(parsedDescriptors))
 			for i, parsedDescriptor := range parsedDescriptors {
 				completedDescriptor := completeUIDs(*parsedDescriptor)
 				err := symbols.collect(*completedDescriptor, r)

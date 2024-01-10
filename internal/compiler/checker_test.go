@@ -31,7 +31,7 @@ func TestChecker(t *testing.T) {
 				{
 					kind:     idl.FileKindMicroglot,
 					uri:      "/test.mgdl",
-					contents: `syntax = "microglot0"`,
+					contents: "syntax = \"microglot0\"\nmodule = @13",
 				},
 			},
 			expectCheckError: false,
@@ -42,7 +42,7 @@ func TestChecker(t *testing.T) {
 				{
 					kind:     idl.FileKindMicroglot,
 					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nstruct Foo { bar :Protobuf.Package }\n",
+					contents: "syntax = \"microglot0\"\nmodule = @13\nstruct Foo { bar :Protobuf.Package }\n",
 				},
 			},
 			expectCheckError: true,
@@ -53,7 +53,7 @@ func TestChecker(t *testing.T) {
 				{
 					kind:     idl.FileKindMicroglot,
 					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nconst Foo :Protobuf.Package = 1\n",
+					contents: "syntax = \"microglot0\"\nmodule = @13\nconst Foo :Protobuf.Package = 1\n",
 				},
 			},
 			expectCheckError: true,
@@ -65,7 +65,7 @@ func TestChecker(t *testing.T) {
 				{
 					kind:     idl.FileKindMicroglot,
 					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nconst Foo :Int32 = 32\nconst Bar :Int32 = Foo\nconst Baz :Int32 = -Bar\nconst Barney :Int32 = (Foo + Bar)\n",
+					contents: "syntax = \"microglot0\"\nmodule = @13\nconst Foo :Int32 = 32\nconst Bar :Int32 = Foo\nconst Baz :Int32 = -Bar\nconst Barney :Int32 = (Foo + Bar)\n",
 				},
 			},
 			expectCheckError: false,
@@ -76,7 +76,7 @@ func TestChecker(t *testing.T) {
 				{
 					kind:     idl.FileKindMicroglot,
 					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nstruct Foo { bar :Int32 = [] }\n",
+					contents: "syntax = \"microglot0\"\nmodule = @13\nstruct Foo { bar :Int32 = [] }\n",
 				},
 			},
 			expectCheckError: true,
@@ -87,7 +87,7 @@ func TestChecker(t *testing.T) {
 				{
 					kind:     idl.FileKindMicroglot,
 					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nannotation Foo(struct) :Text\nstruct Bar {} $(Foo([]))\n",
+					contents: "syntax = \"microglot0\"\nmodule = @13\nannotation Foo(struct) :Text\nstruct Bar {} $(Foo([]))\n",
 				},
 			},
 			expectCheckError: true,
@@ -99,7 +99,7 @@ func TestChecker(t *testing.T) {
 				{
 					kind:     idl.FileKindMicroglot,
 					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nstruct FooArgument { l :List<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({l: []}))\n",
+					contents: "syntax = \"microglot0\"\nmodule = @13\nstruct FooArgument { l :List<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({l: []}))\n",
 				},
 			},
 			expectCheckError: false,
@@ -110,7 +110,7 @@ func TestChecker(t *testing.T) {
 				{
 					kind:     idl.FileKindMicroglot,
 					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nstruct FooArgument { l :List<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({l: 32}))\n",
+					contents: "syntax = \"microglot0\"\nmodule = @13\nstruct FooArgument { l :List<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({l: 32}))\n",
 				},
 			},
 			expectCheckError: true,
@@ -121,7 +121,7 @@ func TestChecker(t *testing.T) {
 				{
 					kind:     idl.FileKindMicroglot,
 					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nstruct FooArgument { l :List<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({l: [32]}))\n",
+					contents: "syntax = \"microglot0\"\nmodule = @13\nstruct FooArgument { l :List<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({l: [32]}))\n",
 				},
 			},
 			expectCheckError: true,
@@ -133,7 +133,7 @@ func TestChecker(t *testing.T) {
 				{
 					kind:     idl.FileKindMicroglot,
 					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nstruct FooArgument { p :Presence<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({p: \"present\"}))\n",
+					contents: "syntax = \"microglot0\"\nmodule = @13\nstruct FooArgument { p :Presence<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({p: \"present\"}))\n",
 				},
 			},
 			expectCheckError: false,
@@ -144,7 +144,7 @@ func TestChecker(t *testing.T) {
 				{
 					kind:     idl.FileKindMicroglot,
 					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nstruct FooArgument { p :Presence<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({}))\n",
+					contents: "syntax = \"microglot0\"\nmodule = @13\nstruct FooArgument { p :Presence<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({}))\n",
 				},
 			},
 			expectCheckError: false,
@@ -155,7 +155,7 @@ func TestChecker(t *testing.T) {
 				{
 					kind:     idl.FileKindMicroglot,
 					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nstruct FooArgument { p :Presence<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({p: 32}))\n",
+					contents: "syntax = \"microglot0\"\nmodule = @13\nstruct FooArgument { p :Presence<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({p: 32}))\n",
 				},
 			},
 			expectCheckError: true,
@@ -167,7 +167,7 @@ func TestChecker(t *testing.T) {
 				{
 					kind:     idl.FileKindMicroglot,
 					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nstruct Foo { bar :Text }\nannotation Bar(struct) :Foo\nstruct Baz {} $(Bar({ bar: \"ASDF\" }))\n",
+					contents: "syntax = \"microglot0\"\nmodule = @13\nstruct Foo { bar :Text }\nannotation Bar(struct) :Foo\nstruct Baz {} $(Bar({ bar: \"ASDF\" }))\n",
 				},
 			},
 			expectCheckError: false,
@@ -178,7 +178,7 @@ func TestChecker(t *testing.T) {
 				{
 					kind:     idl.FileKindMicroglot,
 					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nstruct Foo { bar :Text }\nannotation Bar(struct) :Foo\nstruct Baz {} $(Bar({ }))\n",
+					contents: "syntax = \"microglot0\"\nmodule = @13\nstruct Foo { bar :Text }\nannotation Bar(struct) :Foo\nstruct Baz {} $(Bar({ }))\n",
 				},
 			},
 			expectCheckError: false,
@@ -189,7 +189,7 @@ func TestChecker(t *testing.T) {
 				{
 					kind:     idl.FileKindMicroglot,
 					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nstruct Foo { bar :Text }\nannotation Bar(struct) :Foo\nstruct Baz {} $(Bar({ barney: \"ASDF\", bar: \"ASDF\" }))\n",
+					contents: "syntax = \"microglot0\"\nmodule = @13\nstruct Foo { bar :Text }\nannotation Bar(struct) :Foo\nstruct Baz {} $(Bar({ barney: \"ASDF\", bar: \"ASDF\" }))\n",
 				},
 			},
 			expectCheckError: true,
@@ -200,7 +200,40 @@ func TestChecker(t *testing.T) {
 				{
 					kind:     idl.FileKindMicroglot,
 					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nstruct Foo { bar :Text }\nannotation Bar(struct) :Foo\nstruct Baz {} $(Bar({ bar: 99 }))\n",
+					contents: "syntax = \"microglot0\"\nmodule = @13\nstruct Foo { bar :Text }\nannotation Bar(struct) :Foo\nstruct Baz {} $(Bar({ bar: 99 }))\n",
+				},
+			},
+			expectCheckError: true,
+		},
+		{
+			name: "structs as api method input/output",
+			files: []CheckerTestFile{
+				{
+					kind:     idl.FileKindMicroglot,
+					uri:      "/test.mgdl",
+					contents: "syntax = \"microglot0\"\nmodule = @13\nstruct In {}\nstruct Out {}\napi Foo { Method(:In) returns (:Out) }",
+				},
+			},
+			expectCheckError: false,
+		},
+		{
+			name: "structs as api method input/output (transitive SDK in input)",
+			files: []CheckerTestFile{
+				{
+					kind:     idl.FileKindMicroglot,
+					uri:      "/test.mgdl",
+					contents: "syntax = \"microglot0\"\nmodule = @13\nsdk Nope {}\nstruct In { X :List<:Nope> }\nstruct Out {}\napi Foo { Method(:In) returns (:Out) }",
+				},
+			},
+			expectCheckError: true,
+		},
+		{
+			name: "structs as api method input/output (transitive API in output)",
+			files: []CheckerTestFile{
+				{
+					kind:     idl.FileKindMicroglot,
+					uri:      "/test.mgdl",
+					contents: "syntax = \"microglot0\"\nmodule = @13\napi Nope {}\nstruct In {}\nstruct Out { X :List<:Nope> }\napi Foo { Method(:In) returns (:Out) }",
 				},
 			},
 			expectCheckError: true,

@@ -406,7 +406,7 @@ func (c *imageConverter) fromResolvedReference(resolvedReference *proto.Resolved
 			label := descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL
 			return &label, type_, typeName, nil
 		default:
-			return nil, nil, nil, fmt.Errorf("built-in type %s doesn't convert to protobuf", builtinTypeName)
+			return nil, nil, nil, fmt.Errorf("built-in type %v doesn't convert to protobuf", builtinTypeName)
 		}
 	}
 
