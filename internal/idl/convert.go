@@ -149,9 +149,9 @@ func (c *imageConverter) getQualifiedName(protobufPackage string, moduleUID uint
 }
 
 func (c *imageConverter) fromModule(module *proto.Module) (*descriptorpb.FileDescriptorProto, error) {
-	// TODO 2023.11.03: is it a fatal error to attempt to convert a microglot Module that contains
-	// stuff that cannot be represented in protobuf, e.g. SDKs? Or is this conversion allowed to be
-	// lossy?
+	// It is *NOT* a fatal error to attempt to convert a microglot Module that contains
+	// stuff that cannot be represented in protobuf, e.g. SDKs. This conversion is allowed to be
+	// lossy!
 
 	var dependencies []string
 	for _, import_ := range module.Imports {
@@ -216,7 +216,66 @@ func (c *imageConverter) fromModule(module *proto.Module) (*descriptorpb.FileDes
 	}, nil
 }
 
+func (c *imageConverter) synthesizeMapEntries(struct_ *proto.Struct) ([]*descriptorpb.DescriptorProto, error) {
+	var synthetics []*descriptorpb.DescriptorProto
+	for _, field := range struct_.Fields {
+		resolved, ok := field.Type.Reference.(*proto.TypeSpecifier_Resolved)
+		if !ok {
+			return nil, errors.New("unexpected forward reference while converting descriptor to protobuf!")
+		}
+		if resolved.Resolved.Reference.ModuleUID == 0 {
+			builtinTypeName, ok := GetBuiltinTypeNameFromUID(resolved.Resolved.Reference.TypeUID)
+			if !ok {
+				return nil, fmt.Errorf("unknown built-in type UID: %d", resolved.Resolved.Reference.TypeUID)
+			}
+			if builtinTypeName.Name == "Map" {
+				// TODO 2024.01.16: this doesn't handle collisions at all, yet
+				syntheticName := fmt.Sprintf("%sEntry", field.Name)
+				true_ := true
+				keyName := "key"
+				var keyNumber int32 = 1
+				_, keyType, keyTypeName, err := c.fromTypeSpecifier(resolved.Resolved.Parameters[0], nil)
+				if err != nil {
+					return nil, err
+				}
+				valueName := "value"
+				var valueNumber int32 = 2
+				_, valueType, valueTypeName, err := c.fromTypeSpecifier(resolved.Resolved.Parameters[1], nil)
+				if err != nil {
+					return nil, err
+				}
+				synthetics = append(synthetics, &descriptorpb.DescriptorProto{
+					Name: &syntheticName,
+					Field: []*descriptorpb.FieldDescriptorProto{
+						&descriptorpb.FieldDescriptorProto{
+							Name:     &keyName,
+							Number:   &keyNumber,
+							Type:     keyType,
+							TypeName: keyTypeName,
+						},
+						&descriptorpb.FieldDescriptorProto{
+							Name:     &valueName,
+							Number:   &valueNumber,
+							Type:     valueType,
+							TypeName: valueTypeName,
+						},
+					},
+					Options: &descriptorpb.MessageOptions{
+						MapEntry: &true_,
+					},
+				})
+			}
+		}
+	}
+	return synthetics, nil
+}
+
 func (c *imageConverter) fromStruct(struct_ *proto.Struct) (*descriptorpb.DescriptorProto, error) {
+	nestedType, err := c.synthesizeMapEntries(struct_)
+	if err != nil {
+		return nil, err
+	}
+
 	fields, err := mapFrom(struct_.Fields, c.fromField)
 	if err != nil {
 		return nil, err
@@ -226,6 +285,7 @@ func (c *imageConverter) fromStruct(struct_ *proto.Struct) (*descriptorpb.Descri
 	if err != nil {
 		return nil, err
 	}
+
 	for _, field := range fields {
 		if field.Proto3Optional != nil && *field.Proto3Optional {
 			// TODO 2023.11.12: there's presumably a naming convention for these synthetic oneofs.
@@ -245,7 +305,6 @@ func (c *imageConverter) fromStruct(struct_ *proto.Struct) (*descriptorpb.Descri
 		*(options.MapEntry) = true
 	}
 
-	var nestedType []*descriptorpb.DescriptorProto
 	var enumType []*descriptorpb.EnumDescriptorProto
 	for nestedName, promotedName := range GetPromotedSymbolTable(struct_.AnnotationApplications) {
 		maybeStruct := c.lookupStruct(struct_.Reference.ModuleUID, promotedName)
@@ -294,7 +353,7 @@ func (c *imageConverter) fromUnion(union *proto.Union) (*descriptorpb.OneofDescr
 func (c *imageConverter) fromField(field *proto.Field) (*descriptorpb.FieldDescriptorProto, error) {
 	number := (int32)(field.Reference.AttributeUID)
 
-	label, type_, typeName, err := c.fromTypeSpecifier(field.Type)
+	label, type_, typeName, err := c.fromTypeSpecifier(field.Type, &field.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -327,26 +386,26 @@ func (c *imageConverter) fromField(field *proto.Field) (*descriptorpb.FieldDescr
 	}, nil
 }
 
-func (c *imageConverter) fromTypeSpecifier(typeSpecifier *proto.TypeSpecifier) (*descriptorpb.FieldDescriptorProto_Label, *descriptorpb.FieldDescriptorProto_Type, *string, error) {
+func (c *imageConverter) fromTypeSpecifier(typeSpecifier *proto.TypeSpecifier, fieldName *string) (*descriptorpb.FieldDescriptorProto_Label, *descriptorpb.FieldDescriptorProto_Type, *string, error) {
 	resolved, ok := typeSpecifier.Reference.(*proto.TypeSpecifier_Resolved)
 	if !ok {
 		return nil, nil, nil, errors.New("unexpected forward reference while converting descriptor to protobuf!")
 	}
 
-	label, type_, typeName, err := c.fromResolvedReference(resolved.Resolved)
+	label, type_, typeName, err := c.fromResolvedReference(resolved.Resolved, fieldName)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	return label, type_, typeName, nil
 }
 
-func (c *imageConverter) fromResolvedReference(resolvedReference *proto.ResolvedReference) (*descriptorpb.FieldDescriptorProto_Label, *descriptorpb.FieldDescriptorProto_Type, *string, error) {
+func (c *imageConverter) fromResolvedReference(resolvedReference *proto.ResolvedReference, fieldName *string) (*descriptorpb.FieldDescriptorProto_Label, *descriptorpb.FieldDescriptorProto_Type, *string, error) {
 
 	// moduleUID 0 is for built-in types
 	if resolvedReference.Reference.ModuleUID == 0 {
 		builtinTypeName, ok := GetBuiltinTypeNameFromUID(resolvedReference.Reference.TypeUID)
 		if !ok {
-			return nil, nil, nil, fmt.Errorf("unknown built-in type UID: %d\n", resolvedReference.Reference.TypeUID)
+			return nil, nil, nil, fmt.Errorf("unknown built-in type UID: %d", resolvedReference.Reference.TypeUID)
 		}
 
 		// TODO 2023.11.09: respect $(Protobuf.FieldType())
@@ -392,19 +451,24 @@ func (c *imageConverter) fromResolvedReference(resolvedReference *proto.Resolved
 			type_ := descriptorpb.FieldDescriptorProto_TYPE_DOUBLE
 			return nil, &type_, nil, nil
 		case "List":
-			_, type_, typeName, err := c.fromTypeSpecifier(resolvedReference.Parameters[0])
+			_, type_, typeName, err := c.fromTypeSpecifier(resolvedReference.Parameters[0], nil)
 			if err != nil {
 				return nil, nil, nil, err
 			}
 			label := descriptorpb.FieldDescriptorProto_LABEL_REPEATED
 			return &label, type_, typeName, nil
 		case "Presence":
-			_, type_, typeName, err := c.fromTypeSpecifier(resolvedReference.Parameters[0])
+			_, type_, typeName, err := c.fromTypeSpecifier(resolvedReference.Parameters[0], nil)
 			if err != nil {
 				return nil, nil, nil, err
 			}
 			label := descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL
 			return &label, type_, typeName, nil
+		case "Map":
+			type_ := descriptorpb.FieldDescriptorProto_TYPE_MESSAGE
+			typeName := fmt.Sprintf("%sEntry", *fieldName)
+			label := descriptorpb.FieldDescriptorProto_LABEL_REPEATED
+			return &label, &type_, &typeName, nil
 		default:
 			return nil, nil, nil, fmt.Errorf("built-in type %v doesn't convert to protobuf", builtinTypeName)
 		}
@@ -490,11 +554,11 @@ func (c *imageConverter) fromAPI(api *proto.API) (*descriptorpb.ServiceDescripto
 }
 
 func (c *imageConverter) fromAPIMethod(apiMethod *proto.APIMethod) (*descriptorpb.MethodDescriptorProto, error) {
-	_, _, inputTypeName, err := c.fromTypeSpecifier(apiMethod.Input)
+	_, _, inputTypeName, err := c.fromTypeSpecifier(apiMethod.Input, nil)
 	if err != nil {
 		return nil, err
 	}
-	_, _, outputTypeName, err := c.fromTypeSpecifier(apiMethod.Output)
+	_, _, outputTypeName, err := c.fromTypeSpecifier(apiMethod.Output, nil)
 	if err != nil {
 		return nil, err
 	}

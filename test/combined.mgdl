@@ -1,0 +1,705 @@
+syntax = "microglot0"
+
+module = @0x1FF $(
+  Protobuf.Package("microglot.framework.v1"),
+  Protobuf.FileOptionsGoPackage("gopkg.microglot.org/framework.go/idl/microglot/framework/v1;framework")
+)
+
+struct Exception {
+  Code :UInt32 @1
+  // The exception status code. In most cases, this should be one of the
+  // pre-defined constant values. This field is an integer rather than an
+  // enum to allow for cases where custom codes are required.
+  Message :Text @2
+  Wrapped :List<:Exception> @255
+  // A set of wrapped errors. These generally indicate that the exception was
+  // caused by one or more other, underlying exceptions.
+  Detials :List<:ExceptionDetail> @254
+  // An optional list of details related to the exception.
+}
+
+struct ExceptionDetail {
+  // Exception details more deeply describe the error or error recovery
+  // conditions of an exception.
+  union Kind {
+    InvalidArgument :ExceptionDetailInvalidArgument @1
+    // TODO: Add an Any equivalent to allow expansion.
+    // TODO: See https://github.com/googleapis/googleapis/blob/master/google/rpc/error_details.proto for ideas on augmenting errors
+  } @2
+}
+
+struct ExceptionDetailInvalidArgument {
+  // This describes a single invalid field from a given input body.
+  Path :Text @1
+  // Path is a dot separated address of the field within the input that failed
+  // validation. The format matches that of the FieldAccessor text format.
+  // TODO: Create and document FieldAccessor. A.B.0.*.C, etc.
+  Description :Text @2
+  // A human friendly description of the validation failure.
+}
+
+struct Configuration {
+  // Configuration is used by factories to declare any required configuration.
+  // This supports displaying configuration options to users, validating user
+  // given configuration, and managing configuration based lifecycls for factory
+  // producted instances.
+  Paths :List<:ConfigurationPath> @1
+}
+
+struct ConfigurationPath {
+  // ConfigurationPath is an individual configuration option.
+  Path :Text @1
+  // Path is a dot separated name that identifies the location of the value
+  // within a graph. Each dot represents a parent/child relationship such that
+  // a.b.c identifies a value c which is the child of b which is, in turn, the
+  // child of a.
+  Type :ConfigurationType @2
+  // All configuration is strongly typed. The type may be either a scalar or a
+  // composite. In the case of a composit then the Element field must also be
+  // set.
+  Element :ConfigurationElementType @3
+  // Element is an optional sub-type that is only present when the Type is a
+  // composite.
+  DefaultValue :Text @5
+  // DefaultValue is an optional default for the configuration. The value, if
+  // present, must be a string representing a valid protobuf default value or
+  // microglot scalar value.
+  ExampleValue :Text @6
+  // ExampleValue is an optional example of a valid value. This is displayed
+  // to a user if present.
+  Required :Bool @7
+  // If Required is set to true then the configuration must be present.
+  Static :Bool @8
+  // Static identifies the value as being statically set in any instances of a
+  // factory. This tells the dependency orchestration system that an instance
+  // must be re-built when the value of this configuration changes. Non-static
+  // configurations are those that are always read through the
+  // ConfigurationReader service rather than being stored out of band.
+  Help :Text @9
+  // Help is an optional message to display to the user that explains what the
+  // configuration value represents.
+}
+
+enum ConfigurationType {
+  // ConfigurationType is the set of supported value types.
+  TYPE_UNKNOWN @0
+  TYPE_BOOL @1
+  TYPE_TEXT @2
+  TYPE_DATA @3
+  TYPE_INT32 @6
+  TYPE_INT64 @7
+  TYPE_UINT32 @10
+  TYPE_UINT64 @11
+  TYPE_FLOAT32 @12
+  TYPE_FLOAT64 @13
+  TYPE_LIST @14
+  TYPE_MAP @15
+  // Map allows for an arbitrary set of key/value pairs in a configuration. All
+  // map keys are treated as text. The value type must be identified by the
+  // associated ConfigurationElementType.
+  TYPE_SCHEMA @16
+  // Schema identifies a message or struct type of value.
+}
+
+enum ConfigurationElementType {
+  // ConfigurationElementType is the set of support sub-element types that can
+  // be used with composite configuration types such as list and map.
+  ELEMENT_TYPE_UNKNOWN @0
+  ELEMENT_TYPE_BOOL @1
+  ELEMENT_TYPE_TEXT @2
+  ELEMENT_TYPE_DATA @3
+  ELEMENT_TYPE_INT32 @6
+  ELEMENT_TYPE_INT64 @7
+  ELEMENT_TYPE_UINT32 @10
+  ELEMENT_TYPE_UINT64 @11
+  ELEMENT_TYPE_FLOAT32 @12
+  ELEMENT_TYPE_FLOAT64 @13
+  ELEMENT_TYPE_SCHEMA @14
+}
+
+struct FactoryDescription {
+  // FactoryDescription is a set of metadata that describes a factory.
+  RuntimeURI :Text @1
+  // RuntimeURI always matches the URI of the runtime that hosts the factory.
+  UID :Text @2
+  // UID is an arbitrary, unique identifier for the factory. This value must
+  // be unique within the runtime that hosts the factory.
+  Provides :List<:TypeSpecifier> @3
+  // Provides is a set of type specifiers that represent the interfaces that
+  // factory instances implement. These are used for an optional and lightweight
+  // form of type checking during dependency orchestration.
+  Drivers :Map<:Text, :TypeSpecifier> @4
+  // Drivers identifies a set of named dependencies for which only one
+  // implementation may be given when constructing an instance.
+  Extensions :Map<:Text, :TypeSpecifier> @5
+  // Extensions identifies a set of named dependencies for which multiple
+  // implementations may be given when constructing an instance.
+  Configuration :Configuration @6
+  // Configuration is an optional description of the values required by the
+  // factory to correctly produce an instance. While technically optional, any
+  // factory that does not provide a configuration, or provides an incomplete
+  // configuration, will result in instances that are not correctly integrated
+  // into the configuration driven lifecycle management.
+}
+
+struct TypeSpecifier {
+  // TypeSpecifier identifies an interface that is either implemented by an
+  // instance or required by a factory.
+  union Type {
+    Protobuf :TypeSpecifierProtobuf @1
+    Microglot :TypeSpecifierMicroglot @2
+    Virtual :TypeSpecifierVirtual @3
+  } @4
+}
+
+struct TypeSpecifierProtobuf {
+  // TypeSpecifierProtobuf identifies a protobuf service.
+  Name :Text @1
+  // Name is the full path of the protobuf service.
+}
+
+struct TypeSpecifierMicroglot {
+  // TypeSpecifierMicroglot identifies a microglot API or SDK value.
+  ModuleUID :UInt64 @1
+  TypeUID :UInt64 @2
+  Name :Text @3
+  // Name is the human friendly name of the microglot interface as it appears
+  // in the IDL.
+}
+
+struct TypeSpecifierVirtual {
+  // TypeSpecifierVirtual identifies an interface that exists only in code. These
+  // have arbitrary names defined by the developer.
+  Name :Text @1
+}
+
+struct InstanceDescription {
+  // InstanceDescription is a set of metadata about a constructed instance.
+  RuntimeURI :Text @1
+  // RuntimeURI always matches the URI of the runtime that hosts the factory used
+  // to construct this instance.
+  FactoryUID :Text @2
+  // FactoryUID identifies the factory that created this instance.
+  UID :Text @3
+  // UID is a globally unique identifier for the instance. These values are
+  // generated by the system during construction and, while often based on user
+  // intput, are not guaranteed to be human friendly. Unlike factory UIDs, these
+  // values are unique across an entire runtime and not only unique within the
+  // runtime in which they were created.
+  Provides :List<:TypeSpecifier> @4
+  // Provides is a set of type specifiers that represent the interfaces that
+  // the instance implements. Generally, this list matches the list of the same
+  // name from FactoryDescription.
+  Drivers :List<:RuntimeDependency> @5
+  // Drivers is a list of instances that have been attached as drivers.
+  Extensions :List<:RuntimeDependency> @6
+  // Extensions is a list of instances that have been attached as extensions.
+  Configuration :Configuration @7
+  // Configuration identifies the configuration paths associated with the
+  // instance. While this mostly matches the contents presented by the field of
+  // the same name in FactoryDescription, the exact paths may be modified to
+  // provide, for example, per-instance paths to separate configurations of
+  // multiple instances produced by the same factory.
+}
+
+struct RuntimeDependency {
+  // RuntimeDependency represents a resolved dependency that is currently in use
+  // by an instance.
+  Name :Text @1
+  // Name matches the map key value of a driver or dependency defined by a
+  // factory. This identifies which driver or extension set the dependency is
+  // associated with.
+  UID :Text @2
+  // UID identifies the instance that is resolving the dependency.
+  Key :Text @3
+  // Key is an optional value that identifies the resolved dependency within a
+  // a set of others. This is mostly used to add an extra identifier to an
+  // extension for configuration or functional purposes. This value is expected
+  // to be empty in the common case but exists to support some specialized use
+  // cases such as per-extension configuration.
+}
+
+api Runtime {
+  // A runtime in the context of this framework is an individual collection of
+  // factories. The scope and size of a runtime is flexible but should generally
+  // represent a programming language or process boundary. Instances created
+  // within a runtime can only be shared with other runtimes through a network.
+  //
+  // This interface is intentionally "recursive" in the sense that runtimes can
+  // load additional runtimes. The primary purpose of this is to unify the
+  // interfaces of managing a single runtime and managing an encapsulated set.
+  // The expected common case is for a single runtime to act as the primary and
+  // manage any additional runtimes from within.
+  Description(:RuntimeDescriptionRequest) returns (:RuntimeDescriptionResponse)
+  // Get a description of the runtime.
+  Runtimes(:RuntimePluginsRequest) returns (:RuntimePluginsResponse)
+  // Get a list of all encapsulated runtimes.
+  Factories(:RuntimeFactoriesRequest) returns (:RuntimeFactoriesResponse)
+  // List all factories available through the runtime. This includes all
+  // factories of encapsulated runtimes.
+  Factory(:RuntimeFactoryRequest) returns (:RuntimeFactoryResponse)
+  // Fetch a specific factory description.
+  Instances(:RuntimeInstancesRequest) returns (:RuntimeInstancesResponse)
+  // List all instances created through the runtime. This includes all instances
+  // of encapsulated runtimes.
+  Instance(:RuntimeInstanceRequest) returns (:RuntimeInstanceResponse)
+  // Fetch a specific instance description.
+  LoadRuntime(:RuntimeLoadPluginRequest) returns (:RuntimeLoadPluginResponse)
+  // Load and encapsulate the specified runtime.
+  CreateInstance(:RuntimeCreateInstanceRequest) returns (:RuntimeCreateInstanceResponse)
+  // Create an instance from the specified runtime and factory.
+  DestroyInstance(:RuntimeDestroyInstanceRequest) returns (:RuntimeDestroyInstanceResponse)
+  // Destroy an instance by UID.
+  Destroy(:RuntimeDestroyRequest) returns (:RuntimeDestroyResponse)
+  // Unload the runtime and any encapsulated runtimes.
+}
+
+struct RuntimeDescription {
+  // RuntimeDescription is a set of metadata that describes a runtime.  
+  URI :Text @1
+  // URI is both a unique identifier and address of a runtime executable. The
+  // address determines how the runtime is loaded and may be either a file path
+  // on the local system or a full URI. For example, both "/a/b/c" and
+  // "file:///a/b/c" are equivalent and identify a runtime exectuable on the
+  // local system.
+}
+
+struct RuntimeDescriptionRequest {}
+
+struct RuntimeDescriptionResponse {
+  Description :RuntimeDescription @1
+}
+
+struct RuntimePluginsRequest {}
+
+struct RuntimePluginsResponse {
+  Runtimes :List<:RuntimeDescription> @1
+}
+
+struct RuntimeLoadPluginRequest {
+  URI :Text @1
+}
+
+struct RuntimeLoadPluginResponse {}
+
+struct RuntimeFactoriesRequest {}
+
+struct RuntimeFactoriesResponse {
+  Factories :List<:FactoryDescription> @1
+}
+
+struct RuntimeFactoryRequest {
+  RuntimeURI :Text @1
+  UID :Text @2
+}
+
+struct RuntimeFactoryResponse {
+  Description :FactoryDescription @1
+}
+
+struct RuntimeInstancesRequest {}
+
+struct RuntimeInstancesResponse {
+  Instances :List<:InstanceDescription> @1
+}
+
+struct RuntimeInstanceRequest {
+  UID :Text @1
+}
+
+struct RuntimeInstanceResponse {
+  Description :InstanceDescription @1
+}
+
+struct RuntimeCreateInstanceRequest {
+  RuntimeURI :Text @1
+  FactoryUID :Text @2
+  UID :Text @3
+  Drivers :List<:RuntimeDependency> @4
+  Extensions :List<:RuntimeDependency> @5
+}
+
+struct RuntimeCreateInstanceResponse {
+  Description :InstanceDescription @1
+}
+
+struct RuntimeDestroyInstanceRequest {
+  UID :Text @1
+}
+
+struct RuntimeDestroyInstanceResponse {}
+
+struct RuntimeDestroyRequest {}
+struct RuntimeDestroyResponse {}
+
+api ConfigurationSource {
+  // ConfigurationSource represents a graph or tree of configuration values.
+  // This interface is intended to be broadly applicable so it is constrained to
+  // a small set of operations and types.
+  //
+  // All path inputs must be in the same form as that from ConfigurationPath.
+  // Each path is a dot separated name that identifies a location within the
+  // graph. Each dot represents a parent/child relationship such that a.b.c
+  // identifies a value c which is the child of b which is, in turn, the child
+  // of a.
+  Read(:SourceReadRequest) returns (:SourceReadResponse)
+  // Read the given path. All values are returned as strings to be interpreted.
+  Children(:SourceChildrenRequest) returns (:SourceChildrenResponse)
+  // Get a list of all paths that are hierarchically below the given path.
+  Updates(:SourceUpdatesRequest) returns (:SourceUpdatesResponse)
+  // Get a list of any paths that have been updated since the last call to this
+  // method.
+}
+
+struct SourceReadRequest {
+  Path :Text @1
+}
+
+struct SourceReadResponse {
+  Value :Text @1
+}
+
+struct SourceChildrenRequest {
+  Path :Text @1
+}
+
+struct SourceChildrenResponse {
+  Paths :List<:Text> @1
+}
+
+struct SourceUpdatesRequest {}
+
+struct SourceUpdatesResponse {
+  Paths :List<:Text> @1
+}
+
+api ConfigurationReader {
+  // ConfigurationReader is a type safe interface intended to layer on top of
+  // the ConfigurationSource interface. Where ConfigurationSource provides lower
+  // level access to the graph contents, ConfigurationReader is inteded to be
+  // the primary method of loading configuration values within factories and
+  // instances.
+  ReadBool(:ReadRequest) returns (:ReadBoolResponse)
+  ReadText(:ReadRequest) returns (:ReadTextResponse)
+  ReadData(:ReadRequest) returns (:ReadDataResponse)
+  ReadInt32(:ReadRequest) returns (:ReadInt32Response)
+  ReadInt64(:ReadRequest) returns (:ReadInt64Response)
+  ReadUInt32(:ReadRequest) returns (:ReadUInt32Response)
+  ReadUInt64(:ReadRequest) returns (:ReadUInt64Response)
+  ReadFloat32(:ReadRequest) returns (:ReadFloat32Response)
+  ReadFloat64(:ReadRequest) returns (:ReadFloat64Response)
+  ReadChildren(:ReadRequest) returns (:ReadChildrenResponse)
+}
+
+struct ReadRequest {
+  Name :Text @1
+}
+
+struct ReadBoolResponse {
+  Name :Text @1
+  Value :Bool @2
+}
+
+struct ReadTextResponse {
+  Name :Text @1
+  Value :Text @2
+}
+
+struct ReadDataResponse {
+  Name :Text @1
+  Value :Data @2
+}
+
+struct ReadInt32Response {
+  Name :Text @1
+  Value :Int32 @2
+}
+
+struct ReadInt64Response {
+  Name :Text @1
+  Value :Int64 @2
+}
+
+struct ReadUInt32Response {
+  Name :Text @1
+  Value :UInt32 @2
+}
+
+struct ReadUInt64Response {
+  Name :Text @1
+  Value :UInt64 @2
+}
+
+struct ReadFloat32Response {
+  Name :Text @1
+  Value :Float32 @2
+}
+
+struct ReadFloat64Response {
+  Name :Text @1
+  Value :Float64 @2
+}
+
+struct ReadChildrenResponse {
+  Paths :List<:Text> @1
+}
+
+api ConfigurationPathModifier {
+  // ConfigurationPathModifier is a mostly internal framework interface that is
+  // used to manipulate configuration paths. This is used, for example, to
+  // transform factory defined configuration paths into per-instance paths to
+  // allow for per-instance configuration.
+  Modify(:ConfigurationPathModifyRequest) returns (:ConfigurationPathModifyResponse)
+  Unmodify(:ConfigurationPathModifyRequest) returns (:ConfigurationPathModifyResponse)
+}
+
+struct ConfigurationPathModifyRequest {
+  Path :Text @1
+  Instance :InstanceDescription @2
+}
+
+struct ConfigurationPathModifyResponse {
+  Path :Text @1
+}
+
+struct DependencyNode {
+  // DependencyNode is a mostly internal structure used by the framework when
+  // generating and evaluating dependency graphs.
+  UID :Text @2
+  DependsOn :List<:Text> @3
+  Attributes :List<:Text> @4
+}
+
+const UIDFactoryExecutor :Text = "ExecutorDefault"
+// UID value for the default executor factory in every runtime. In almost all
+// cases, custom executors should be constructed using this factory.
+
+const UIDInstanceExecutor :Text = "ExecutorDefault"
+// UID value for the default executor instance in every runtime. This represents
+// a shared, general purpose executor that may be used for background tasks.
+// Generally, a custom executor should be constructed for use cases that require
+// special limits or configuration.
+
+const UIDInstanceExecutorCritical :Text = "ExecutorCritical"
+// UID value for the default executor instance in every runtime. All critical
+// tasks should use this instance rather than creating a new one.
+
+const UIDInstanceTextNormalizer :Text = "TextNormalizer"
+// The UID value for the text normalizer available in every runtime. This is
+// mostly used internally by the framework but may be used in any case where
+// unicode text needs to be safely compared in a case-insensitive manner.
+
+const UIDInstanceConfigurationSource :Text = "ConfigurationSource"
+// The UID value for the configuration source available in every runtime. This
+// is mostly used internally by the framework and is not generally useful.
+
+const UIDInstanceConfigurationReader :Text = "ConfigurationReader"
+// The UID value for the configuration reader available in every runtime. All
+// factories automatically receive a driver with a name matching this value
+// whether it is requested in the factory description or not.
+
+const UIDInstanceConfigurationPathModifier :Text = "ConfigurationPathModifier"
+// The UID value for the configuration path modifier available in every runtime.
+// This is mostly used internally by the framework and is not generally useful.
+
+const UIDInstanceRuntime :Text = "Runtime"
+// The UID value for the primary runtime. There are very few cases where this
+// should be used outside of internal framework code. Manipulation of the
+// runtime by instances managed within the runtime can result in unexpected
+// behavior.
+
+
+const ExceptionCodeCanceled           :UInt32 = 1
+const ExceptionCodeUnknown            :UInt32 = 2
+const ExceptionCodeInvalidArgument    :UInt32 = 3
+const ExceptionCodeDeadlineExceeded   :UInt32 = 4
+const ExceptionCodeNotFound           :UInt32 = 5
+const ExceptionCodeAlreadyExists      :UInt32 = 6
+const ExceptionCodePermissionDenied   :UInt32 = 7
+const ExceptionCodeResourceExhausted  :UInt32 = 8
+const ExceptionCodeFailedPrecondition :UInt32 = 9
+const ExceptionCodeAborted            :UInt32 = 10
+const ExceptionCodeOutOfRange         :UInt32 = 11
+const ExceptionCodeUnimplemented      :UInt32 = 12
+const ExceptionCodeInternal           :UInt32 = 13
+const ExceptionCodeUnavailable        :UInt32 = 14
+const ExceptionCodeDataLoss           :UInt32 = 15
+const ExceptionCodeUnauthenticated    :UInt32 = 16
+
+sdk RuntimeLocal {
+	// RuntimeLocal is an SDK variant of the Runtime API. This version exists to
+	// provide the local runtime with the stateful interactions required to
+	// manage factory installation and interact with the native concurrency
+	// engine, etc.
+	Executor() returns (:Executor) nothrows
+	// Executor returns the primary concurrency engine available in the system.
+	ExecutorCritical() returns (:ExecutorCritical) nothrows
+	// ExecutorCritical returns an instance of the primary concurrency engine
+	// that is dedicated to critical tasks. Tasks executed through this executor
+	// will cause the entire process to fail when they exit.
+	Runtimes() returns (:List<:Runtime>) nothrows
+	Factories() returns (:List<:Factory>) nothrows
+	Instances() returns (:List<:Instance>) nothrows
+	Factory(uid :Text) returns (:Factory)
+	Instance(uid :Text) returns (:Instance)
+	LoadRuntime(uri :Text)
+	AddFactory(f :Factory)
+	AddInstance(inst :Instance)
+}
+
+
+sdk Factory {
+	// Factory encapsulates a constructor for implementations of an interface.
+	Description() returns (:FactoryDescription) nothrows
+	Constructor() returns (:InstanceConstructor) nothrows
+	Proxy(uid :Text, address :Text) returns (:Instance)
+	// Proxy returns a value that matches the normal output type of the factory
+	// except that it is backed by a network proxy to a real instances hosted
+	// at the given address.
+}
+
+
+sdk InstanceConstructor {
+	// InstanceConstructor is an interim type designed to accumulate the state
+	// needed to produce an instance.
+	SetUID(uid :Text) nothrows
+	AddDriver(name :Text, v :Instance) nothrows
+	AddExtension(name :Text, key :Text, v :Instance) nothrows
+	SetConfiguration(c :Configuration) nothrows
+	// SetConfiguration is optionally called by the orchestrator when
+	// configuration is present in the factory description. This allows the
+	// orchestrator to rewrite the instance configuration paths before creating
+	// it.
+	Construct() returns (:Instance)
+}
+
+sdk Runnable {
+	// Runnable is anything that intends to be managed by an executor.
+	Run()
+	Stop()
+}
+
+sdk Task {
+	// A task is a handle for a runnable that has been given to an executor.
+	Wait()
+	Cancel()
+}
+
+sdk Executor {
+	// Executor represents a concurrency engine.
+	Run(r :Runnable) returns (:Task) nothrows
+}
+
+sdk ExecutorCritical extends (:Executor, :Task) {
+	// ExecutorCritical combines an executor and a task to provide a system with
+	// an easy way to listen for critical task failure. The ExecutorCritical's
+	// Wait() method exits when a critical task fails.
+}
+
+sdk ConfigurationGraph {
+	// ConfigurationGraph represents a graph oriented collection of
+	// configuration data. Each instance represents a node which may be both
+	// parent of and child to other nodes.
+	Path() returns (:Text) nothrows
+	// Path returns the node's path without additional context. For example, the
+	// path of node "c" in "a.b.c" is "c".
+	FullPath() returns (:Text) nothrows
+	// FullPath returns the node's full path including parent context. For
+	// example, the full path of node "c" in "a.b.c" is "a.b.c".
+	Value() returns (:Text) nothrows
+	// Get the value of the node.
+	SetValue(v :Text)
+	// Set the value of the node.
+	Child(path :Text) returns (:ConfigurationGraph)
+	// Get a specified child of the node based on path.
+	Children() returns (:List<:ConfigurationGraph>) nothrows
+	// Get all children of the node.
+	AddChild(path :Text) returns (:ConfigurationGraph)
+	// Add a child node.
+	RemoveChild(path :Text)
+	// Remove a child node.
+	Replace(g :ConfigurationGraph)
+	// Replace the contents of the node with the given ones.
+	Changes() returns (:List<:Text>) nothrows
+	// Get a list of changes to the node and all children since the last time
+	// this method was called.
+}
+
+sdk ConfigurationGraphLoader {
+	// ConfigurationGraphLoader encapsulates some method of fetching graph
+	// contents from an encapsulated source. For example, implementations might
+	// load file contents or query a database in order to produce a new graph on
+	// each call to LoadGraph.
+	LoadGraph() returns (:ConfigurationGraph)
+}
+
+sdk ConfigurationBootstrapper {
+	// ConfigurationBootstrapper represents a stage in application bootstrapping
+	// where the configuration related interfaces are established.
+	// Implementations must establish an instance of ConfigurationSource,
+	// ConfigurationReader, ConfigurationPathModifier, and TextNormalizer within
+	// the RuntimeLocal.
+	Bootstrap(local :RuntimeLocal)
+}
+
+sdk RuntimeSelector {
+	// RuntimeSelector is repsonsible for generating a list of runtimes that the
+	// primary runtime should load.
+	Select(local :RuntimeLocal) returns (:List<:Text>)
+}
+
+sdk InstanceSelector {
+	// InstanceSelector is responsible for generating a list of instances that
+	// the must be created by the primary runtime. The output of this, if
+	// created successfully, will represent the initial, running system.
+	Select(local :RuntimeLocal) returns (:List<:InstanceDescription>)
+}
+
+sdk DependencyGraph {
+	// DependencyGraph is a graph oriented view of a configurable set of nodes.
+	// This is primarily used by the dependency orchestrator to determine
+	// creation order or the impact of a node change.
+	//
+	// Note that dependency cycles are allowed but discouraged. System
+	// arrangements that rely on dependency cycles are the responsibility of the
+	// user to ensure are free of ordering issues.
+	Add(ds :List<:DependencyNode>)
+	// Add nodes to the dependency graph.
+	Remove(uids :List<:Text>)
+	// Remove nodes from the dependency graph. This fails if removing the set
+	// would result in a graph with missing dependencies.
+	Get(uid :Text) returns (:List<:DependencyNode>)
+	// Get a sub-graph that includes every node that depends on the given UID
+	// either directly or indirectly through another node.
+	GetByAttribute(attr :Text) returns (:List<:DependencyNode>)
+	// Get a list of all nodes associated with a given attribute.
+	Sort(nodes :List<:DependencyNode>) returns (:List<:DependencyNode>)
+	// Sort the given nodes topologically. Unresolved dependencies are
+	// considered and exception but cycls are allowed. The sort makes no
+	// guarantees about the order of cyclic nodes.
+}
+
+
+sdk RuntimeBootstrapper {
+	// RuntimeBootstrapper implementations establish state or configuration
+	// related to the runtime itself. For example, the default implementation
+	// establishes reconstruction of instances based on configuration value
+	// changes.
+	Bootstrap(local :RuntimeLocal)
+}
+
+
+sdk TextNormalizer {
+	// TextNormalizer is used to support multi-language case insensitivity and
+	// other stabilizations of text for the purposes of configuration loading.
+	// All forms of a word that are considered equal must result in the exact
+	// same set of bytes after normalization.
+	Normalize(s :Text) returns (:Text)
+}
+
+sdk Instance {
+	// Instance represents a constructed value from some factory.
+	Description() returns (:InstanceDescription) nothrows
+	Listen(address :Text)
+	// Listen mounts the instance on a network using the specified address.
+}

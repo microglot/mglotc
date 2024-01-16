@@ -28,7 +28,7 @@ func (i *Image) Lookup(tr *proto.TypeReference) (TypeKind, interface{}) {
 			var kind TypeKind
 			if name.Name == "Data" {
 				kind = TypeKindData
-			} else if name.Name == "List" || name.Name == "Presence" {
+			} else if name.Name == "List" || name.Name == "Presence" || name.Name == "Map" {
 				kind = TypeKindVirtual
 			} else {
 				kind = TypeKindPrimitive

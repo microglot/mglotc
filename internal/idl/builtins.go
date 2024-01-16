@@ -30,6 +30,13 @@ var BUILTIN_UID_TYPENAMES = map[uint64]proto.TypeName{
 			&proto.TypeSpecifier{},
 		},
 	},
+	16: proto.TypeName{
+		Name: "Map",
+		Parameters: []*proto.TypeSpecifier{
+			&proto.TypeSpecifier{},
+			&proto.TypeSpecifier{},
+		},
+	},
 }
 
 func GetBuiltinTypeNameFromUID(uid uint64) (proto.TypeName, bool) {
