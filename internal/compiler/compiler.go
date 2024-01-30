@@ -17,6 +17,7 @@ import (
 	"gopkg.microglot.org/compiler.go/internal/fs"
 	"gopkg.microglot.org/compiler.go/internal/idl"
 	"gopkg.microglot.org/compiler.go/internal/proto"
+	"gopkg.microglot.org/compiler.go/internal/target"
 )
 
 type Option func(c *compiler) error
@@ -91,7 +92,7 @@ type compiler struct {
 func (self *compiler) Compile(ctx context.Context, req *idl.CompileRequest) (*idl.CompileResponse, error) {
 	targets := make([]string, 0, len(req.Files))
 	for _, f := range req.Files {
-		targets = append(targets, self.targetURI(ctx, f))
+		targets = append(targets, target.Normalize(f))
 	}
 	files := make([]idl.File, 0, len(targets))
 	for _, target := range targets {
@@ -143,7 +144,7 @@ func (self *compiler) Compile(ctx context.Context, req *idl.CompileRequest) (*id
 			if result.module != nil {
 				modules = append(modules, result.module)
 				for _, import_ := range result.module.Imports {
-					uri := self.targetURI(ctx, import_.ImportedURI)
+					uri := target.Normalize(import_.ImportedURI)
 					in, err := self.FS.Open(ctx, uri)
 					if err != nil {
 						return nil, err
