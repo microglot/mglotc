@@ -162,7 +162,7 @@ func main() {
 		}
 
 		if response.Error != nil {
-			fmt.Fprintln(os.Stderr, response.Error)
+			fmt.Fprintln(os.Stderr, response.GetError())
 			os.Exit(1)
 		}
 
