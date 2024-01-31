@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"sort"
 	"strings"
 
 	"gopkg.microglot.org/compiler.go/internal/idl"
@@ -143,7 +144,7 @@ func fromStatementConst(statementConst *astStatementConst) *proto.Constant {
 }
 
 func fromStatementEnum(statementEnum *astStatementEnum) *proto.Enum {
-	return &proto.Enum{
+	result := &proto.Enum{
 		Reference:  fromTypeUID(statementEnum.meta.uid),
 		Name:       statementEnum.identifier.Value,
 		Enumerants: mapFrom(statementEnum.enumerants, fromEnumerant),
@@ -152,6 +153,23 @@ func fromStatementEnum(statementEnum *astStatementEnum) *proto.Enum {
 		CommentBlock:           fromCommentBlock(statementEnum.meta.comments),
 		AnnotationApplications: fromAnnotationApplication(statementEnum.meta.annotationApplication),
 	}
+	var foundZero bool
+	for _, en := range result.Enumerants {
+		if en.Reference.AttributeUID == 0 {
+			foundZero = true
+			break
+		}
+	}
+	if !foundZero {
+		result.Enumerants = append(result.Enumerants, &proto.Enumerant{
+			Reference: fromAttributeUID(&astValueLiteralInt{val: 0}),
+			Name:      "None",
+		})
+	}
+	sort.Slice(result.Enumerants, func(i, j int) bool {
+		return result.Enumerants[i].Reference.AttributeUID < result.Enumerants[j].Reference.AttributeUID
+	})
+	return result
 }
 
 func fromStatementStruct(statementStruct *astStatementStruct) *proto.Struct {
