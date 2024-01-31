@@ -80,14 +80,31 @@ func (c *imageChecker) checkTypeSpecifier(ts *proto.TypeSpecifier, expectedKinds
 
 // additional typechecks for structs used as API input/output
 func (c *imageChecker) checkTypeSpecifierForAPI(ts *proto.TypeSpecifier) {
+	var stack []*proto.TypeSpecifier_Resolved
 	resolved, ok := ts.Reference.(*proto.TypeSpecifier_Resolved)
 	if ok {
-		kind, declaration := c.lookup(resolved.Resolved.Reference)
+		stack = append(stack, resolved)
+	}
+
+	seen := make(map[string]bool)
+	for len(stack) > 0 {
+		current := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+		key := fmt.Sprintf("%d.%d", current.Resolved.Reference.ModuleUID, current.Resolved.Reference.TypeUID)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+
+		kind, declaration := c.lookup(current.Resolved.Reference)
 		switch kind {
 		case idl.TypeKindStruct:
 			struct_ := declaration.(*proto.Struct)
 			for _, field := range struct_.Fields {
-				c.checkTypeSpecifierForAPI(field.Type)
+				resolvedField, ok := field.Type.Reference.(*proto.TypeSpecifier_Resolved)
+				if ok {
+					stack = append(stack, resolvedField)
+				}
 			}
 		case idl.TypeKindAPI, idl.TypeKindSDK:
 			c.reporter.Report(exc.New(exc.Location{
@@ -95,8 +112,11 @@ func (c *imageChecker) checkTypeSpecifierForAPI(ts *proto.TypeSpecifier) {
 			}, exc.CodeUnknownFatal, fmt.Sprintf("structs which transitively include API, SDK or Impl fields can't be passed as API method input or output")))
 		}
 
-		for _, parameter := range resolved.Resolved.Parameters {
-			c.checkTypeSpecifierForAPI(parameter)
+		for _, parameter := range current.Resolved.Parameters {
+			resolvedParam, ok := parameter.Reference.(*proto.TypeSpecifier_Resolved)
+			if ok {
+				stack = append(stack, resolvedParam)
+			}
 		}
 	}
 }
