@@ -3,7 +3,6 @@ package idl
 import (
 	"errors"
 	"fmt"
-	"strings"
 
 	"google.golang.org/protobuf/types/descriptorpb"
 
@@ -190,9 +189,7 @@ func (c *imageConverter) fromModule(module *proto.Module) (*descriptorpb.FileDes
 	}
 
 	syntax := "proto3"
-
-	// TODO 2023.11.20: this is a little bit suspicious, and very possibly wrong.
-	name := strings.TrimLeft(module.URI, "/")
+	name := module.URI
 
 	return &descriptorpb.FileDescriptorProto{
 		Name:       &name,

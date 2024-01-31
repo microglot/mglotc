@@ -20,6 +20,7 @@ import (
 	"gopkg.microglot.org/compiler.go/internal/fs"
 	"gopkg.microglot.org/compiler.go/internal/idl"
 	"gopkg.microglot.org/compiler.go/internal/mgdl_gen_go"
+	"gopkg.microglot.org/compiler.go/internal/target"
 )
 
 type opts struct {
@@ -47,6 +48,9 @@ func main() {
 	flags.StringSliceVar(&op.Plugins, "plugin", []string{}, "Specifies a plugin executable to use.")
 	_ = flags.Parse(os.Args[1:])
 	targets := flags.Args()
+	for x, t := range targets {
+		targets[x] = target.Normalize(t)
+	}
 
 	output, absErr := filepath.Abs(op.Output)
 	if absErr != nil {
