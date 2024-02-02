@@ -3,6 +3,7 @@ package idl
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"google.golang.org/protobuf/types/descriptorpb"
 
@@ -140,6 +141,14 @@ func (c *imageConverter) isPromotedType(moduleUID uint64, name string) bool {
 }
 
 func (c *imageConverter) getQualifiedName(protobufPackage string, moduleUID uint64, name string) string {
+	// TODO: 2024.02.01: Based on experimentation, it appears that protoc and
+	//                   protocompile always produce fully qualified type names.
+	//                   This behavior is relied on by some of the official Go
+	//                   protobuf libraries. This method needs to be refactored
+	//                   to handle fully qualified nested type references and
+	//                   fully qualified map entry type references. It then
+	//                   needs to be used anywhere a TypeName reference is
+	//                   created.
 	nestedName := c.getNestedName(moduleUID, name)
 	if nestedName != name {
 		return nestedName
@@ -160,7 +169,7 @@ func (c *imageConverter) fromModule(module *proto.Module) (*descriptorpb.FileDes
 	var messageTypes []*descriptorpb.DescriptorProto
 	for _, struct_ := range module.Structs {
 		if !c.isPromotedType(module.UID, struct_.Name.Name) {
-			messageType, err := c.fromStruct(struct_)
+			messageType, err := c.fromStruct(module, struct_)
 			if err != nil {
 				return nil, err
 			}
@@ -213,7 +222,7 @@ func (c *imageConverter) fromModule(module *proto.Module) (*descriptorpb.FileDes
 	}, nil
 }
 
-func (c *imageConverter) synthesizeMapEntries(struct_ *proto.Struct) ([]*descriptorpb.DescriptorProto, error) {
+func (c *imageConverter) synthesizeMapEntries(module *proto.Module, struct_ *proto.Struct) ([]*descriptorpb.DescriptorProto, error) {
 	var synthetics []*descriptorpb.DescriptorProto
 	for _, field := range struct_.Fields {
 		resolved, ok := field.Type.Reference.(*proto.TypeSpecifier_Resolved)
@@ -267,8 +276,32 @@ func (c *imageConverter) synthesizeMapEntries(struct_ *proto.Struct) ([]*descrip
 	return synthetics, nil
 }
 
-func (c *imageConverter) fromStruct(struct_ *proto.Struct) (*descriptorpb.DescriptorProto, error) {
-	nestedType, err := c.synthesizeMapEntries(struct_)
+func (c *imageConverter) addMapEntryQualification(module *proto.Module, struct_ *proto.Struct, synthetics []*descriptorpb.DescriptorProto, fields []*descriptorpb.FieldDescriptorProto) {
+	// Using unqualified names for synthetic map entry types appears to be valid
+	// according to all the documentation I could find as of 2024-02-01.
+	// However, the google.golang.org/protobuf/reflect/protoreflect library will
+	// fail to interact with map entry references unless they are fully
+	// qualified. I suspect that protoc and protocompile always render fully
+	// qualified paths for these types. For compatibility, this sets the
+	// TypeName for any synthetic map entry types to a fully qualified name.
+	prefix := module.ProtobufPackage
+	if prefix != "" && !strings.HasPrefix(prefix, ".") {
+		prefix = "." + prefix
+	}
+	prefix = prefix + "." + struct_.Name.Name
+	synth := make(map[string]bool, len(synthetics))
+	for _, synthetic := range synthetics {
+		synth[*synthetic.Name] = true
+	}
+	for _, f := range fields {
+		if f.TypeName != nil && synth[*f.TypeName] {
+			*f.TypeName = prefix + "." + *f.TypeName
+		}
+	}
+}
+
+func (c *imageConverter) fromStruct(module *proto.Module, struct_ *proto.Struct) (*descriptorpb.DescriptorProto, error) {
+	nestedType, err := c.synthesizeMapEntries(module, struct_)
 	if err != nil {
 		return nil, err
 	}
@@ -277,6 +310,7 @@ func (c *imageConverter) fromStruct(struct_ *proto.Struct) (*descriptorpb.Descri
 	if err != nil {
 		return nil, err
 	}
+	c.addMapEntryQualification(module, struct_, nestedType, fields)
 
 	oneofs, err := mapFrom(struct_.Unions, c.fromUnion)
 	if err != nil {
@@ -317,7 +351,7 @@ func (c *imageConverter) fromStruct(struct_ *proto.Struct) (*descriptorpb.Descri
 			*maybeEnumType.Name = nestedName
 			enumType = append(enumType, maybeEnumType)
 		} else {
-			maybeNestedType, err := c.fromStruct(maybeStruct)
+			maybeNestedType, err := c.fromStruct(module, maybeStruct)
 			if err != nil {
 				return nil, err
 			}
