@@ -326,8 +326,13 @@ func (c *imageConverter) fromStruct(struct_ *proto.Struct) (*descriptorpb.Descri
 		}
 	}
 
+	name := new(string)
+	*name = struct_.Name.Name
+	// TODO: 2024.02.01: Audit the code for pointer passing like this. Replace
+	//                   them with a helper that always generates a pointer to
+	//                   a copy.
 	return &descriptorpb.DescriptorProto{
-		Name:       &struct_.Name.Name,
+		Name:       name,
 		Field:      fields,
 		OneofDecl:  oneofs,
 		Options:    options,
