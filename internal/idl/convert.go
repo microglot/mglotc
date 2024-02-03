@@ -387,8 +387,7 @@ func (c *imageConverter) fromUnion(union *proto.Union) (*descriptorpb.OneofDescr
 }
 
 func (c *imageConverter) fromField(field *proto.Field) (*descriptorpb.FieldDescriptorProto, error) {
-	number := (int32)(field.Reference.AttributeUID)
-
+	number := int32(field.Reference.AttributeUID)
 	label, type_, typeName, err := c.fromTypeSpecifier(field.Type, &field.Name)
 	if err != nil {
 		return nil, err

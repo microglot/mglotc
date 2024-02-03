@@ -298,6 +298,17 @@ func newUID(parentUID uint64, name string) uint64 {
 	}
 	return typeUID
 }
+func newAttributeUID(parent uint64, name string) uint64 {
+	// Protubuf field numbers are limited to 2^29 - 1 because the first three
+	// bytes are used to encode the field type. For compatibility we must remove
+	// the leading three bits.
+	//
+	// TODO 2024.02.01: Attribute UID values must also not be in the range of
+	//                  19000 - 19999. Add a check that validates all field UID
+	//                  values are in the supported range.
+	uid := newUID(parent, name)
+	return uid & 0x1FFFFFFF
+}
 
 func completeTypeReference(moduleUID uint64, name string, typeReference *proto.TypeReference) {
 	if typeReference.ModuleUID == idl.Incomplete {
@@ -327,7 +338,7 @@ func completeAttributeReference(moduleUID uint64, typeUID uint64, name string, a
 	}
 
 	if attributeReference.AttributeUID == idl.Incomplete {
-		attributeReference.AttributeUID = newUID(typeUID, name)
+		attributeReference.AttributeUID = newAttributeUID(typeUID, name)
 	}
 
 }
@@ -354,7 +365,7 @@ func completeSDKInputReference(moduleUID uint64, typeUID uint64, attributeUID ui
 		panic(fmt.Errorf("the attribute UID for %s is already set, which shouldn't happen", name))
 	}
 
-	if sdkInputReference.AttributeUID == idl.Incomplete {
+	if sdkInputReference.InputUID == idl.Incomplete {
 		sdkInputReference.InputUID = newUID(attributeUID, name)
 	}
 }
