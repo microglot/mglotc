@@ -160,7 +160,10 @@ func (c *imageConverter) getQualifiedName(protobufPackage string, moduleUID uint
 	if nestedName != name {
 		return nestedName
 	}
-	return fmt.Sprintf(".%s.%s", protobufPackage, name)
+	if protobufPackage != "" {
+		return fmt.Sprintf(".%s.%s", protobufPackage, name)
+	}
+	return fmt.Sprintf(".%s", name)
 }
 
 func (c *imageConverter) fromModule(module *proto.Module) (*descriptorpb.FileDescriptorProto, error) {
