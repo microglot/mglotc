@@ -26,6 +26,63 @@ func (image *Image) ToFileDescriptorSet() (*descriptorpb.FileDescriptorSet, erro
 
 type imageConverter struct {
 	image *Image
+
+	// SourceCodeInfo is accumulated as side-effects of the main conversion.
+
+	// these keep track of the current "path" during conversion
+	// Path is a highly specialized and compact "index" into a FileDescriptor, used
+	// to associate optional SourceCodeInfo with specific elements of the FileDescriptor.
+	path       []int32
+	indexStack []int
+
+	// this tracks the sourcecodeinfo a
+	location []*descriptorpb.SourceCodeInfo_Location
+}
+
+func (c *imageConverter) pushFieldNumber(fieldNumber int32) {
+	c.path = append(c.path, fieldNumber)
+}
+
+func (c *imageConverter) popFieldNumber() {
+	c.path = c.path[:len(c.path)-1]
+}
+
+func (c *imageConverter) pushIndex() {
+	c.path = append(c.path, 0)
+	c.indexStack = append(c.indexStack, len(c.path)-1)
+}
+
+func (c *imageConverter) popIndex() {
+	c.path = c.path[:len(c.path)-1]
+	c.indexStack = c.indexStack[:len(c.indexStack)-1]
+}
+
+func (c *imageConverter) incrementIndex() {
+	if len(c.indexStack) > 0 {
+		c.path[c.indexStack[len(c.indexStack)-1]] += 1
+	}
+}
+
+func (c *imageConverter) resetPath() {
+	c.path = []int32{}
+	c.indexStack = []int{}
+	c.location = []*descriptorpb.SourceCodeInfo_Location{}
+}
+
+func (c *imageConverter) maybeEmitLocation(commentBlock *proto.CommentBlock) {
+	if commentBlock != nil {
+		comment := strings.Join(commentBlock.Lines, "\n")
+
+		location := descriptorpb.SourceCodeInfo_Location{
+			Path:            make([]int32, len(c.path)),
+			Span:            []int32{0, 0, 0, 0},
+			LeadingComments: &comment,
+			// TrailingComments
+			// LeadingDetachedComments
+		}
+		copy(location.Path, c.path)
+		c.location = append(c.location, &location)
+	}
 }
 
 func (c *imageConverter) convert() (*descriptorpb.FileDescriptorSet, error) {
@@ -42,7 +99,7 @@ func (c *imageConverter) convert() (*descriptorpb.FileDescriptorSet, error) {
 	}, nil
 }
 
-func mapFrom[F any, T any](in []*F, f func(*F) (T, error)) ([]T, error) {
+func mapFrom[F any, T any](c *imageConverter, in []*F, f func(*F) (T, error)) ([]T, error) {
 	if in != nil {
 		out := make([]T, 0, len(in))
 
@@ -52,6 +109,7 @@ func mapFrom[F any, T any](in []*F, f func(*F) (T, error)) ([]T, error) {
 				return nil, err
 			}
 			out = append(out, outElement)
+			c.incrementIndex()
 		}
 
 		return out, nil
@@ -171,11 +229,15 @@ func (c *imageConverter) fromModule(module *proto.Module) (*descriptorpb.FileDes
 	// stuff that cannot be represented in protobuf, e.g. SDKs. This conversion is allowed to be
 	// lossy!
 
+	c.resetPath()
+
 	var dependencies []string
 	for _, import_ := range module.Imports {
 		dependencies = append(dependencies, import_.ImportedURI)
 	}
 
+	c.pushFieldNumber( /* MessageType */ 4)
+	c.pushIndex()
 	var messageTypes []*descriptorpb.DescriptorProto
 	for _, struct_ := range module.Structs {
 		if !c.isPromotedType(module.UID, struct_.Name.Name) {
@@ -184,8 +246,11 @@ func (c *imageConverter) fromModule(module *proto.Module) (*descriptorpb.FileDes
 				return nil, err
 			}
 			messageTypes = append(messageTypes, messageType)
+			c.incrementIndex()
 		}
 	}
+	c.popIndex()
+	c.popFieldNumber()
 
 	var enumTypes []*descriptorpb.EnumDescriptorProto
 	for _, enum := range module.Enums {
@@ -226,7 +291,10 @@ func (c *imageConverter) fromModule(module *proto.Module) (*descriptorpb.FileDes
 			// TODO 2023.12.30: remaining options
 		},
 
-		// SourceCodeInfo
+		SourceCodeInfo: &descriptorpb.SourceCodeInfo{
+			Location: c.location,
+		},
+
 		Syntax: &syntax,
 		// Edition
 	}, nil
@@ -316,13 +384,17 @@ func (c *imageConverter) fromStruct(module *proto.Module, struct_ *proto.Struct)
 		return nil, err
 	}
 
-	fields, err := mapFrom(struct_.Fields, c.fromField)
+	c.pushFieldNumber( /* Field */ 2)
+	c.pushIndex()
+	fields, err := mapFrom(c, struct_.Fields, c.fromField)
 	if err != nil {
 		return nil, err
 	}
+	c.popIndex()
+	c.popFieldNumber()
 	c.addMapEntryQualification(module, struct_, nestedType, fields)
 
-	oneofs, err := mapFrom(struct_.Unions, c.fromUnion)
+	oneofs, err := mapFrom(c, struct_.Unions, c.fromUnion)
 	if err != nil {
 		return nil, err
 	}
@@ -370,6 +442,8 @@ func (c *imageConverter) fromStruct(module *proto.Module, struct_ *proto.Struct)
 		}
 	}
 
+	c.maybeEmitLocation(struct_.CommentBlock)
+
 	name := new(string)
 	*name = struct_.Name.Name
 	// TODO: 2024.02.01: Audit the code for pointer passing like this. Replace
@@ -415,6 +489,7 @@ func (c *imageConverter) fromField(field *proto.Field) (*descriptorpb.FieldDescr
 		*proto3Optional = true
 	}
 
+	c.maybeEmitLocation(field.CommentBlock)
 	return &descriptorpb.FieldDescriptorProto{
 		Name:     &field.Name,
 		Number:   &number,
@@ -562,7 +637,7 @@ func (c *imageConverter) fromResolvedReference(resolvedReference *proto.Resolved
 }
 
 func (c *imageConverter) fromEnum(enum *proto.Enum) (*descriptorpb.EnumDescriptorProto, error) {
-	values, err := mapFrom(enum.Enumerants, c.fromEnumerant)
+	values, err := mapFrom(c, enum.Enumerants, c.fromEnumerant)
 	if err != nil {
 		return nil, err
 	}
@@ -586,7 +661,7 @@ func (c *imageConverter) fromEnumerant(enumerant *proto.Enumerant) (*descriptorp
 }
 
 func (c *imageConverter) fromAPI(api *proto.API) (*descriptorpb.ServiceDescriptorProto, error) {
-	methods, err := mapFrom(api.Methods, c.fromAPIMethod)
+	methods, err := mapFrom(c, api.Methods, c.fromAPIMethod)
 	if err != nil {
 		return nil, err
 	}
