@@ -9,6 +9,7 @@ import (
 	"github.com/bufbuild/protocompile/options"
 	"github.com/bufbuild/protocompile/parser"
 	"github.com/bufbuild/protocompile/reporter"
+	"github.com/bufbuild/protocompile/sourceinfo"
 
 	"gopkg.microglot.org/compiler.go/internal/compiler/protobuf"
 	"gopkg.microglot.org/compiler.go/internal/exc"
@@ -41,10 +42,12 @@ func (self *SubCompilerProtobuf) CompileFile(ctx context.Context, r exc.Reporter
 		return nil, err
 	}
 
-	_, err = options.InterpretUnlinkedOptions(result)
+	optsIndex, err := options.InterpretUnlinkedOptions(result)
 	if err != nil {
 		return nil, err
 	}
+
+	result.FileDescriptorProto().SourceCodeInfo = sourceinfo.GenerateSourceInfo(result.AST(), optsIndex)
 
 	module, err := protobuf.FromFileDescriptorProto(result.FileDescriptorProto())
 	if err != nil {
