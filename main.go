@@ -126,9 +126,13 @@ func main() {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
+		var protoTargets []string
+		for _, target := range targets {
+			protoTargets = append(protoTargets, idl.URIToProtoFile(target))
+		}
 		request := pluginpb.CodeGeneratorRequest{
 			ProtoFile:       fds.File,
-			FileToGenerate:  targets,
+			FileToGenerate:  protoTargets,
 			CompilerVersion: &pluginpb.Version{},
 			Parameter:       &parameters,
 		}
