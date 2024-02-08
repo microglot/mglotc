@@ -13,8 +13,35 @@ cp test/* $IN
 
 protoc --proto_path=$IN/ $NAME.proto --go_out=paths=source_relative:$OUT_BASELINE --fatal_warnings
 sed -I -e "s/^\/\/ \tprotoc .*//" $OUT_BASELINE/$NAME.pb.go 
+sed -I -e "s/.*rawDesc = nil//" $OUT_BASELINE/$NAME.pb.go
+
+cat > $OUT_BASELINE/main.go <<EOF
+package main
+
+import (
+        "fmt"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/descriptorpb"
+)
+
+func main() {
+        var d descriptorpb.FileDescriptorProto
+        proto.UnmarshalOptions{}.Unmarshal(file_${NAME}_proto_rawDesc, &d)
+
+        fmt.Printf("Name: %v\n", *d.Name)
+        fmt.Printf("Package: %v\n", d.Package)
+        fmt.Printf("Dependency: %v\n", d.Dependency)
+        fmt.Printf("PublicDependency: %v\n", d.PublicDependency)
+}
+EOF
+(cd $OUT_BASELINE; go mod init $NAME && go get google.golang.org/grpc && go run .) > $OUT_BASELINE/descriptor
 
 go run main.go --root=$IN/ $NAME.proto --output=$OUT_ROUNDTRIP --pbplugin=protoc-gen-go:paths=source_relative
 sed -I -e "s/^\/\/ \tprotoc .*//" $OUT_ROUNDTRIP/$NAME.pb.go 
+sed -I -e "s/.*rawDesc = nil//" $OUT_ROUNDTRIP/$NAME.pb.go
 
+cp $OUT_BASELINE/main.go $OUT_ROUNDTRIP/main.go
+(cd $OUT_ROUNDTRIP; go mod init $NAME && go get google.golang.org/grpc && go run .) > $OUT_ROUNDTRIP/descriptor
+
+git diff --no-index $OUT_BASELINE/descriptor $OUT_ROUNDTRIP/descriptor
 git diff --no-index $OUT_BASELINE/$NAME.pb.go $OUT_ROUNDTRIP/$NAME.pb.go

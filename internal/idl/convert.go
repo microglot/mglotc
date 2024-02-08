@@ -242,9 +242,14 @@ func (c *imageConverter) fromModule(module *proto.Module) (*descriptorpb.FileDes
 	syntax := "proto3"
 	name := URIToProtoFile(module.URI)
 
+        var package_ *string = nil
+        if module.ProtobufPackage != "" {
+           package_ = &module.ProtobufPackage
+        }
+
 	return &descriptorpb.FileDescriptorProto{
 		Name:       &name,
-		Package:    &module.ProtobufPackage,
+		Package:    package_,
 		Dependency: dependencies,
 		// PublicDependency
 		// WeakDependency
