@@ -381,8 +381,7 @@ func (c *imageConverter) fromStruct(module *proto.Module, struct_ *proto.Struct)
 
 	for _, field := range fields {
 		if field.Proto3Optional != nil && *field.Proto3Optional {
-			// TODO 2023.11.12: there's presumably a naming convention for these synthetic oneofs.
-			name := "synthetic"
+			name := fmt.Sprintf("_%s", *field.Name)
 			oneofs = append(oneofs, &descriptorpb.OneofDescriptorProto{
 				Name: &name,
 			})
@@ -511,44 +510,56 @@ func (c *imageConverter) fromResolvedReference(resolvedReference *proto.Resolved
 		switch builtinTypeName.Name {
 		case "Bool":
 			type_ := descriptorpb.FieldDescriptorProto_TYPE_BOOL
-			return nil, &type_, nil, nil
+			label := descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL
+			return &label, &type_, nil, nil
 		case "Text":
 			type_ := descriptorpb.FieldDescriptorProto_TYPE_STRING
 			label := descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL
 			return &label, &type_, nil, nil
 		case "Data":
 			type_ := descriptorpb.FieldDescriptorProto_TYPE_BYTES
-			return nil, &type_, nil, nil
+			label := descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL
+			return &label, &type_, nil, nil
 		case "Int8":
 			type_ := descriptorpb.FieldDescriptorProto_TYPE_INT32
-			return nil, &type_, nil, nil
+			label := descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL
+			return &label, &type_, nil, nil
 		case "Int16":
 			type_ := descriptorpb.FieldDescriptorProto_TYPE_INT32
-			return nil, &type_, nil, nil
+			label := descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL
+			return &label, &type_, nil, nil
 		case "Int32":
 			type_ := descriptorpb.FieldDescriptorProto_TYPE_INT32
-			return nil, &type_, nil, nil
+			label := descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL
+			return &label, &type_, nil, nil
 		case "Int64":
 			type_ := descriptorpb.FieldDescriptorProto_TYPE_INT64
-			return nil, &type_, nil, nil
+			label := descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL
+			return &label, &type_, nil, nil
 		case "UInt8":
 			type_ := descriptorpb.FieldDescriptorProto_TYPE_UINT32
-			return nil, &type_, nil, nil
+			label := descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL
+			return &label, &type_, nil, nil
 		case "UInt16":
 			type_ := descriptorpb.FieldDescriptorProto_TYPE_UINT32
-			return nil, &type_, nil, nil
+			label := descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL
+			return &label, &type_, nil, nil
 		case "UInt32":
 			type_ := descriptorpb.FieldDescriptorProto_TYPE_UINT32
-			return nil, &type_, nil, nil
+			label := descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL
+			return &label, &type_, nil, nil
 		case "UInt64":
 			type_ := descriptorpb.FieldDescriptorProto_TYPE_UINT64
-			return nil, &type_, nil, nil
+			label := descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL
+			return &label, &type_, nil, nil
 		case "Float32":
 			type_ := descriptorpb.FieldDescriptorProto_TYPE_FLOAT
-			return nil, &type_, nil, nil
+			label := descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL
+			return &label, &type_, nil, nil
 		case "Float64":
 			type_ := descriptorpb.FieldDescriptorProto_TYPE_DOUBLE
-			return nil, &type_, nil, nil
+			label := descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL
+			return &label, &type_, nil, nil
 		case "List":
 			_, type_, typeName, err := c.fromTypeSpecifier(resolvedReference.Parameters[0], nil)
 			if err != nil {
@@ -579,14 +590,16 @@ func (c *imageConverter) fromResolvedReference(resolvedReference *proto.Resolved
 				if struct_.Reference.TypeUID == resolvedReference.Reference.TypeUID {
 					type_ := descriptorpb.FieldDescriptorProto_TYPE_MESSAGE
 					typeName := c.getQualifiedName(module.ProtobufPackage, struct_.Reference.ModuleUID, struct_.Name.Name)
-					return nil, &type_, &typeName, nil
+					label := descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL
+					return &label, &type_, &typeName, nil
 				}
 			}
 			for _, enum := range module.Enums {
 				if enum.Reference.TypeUID == resolvedReference.Reference.TypeUID {
 					type_ := descriptorpb.FieldDescriptorProto_TYPE_ENUM
 					typeName := c.getQualifiedName(module.ProtobufPackage, enum.Reference.ModuleUID, enum.Name)
-					return nil, &type_, &typeName, nil
+					label := descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL
+					return &label, &type_, &typeName, nil
 				}
 			}
 			for _, api := range module.APIs {
