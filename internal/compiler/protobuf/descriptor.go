@@ -14,7 +14,7 @@ import (
 	"gopkg.microglot.org/compiler.go/internal/proto"
 )
 
-func mapFrom[F any, T any](in []*F, f func(*F) (T, error)) ([]T, error) {
+func mapFrom[F any, T any](p *idl.PathState, in []*F, f func(*F) (T, error)) ([]T, error) {
 	if in != nil {
 		out := make([]T, 0, len(in))
 
@@ -24,6 +24,7 @@ func mapFrom[F any, T any](in []*F, f func(*F) (T, error)) ([]T, error) {
 				return nil, err
 			}
 			out = append(out, outElement)
+			p.IncrementIndex()
 		}
 		return out, nil
 	}
@@ -130,16 +131,16 @@ func nameCollides(name string, structs *[]*proto.Struct, enums *[]*proto.Enum) b
 	return false
 }
 
-func promoteNested(structs *[]*proto.Struct, enums *[]*proto.Enum, prefix string, descriptor *descriptorpb.DescriptorProto) (map[string]string, error) {
+func (c *fileDescriptorConverter) promoteNested(structs *[]*proto.Struct, enums *[]*proto.Enum, prefix string, descriptor *descriptorpb.DescriptorProto) (map[string]string, error) {
 	var promotions map[string]string
 	for _, descriptorProto := range descriptor.NestedType {
 		// recur
-		promoted, err := promoteNested(structs, enums, prefix+*descriptorProto.Name+"_", descriptorProto)
+		promoted, err := c.promoteNested(structs, enums, prefix+*descriptorProto.Name+"_", descriptorProto)
 		if err != nil {
 			return nil, err
 		}
 
-		struct_, err := fromDescriptorProto(descriptorProto)
+		struct_, err := c.fromDescriptorProto(descriptorProto)
 		if err != nil {
 			return nil, err
 		}
@@ -163,7 +164,7 @@ func promoteNested(structs *[]*proto.Struct, enums *[]*proto.Enum, prefix string
 		promotions[*descriptorProto.Name] = struct_.Name.Name
 	}
 	for _, enumDescriptorProto := range descriptor.EnumType {
-		enum, err := fromEnumDescriptorProto(enumDescriptorProto)
+		enum, err := c.fromEnumDescriptorProto(enumDescriptorProto)
 		if err != nil {
 			return nil, err
 		}
@@ -185,9 +186,22 @@ func promoteNested(structs *[]*proto.Struct, enums *[]*proto.Enum, prefix string
 	return promotions, nil
 }
 
+type fileDescriptorConverter struct {
+	fileDescriptor *descriptorpb.FileDescriptorProto
+
+	p *idl.PathState
+}
+
 func FromFileDescriptorProto(fileDescriptor *descriptorpb.FileDescriptorProto) (*proto.Module, error) {
+	converter := fileDescriptorConverter{
+		fileDescriptor: fileDescriptor,
+	}
+	return converter.convert()
+}
+
+func (c *fileDescriptorConverter) convert() (*proto.Module, error) {
 	var imports []*proto.Import
-	for _, import_ := range fileDescriptor.Dependency {
+	for _, import_ := range c.fileDescriptor.Dependency {
 		imports = append(imports, &proto.Import{
 			// ModuleUID:
 			// ImportedUID:
@@ -200,17 +214,21 @@ func FromFileDescriptorProto(fileDescriptor *descriptorpb.FileDescriptorProto) (
 		})
 	}
 
+	c.p = &idl.PathState{}
+
 	var structs []*proto.Struct
-	enums, err := mapFrom(fileDescriptor.EnumType, fromEnumDescriptorProto)
+	enums, err := mapFrom(c.p, c.fileDescriptor.EnumType, c.fromEnumDescriptorProto)
 	if err != nil {
 		return nil, err
 	}
-	for _, descriptorProto := range fileDescriptor.MessageType {
-		promoted, err := promoteNested(&structs, &enums, *descriptorProto.Name+"_", descriptorProto)
+	c.p.PushFieldNumber( /* MessageType */ 4)
+	c.p.PushIndex()
+	for _, descriptorProto := range c.fileDescriptor.MessageType {
+		promoted, err := c.promoteNested(&structs, &enums, *descriptorProto.Name+"_", descriptorProto)
 		if err != nil {
 			return nil, err
 		}
-		struct_, err := fromDescriptorProto(descriptorProto)
+		struct_, err := c.fromDescriptorProto(descriptorProto)
 		if err != nil {
 			return nil, err
 		}
@@ -219,15 +237,18 @@ func FromFileDescriptorProto(fileDescriptor *descriptorpb.FileDescriptorProto) (
 			struct_.AnnotationApplications = appendProtobufAnnotation(struct_.AnnotationApplications, "NestedTypeInfo", computeNestedTypeInfo(promoted))
 		}
 		structs = append(structs, struct_)
+		c.p.IncrementIndex()
 	}
+	c.p.PopIndex()
+	c.p.PopFieldNumber()
 
 	// compute moduleUID
 	var moduleUID uint64
 	hasher := sha256.New()
-	if fileDescriptor.Package != nil {
-		hasher.Write([]byte(*fileDescriptor.Package))
+	if c.fileDescriptor.Package != nil {
+		hasher.Write([]byte(*c.fileDescriptor.Package))
 	}
-	hasher.Write([]byte(*fileDescriptor.Name))
+	hasher.Write([]byte(*c.fileDescriptor.Name))
 	err = binary.Read(bytes.NewReader(hasher.Sum(nil)), binary.LittleEndian, &moduleUID)
 	if err != nil {
 		return nil, err
@@ -237,25 +258,25 @@ func FromFileDescriptorProto(fileDescriptor *descriptorpb.FileDescriptorProto) (
 
 	// compute protobufPackage
 	var protobufPackage string
-	if fileDescriptor.Package != nil {
-		protobufPackage = *fileDescriptor.Package
+	if c.fileDescriptor.Package != nil {
+		protobufPackage = *c.fileDescriptor.Package
 		annotationApplications = appendProtobufAnnotationString(annotationApplications, "Package", protobufPackage)
 	}
 
-	apis, err := mapFrom(fileDescriptor.Service, fromServiceDescriptorProto)
+	apis, err := mapFrom(c.p, c.fileDescriptor.Service, c.fromServiceDescriptorProto)
 	if err != nil {
 		return nil, err
 	}
 
-	if fileDescriptor.Options != nil {
-		if fileDescriptor.Options.GoPackage != nil {
-			annotationApplications = appendProtobufAnnotationString(annotationApplications, "FileOptionsGoPackage", *fileDescriptor.Options.GoPackage)
+	if c.fileDescriptor.Options != nil {
+		if c.fileDescriptor.Options.GoPackage != nil {
+			annotationApplications = appendProtobufAnnotationString(annotationApplications, "FileOptionsGoPackage", *c.fileDescriptor.Options.GoPackage)
 		}
 		// TODO 2023.12.30: ... convert remaining Options
 	}
 
 	return &proto.Module{
-		URI:                    *fileDescriptor.Name,
+		URI:                    *c.fileDescriptor.Name,
 		UID:                    moduleUID,
 		ProtobufPackage:        protobufPackage,
 		AnnotationApplications: annotationApplications,
@@ -270,7 +291,7 @@ func FromFileDescriptorProto(fileDescriptor *descriptorpb.FileDescriptorProto) (
 	}, nil
 }
 
-func fromDescriptorProto(descriptor *descriptorpb.DescriptorProto) (*proto.Struct, error) {
+func (c *fileDescriptorConverter) fromDescriptorProto(descriptor *descriptorpb.DescriptorProto) (*proto.Struct, error) {
 	var unions []*proto.Union
 	for index, oneofDescriptor := range descriptor.OneofDecl {
 		isSynthetic := false
@@ -295,10 +316,14 @@ func fromDescriptorProto(descriptor *descriptorpb.DescriptorProto) (*proto.Struc
 		}
 	}
 
-	fields, err := mapFrom(descriptor.Field, fromFieldDescriptorProto)
+	c.p.PushFieldNumber( /* Field */ 2)
+	c.p.PushIndex()
+	fields, err := mapFrom(c.p, descriptor.Field, c.fromFieldDescriptorProto)
 	if err != nil {
 		return nil, err
 	}
+	c.p.PopIndex()
+	c.p.PopFieldNumber()
 
 	isSynthetic := false
 	if descriptor.Options != nil && descriptor.Options.MapEntry != nil && *descriptor.Options.MapEntry {
@@ -320,12 +345,12 @@ func fromDescriptorProto(descriptor *descriptorpb.DescriptorProto) (*proto.Struc
 		Unions:      unions,
 		IsSynthetic: isSynthetic,
 		// Reserved:
-		// CommentBlock:
+		CommentBlock: c.fromSourceCodeInfo(),
 		// AnnotationsApplications:
 	}, nil
 }
 
-func fromFieldDescriptorProto(fieldDescriptor *descriptorpb.FieldDescriptorProto) (*proto.Field, error) {
+func (c *fileDescriptorConverter) fromFieldDescriptorProto(fieldDescriptor *descriptorpb.FieldDescriptorProto) (*proto.Field, error) {
 	typeName := ""
 	if fieldDescriptor.Type == nil || *fieldDescriptor.Type == descriptorpb.FieldDescriptorProto_TYPE_GROUP || *fieldDescriptor.Type == descriptorpb.FieldDescriptorProto_TYPE_MESSAGE || *fieldDescriptor.Type == descriptorpb.FieldDescriptorProto_TYPE_ENUM {
 		typeName = *fieldDescriptor.TypeName
@@ -568,12 +593,12 @@ func fromFieldDescriptorProto(fieldDescriptor *descriptorpb.FieldDescriptorProto
 		UnionIndex:             unionIndex,
 		AnnotationApplications: annotationApplications,
 
-		// CommentBlock:
+		CommentBlock: c.fromSourceCodeInfo(),
 	}, nil
 }
 
-func fromEnumDescriptorProto(enumDescriptor *descriptorpb.EnumDescriptorProto) (*proto.Enum, error) {
-	enumerants, err := mapFrom(enumDescriptor.Value, fromEnumValueDescriptorProto)
+func (c *fileDescriptorConverter) fromEnumDescriptorProto(enumDescriptor *descriptorpb.EnumDescriptorProto) (*proto.Enum, error) {
+	enumerants, err := mapFrom(c.p, enumDescriptor.Value, c.fromEnumValueDescriptorProto)
 	if err != nil {
 		return nil, err
 	}
@@ -594,7 +619,7 @@ func fromEnumDescriptorProto(enumDescriptor *descriptorpb.EnumDescriptorProto) (
 	}, nil
 }
 
-func fromEnumValueDescriptorProto(enumValueDescriptor *descriptorpb.EnumValueDescriptorProto) (*proto.Enumerant, error) {
+func (c *fileDescriptorConverter) fromEnumValueDescriptorProto(enumValueDescriptor *descriptorpb.EnumValueDescriptorProto) (*proto.Enumerant, error) {
 	// TODO 2023.10.10: convert Options
 
 	return &proto.Enumerant{
@@ -609,8 +634,8 @@ func fromEnumValueDescriptorProto(enumValueDescriptor *descriptorpb.EnumValueDes
 	}, nil
 }
 
-func fromServiceDescriptorProto(serviceDescriptor *descriptorpb.ServiceDescriptorProto) (*proto.API, error) {
-	methods, err := mapFrom(serviceDescriptor.Method, fromMethodDescriptorProto)
+func (c *fileDescriptorConverter) fromServiceDescriptorProto(serviceDescriptor *descriptorpb.ServiceDescriptorProto) (*proto.API, error) {
+	methods, err := mapFrom(c.p, serviceDescriptor.Method, c.fromMethodDescriptorProto)
 	if err != nil {
 		return nil, err
 	}
@@ -634,7 +659,7 @@ func fromServiceDescriptorProto(serviceDescriptor *descriptorpb.ServiceDescripto
 	}, nil
 }
 
-func fromMethodDescriptorProto(methodDescriptor *descriptorpb.MethodDescriptorProto) (*proto.APIMethod, error) {
+func (c *fileDescriptorConverter) fromMethodDescriptorProto(methodDescriptor *descriptorpb.MethodDescriptorProto) (*proto.APIMethod, error) {
 	if methodDescriptor.ClientStreaming != nil && *methodDescriptor.ClientStreaming {
 		return nil, errors.New("client streaming protobufs have no microglot equivalent")
 	}
@@ -672,4 +697,39 @@ func fromMethodDescriptorProto(methodDescriptor *descriptorpb.MethodDescriptorPr
 		// CommentBlock
 		// AnnotationApplication
 	}, nil
+}
+
+func (c *fileDescriptorConverter) fromSourceCodeInfo() *proto.CommentBlock {
+	currentPath := c.p.CopyPath()
+	if c.fileDescriptor.SourceCodeInfo != nil {
+		for _, location := range c.fileDescriptor.SourceCodeInfo.Location {
+			if len(location.Path) == len(currentPath) {
+				match := true
+				for i := 0; i < len(location.Path); i++ {
+					if location.Path[i] != currentPath[i] {
+						match = false
+						break
+					}
+				}
+				if match {
+					commentBlock := proto.CommentBlock{}
+
+					if location.LeadingComments != nil {
+						commentBlock.Lines = append(commentBlock.Lines, *location.LeadingComments)
+					}
+					if location.TrailingComments != nil {
+						commentBlock.Lines = append(commentBlock.Lines, *location.TrailingComments)
+					}
+					for _, detached := range location.LeadingDetachedComments {
+						commentBlock.Lines = append(commentBlock.Lines, detached)
+					}
+
+					if len(commentBlock.Lines) > 0 {
+						return &commentBlock
+					}
+				}
+			}
+		}
+	}
+	return nil
 }
