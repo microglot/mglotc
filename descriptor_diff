@@ -12,7 +12,9 @@ OUT_ROUNDTRIP=$(mktemp -d)
 cp test/* $IN
 
 protoc --proto_path=$IN/ $NAME.proto --go_out=paths=source_relative:$OUT_BASELINE --fatal_warnings
+sed -I -e "s/^\/\/ \tprotoc .*//" $OUT_BASELINE/$NAME.pb.go 
 
 go run main.go --root=$IN/ $NAME.proto --output=$OUT_ROUNDTRIP --pbplugin=protoc-gen-go:paths=source_relative
+sed -I -e "s/^\/\/ \tprotoc .*//" $OUT_ROUNDTRIP/$NAME.pb.go 
 
 git diff --no-index $OUT_BASELINE/$NAME.pb.go $OUT_ROUNDTRIP/$NAME.pb.go
