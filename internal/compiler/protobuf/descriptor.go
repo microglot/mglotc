@@ -58,6 +58,16 @@ func appendProtobufAnnotationString(as []*proto.AnnotationApplication, name stri
 	})
 }
 
+func appendProtobufAnnotationBoolean(as []*proto.AnnotationApplication, name string, value bool) []*proto.AnnotationApplication {
+	return appendProtobufAnnotation(as, name, &proto.Value{
+		Kind: &proto.Value_Bool{
+			Bool: &proto.ValueBool{
+				Value: value,
+			},
+		},
+	})
+}
+
 // $(Protobuf.NestedTypeInfo()) is encoded as a Protobuf.NestedTypes struct
 func computeNestedTypeInfo(promoted map[string]string) *proto.Value {
 	elements := make([]*proto.Value, 0)
@@ -580,6 +590,10 @@ func (c *fileDescriptorConverter) fromFieldDescriptorProto(fieldDescriptor *desc
 	}
 
 	var annotationApplications []*proto.AnnotationApplication
+	if fieldDescriptor.JsonName != nil {
+		annotationApplications = appendProtobufAnnotationString(annotationApplications, "JsonName", *fieldDescriptor.JsonName)
+	}
+	annotationApplications = appendProtobufAnnotationBoolean(annotationApplications, "Proto3Optional", fieldDescriptor.Proto3Optional != nil && *fieldDescriptor.Proto3Optional)
 
 	return &proto.Field{
 		Reference: &proto.AttributeReference{

@@ -15,6 +15,8 @@ protoc --proto_path=$IN/ $NAME.proto --go_out=paths=source_relative:$OUT_BASELIN
 sed -I -e "s/^\/\/ \tprotoc .*//" $OUT_BASELINE/$NAME.pb.go 
 sed -I -e "s/.*rawDesc = nil//" $OUT_BASELINE/$NAME.pb.go
 
+## This code unmarshals the "rawDesc" descriptor and partially outputs it in string form, to make
+## tracking down subtle differences between the baseline and round-trip descriptor easier.
 cat > $OUT_BASELINE/main.go <<EOF
 package main
 
@@ -24,6 +26,22 @@ import (
 	"google.golang.org/protobuf/types/descriptorpb"
 )
 
+func printDescriptorProto(prefix string, m *descriptorpb.DescriptorProto) {
+            fmt.Printf("%s.Name: %v\n", prefix, *m.Name)
+            for j, f := range m.Field {
+                fmt.Printf("%s.Field[%d]: %v\n", prefix, j, f)
+            }
+            fmt.Printf("%s.Extension: %v\n", prefix, m.Extension)
+            for j, t := range m.NestedType {
+                        printDescriptorProto(fmt.Sprintf("%s.NestedType[%d]", prefix, j), t)
+            }
+            fmt.Printf("%s.EnumType: %v\n", prefix, m.EnumType)
+            fmt.Printf("%s.ExtensionRange: %v\n", prefix, m.ExtensionRange)
+            fmt.Printf("%s.OneofDecl: %v\n", prefix, m.OneofDecl)
+            fmt.Printf("%s.Options: %v\n", prefix, m.Options)
+         }
+
+
 func main() {
         var d descriptorpb.FileDescriptorProto
         proto.UnmarshalOptions{}.Unmarshal(file_${NAME}_proto_rawDesc, &d)
@@ -32,6 +50,11 @@ func main() {
         fmt.Printf("Package: %v\n", d.Package)
         fmt.Printf("Dependency: %v\n", d.Dependency)
         fmt.Printf("PublicDependency: %v\n", d.PublicDependency)
+        fmt.Printf("WeakDependency: %v\n", d.WeakDependency)
+        for i, m := range d.MessageType {
+                printDescriptorProto(fmt.Sprintf("MessageType[%d]", i), m)
+        }
+        fmt.Printf("EnumType: %v\n", d.EnumType)
 }
 EOF
 (cd $OUT_BASELINE; go mod init $NAME && go get google.golang.org/grpc && go run .) > $OUT_BASELINE/descriptor

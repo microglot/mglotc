@@ -2,6 +2,8 @@ syntax = "proto3";
 
 option go_package = "gopkg.microglot.org/compiler.go/internal/main";
 
+// message comment
 message foo {
-   map<string, string> bar = 1;
+   // leading field comment
+   string bar = 1;
 }

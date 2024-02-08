@@ -106,6 +106,14 @@ func getProtobufAnnotationString(as []*proto.AnnotationApplication, name string)
 	return &value.Kind.(*proto.Value_Text).Text.Value
 }
 
+func getProtobufAnnotationBool(as []*proto.AnnotationApplication, name string) *bool {
+	value := GetProtobufAnnotation(as, name)
+	if value == nil {
+		return nil
+	}
+	return &value.Kind.(*proto.Value_Bool).Bool.Value
+}
+
 func GetPromotedSymbolTable(as []*proto.AnnotationApplication) map[string]string {
 	promotedSymbolTable := make(map[string]string)
 	nestedTypeInfo := GetProtobufAnnotation(as, "NestedTypeInfo")
@@ -152,7 +160,7 @@ func (c *imageConverter) getNestedName(moduleUID uint64, name string) string {
 			for _, struct_ := range module.Structs {
 				for nestedName, promotedName := range GetPromotedSymbolTable(struct_.AnnotationApplications) {
 					if promotedName == name {
-						return nestedName
+						return fmt.Sprintf(".%s.%s", struct_.Name.Name, nestedName)
 					}
 				}
 			}
@@ -242,10 +250,10 @@ func (c *imageConverter) fromModule(module *proto.Module) (*descriptorpb.FileDes
 	syntax := "proto3"
 	name := URIToProtoFile(module.URI)
 
-        var package_ *string = nil
-        if module.ProtobufPackage != "" {
-           package_ = &module.ProtobufPackage
-        }
+	var package_ *string = nil
+	if module.ProtobufPackage != "" {
+		package_ = &module.ProtobufPackage
+	}
 
 	return &descriptorpb.FileDescriptorProto{
 		Name:       &name,
@@ -455,10 +463,9 @@ func (c *imageConverter) fromField(field *proto.Field) (*descriptorpb.FieldDescr
 		*oneofIndex = (int32)(*field.UnionIndex)
 	}
 
-	var proto3Optional *bool
-	if label != nil && *label == descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL {
-		proto3Optional = new(bool)
-		*proto3Optional = true
+	proto3Optional := getProtobufAnnotationBool(field.AnnotationApplications, "Proto3Optional")
+	if proto3Optional != nil && *proto3Optional == false {
+		proto3Optional = nil
 	}
 
 	c.maybeEmitLocation(field.CommentBlock)
@@ -471,9 +478,8 @@ func (c *imageConverter) fromField(field *proto.Field) (*descriptorpb.FieldDescr
 		// Extendee
 		// DefaultValue
 		OneofIndex: oneofIndex,
-		// JsonName
+		JsonName:   getProtobufAnnotationString(field.AnnotationApplications, "JsonName"),
 		// Options
-
 		Proto3Optional: proto3Optional,
 	}, nil
 }
@@ -508,7 +514,8 @@ func (c *imageConverter) fromResolvedReference(resolvedReference *proto.Resolved
 			return nil, &type_, nil, nil
 		case "Text":
 			type_ := descriptorpb.FieldDescriptorProto_TYPE_STRING
-			return nil, &type_, nil, nil
+			label := descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL
+			return &label, &type_, nil, nil
 		case "Data":
 			type_ := descriptorpb.FieldDescriptorProto_TYPE_BYTES
 			return nil, &type_, nil, nil
