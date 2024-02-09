@@ -3,5 +3,5 @@ syntax = "proto3";
 option go_package = "gopkg.microglot.org/compiler.go/internal/main";
 
 message foo {
-   map<string, string> bar = 1;
+   string bar = 1;
 }
