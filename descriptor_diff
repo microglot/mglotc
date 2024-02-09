@@ -12,6 +12,14 @@ OUT_ROUNDTRIP=$(mktemp -d)
 cp test/* $IN
 
 protoc --proto_path=$IN/ $NAME.proto --go_out=paths=source_relative:$OUT_BASELINE --fatal_warnings
+# This test compares both the descriptor and the generated Go code. The Go code
+# includes the protoc version so we remove that because because microglot
+# generated code doesn't produce the same version value. Also, the Go code
+# usually only contains the raw descriptor long enough to use it at init time.
+# So, while the bytes are embedded in the Go source the contents are eventually
+# erased with something like file___foo_mgdl_rawDesc = nil which then makes it
+# inaccessible. We remove the nil assignment so that the injected test code
+# can access that content.
 sed -I -e "s/^\/\/ \tprotoc .*//" $OUT_BASELINE/$NAME.pb.go 
 sed -I -e "s/.*rawDesc = nil//" $OUT_BASELINE/$NAME.pb.go
 
