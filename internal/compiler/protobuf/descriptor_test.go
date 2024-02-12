@@ -59,6 +59,48 @@ func TestDescriptor(t *testing.T) {
 										},
 									},
 								},
+
+								AnnotationApplications: []*proto.AnnotationApplication{
+									&proto.AnnotationApplication{
+										Annotation: &proto.TypeSpecifier{
+											Reference: &proto.TypeSpecifier_Resolved{
+												Resolved: &proto.ResolvedReference{
+													Reference: &proto.TypeReference{
+														ModuleUID: 2,
+														TypeUID:   idl.PROTOBUF_TYPE_UIDS["JsonName"],
+													},
+												},
+											},
+										},
+										Value: &proto.Value{
+											Kind: &proto.Value_Text{
+												Text: &proto.ValueText{
+													Value:  "X",
+													Source: "",
+												},
+											},
+										},
+									},
+									&proto.AnnotationApplication{
+										Annotation: &proto.TypeSpecifier{
+											Reference: &proto.TypeSpecifier_Resolved{
+												Resolved: &proto.ResolvedReference{
+													Reference: &proto.TypeReference{
+														ModuleUID: 2,
+														TypeUID:   idl.PROTOBUF_TYPE_UIDS["Proto3Optional"],
+													},
+												},
+											},
+										},
+										Value: &proto.Value{
+											Kind: &proto.Value_Bool{
+												Bool: &proto.ValueBool{
+													Value: false,
+												},
+											},
+										},
+									},
+								},
 							},
 						},
 					},
@@ -92,6 +134,48 @@ func TestDescriptor(t *testing.T) {
 										Forward: &proto.ForwardReference{
 											Reference: &proto.ForwardReference_Protobuf{
 												Protobuf: "pkg.Barney",
+											},
+										},
+									},
+								},
+
+								AnnotationApplications: []*proto.AnnotationApplication{
+									&proto.AnnotationApplication{
+										Annotation: &proto.TypeSpecifier{
+											Reference: &proto.TypeSpecifier_Resolved{
+												Resolved: &proto.ResolvedReference{
+													Reference: &proto.TypeReference{
+														ModuleUID: 2,
+														TypeUID:   idl.PROTOBUF_TYPE_UIDS["JsonName"],
+													},
+												},
+											},
+										},
+										Value: &proto.Value{
+											Kind: &proto.Value_Text{
+												Text: &proto.ValueText{
+													Value:  "X",
+													Source: "",
+												},
+											},
+										},
+									},
+									&proto.AnnotationApplication{
+										Annotation: &proto.TypeSpecifier{
+											Reference: &proto.TypeSpecifier_Resolved{
+												Resolved: &proto.ResolvedReference{
+													Reference: &proto.TypeReference{
+														ModuleUID: 2,
+														TypeUID:   idl.PROTOBUF_TYPE_UIDS["Proto3Optional"],
+													},
+												},
+											},
+										},
+										Value: &proto.Value{
+											Kind: &proto.Value_Bool{
+												Bool: &proto.ValueBool{
+													Value: false,
+												},
 											},
 										},
 									},
@@ -387,6 +471,47 @@ func TestDescriptor(t *testing.T) {
 										},
 									},
 								},
+								AnnotationApplications: []*proto.AnnotationApplication{
+									&proto.AnnotationApplication{
+										Annotation: &proto.TypeSpecifier{
+											Reference: &proto.TypeSpecifier_Resolved{
+												Resolved: &proto.ResolvedReference{
+													Reference: &proto.TypeReference{
+														ModuleUID: 2,
+														TypeUID:   idl.PROTOBUF_TYPE_UIDS["JsonName"],
+													},
+												},
+											},
+										},
+										Value: &proto.Value{
+											Kind: &proto.Value_Text{
+												Text: &proto.ValueText{
+													Value:  "Baz",
+													Source: "",
+												},
+											},
+										},
+									},
+									&proto.AnnotationApplication{
+										Annotation: &proto.TypeSpecifier{
+											Reference: &proto.TypeSpecifier_Resolved{
+												Resolved: &proto.ResolvedReference{
+													Reference: &proto.TypeReference{
+														ModuleUID: 2,
+														TypeUID:   idl.PROTOBUF_TYPE_UIDS["Proto3Optional"],
+													},
+												},
+											},
+										},
+										Value: &proto.Value{
+											Kind: &proto.Value_Bool{
+												Bool: &proto.ValueBool{
+													Value: false,
+												},
+											},
+										},
+									},
+								},
 							},
 							&proto.Field{
 								Reference: &proto.AttributeReference{
@@ -401,6 +526,47 @@ func TestDescriptor(t *testing.T) {
 										Forward: &proto.ForwardReference{
 											Reference: &proto.ForwardReference_Protobuf{
 												Protobuf: "Text",
+											},
+										},
+									},
+								},
+								AnnotationApplications: []*proto.AnnotationApplication{
+									&proto.AnnotationApplication{
+										Annotation: &proto.TypeSpecifier{
+											Reference: &proto.TypeSpecifier_Resolved{
+												Resolved: &proto.ResolvedReference{
+													Reference: &proto.TypeReference{
+														ModuleUID: 2,
+														TypeUID:   idl.PROTOBUF_TYPE_UIDS["JsonName"],
+													},
+												},
+											},
+										},
+										Value: &proto.Value{
+											Kind: &proto.Value_Text{
+												Text: &proto.ValueText{
+													Value:  "Barney",
+													Source: "",
+												},
+											},
+										},
+									},
+									&proto.AnnotationApplication{
+										Annotation: &proto.TypeSpecifier{
+											Reference: &proto.TypeSpecifier_Resolved{
+												Resolved: &proto.ResolvedReference{
+													Reference: &proto.TypeReference{
+														ModuleUID: 2,
+														TypeUID:   idl.PROTOBUF_TYPE_UIDS["Proto3Optional"],
+													},
+												},
+											},
+										},
+										Value: &proto.Value{
+											Kind: &proto.Value_Bool{
+												Bool: &proto.ValueBool{
+													Value: false,
+												},
 											},
 										},
 									},
@@ -687,6 +853,48 @@ func TestDescriptor(t *testing.T) {
 										},
 									},
 								},
+
+								AnnotationApplications: []*proto.AnnotationApplication{
+									&proto.AnnotationApplication{
+										Annotation: &proto.TypeSpecifier{
+											Reference: &proto.TypeSpecifier_Resolved{
+												Resolved: &proto.ResolvedReference{
+													Reference: &proto.TypeReference{
+														ModuleUID: 2,
+														TypeUID:   idl.PROTOBUF_TYPE_UIDS["JsonName"],
+													},
+												},
+											},
+										},
+										Value: &proto.Value{
+											Kind: &proto.Value_Text{
+												Text: &proto.ValueText{
+													Value:  "key",
+													Source: "",
+												},
+											},
+										},
+									},
+									&proto.AnnotationApplication{
+										Annotation: &proto.TypeSpecifier{
+											Reference: &proto.TypeSpecifier_Resolved{
+												Resolved: &proto.ResolvedReference{
+													Reference: &proto.TypeReference{
+														ModuleUID: 2,
+														TypeUID:   idl.PROTOBUF_TYPE_UIDS["Proto3Optional"],
+													},
+												},
+											},
+										},
+										Value: &proto.Value{
+											Kind: &proto.Value_Bool{
+												Bool: &proto.ValueBool{
+													Value: false,
+												},
+											},
+										},
+									},
+								},
 							},
 							&proto.Field{
 								Reference: &proto.AttributeReference{
@@ -700,6 +908,48 @@ func TestDescriptor(t *testing.T) {
 										Forward: &proto.ForwardReference{
 											Reference: &proto.ForwardReference_Protobuf{
 												Protobuf: "Text",
+											},
+										},
+									},
+								},
+
+								AnnotationApplications: []*proto.AnnotationApplication{
+									&proto.AnnotationApplication{
+										Annotation: &proto.TypeSpecifier{
+											Reference: &proto.TypeSpecifier_Resolved{
+												Resolved: &proto.ResolvedReference{
+													Reference: &proto.TypeReference{
+														ModuleUID: 2,
+														TypeUID:   idl.PROTOBUF_TYPE_UIDS["JsonName"],
+													},
+												},
+											},
+										},
+										Value: &proto.Value{
+											Kind: &proto.Value_Text{
+												Text: &proto.ValueText{
+													Value:  "value",
+													Source: "",
+												},
+											},
+										},
+									},
+									&proto.AnnotationApplication{
+										Annotation: &proto.TypeSpecifier{
+											Reference: &proto.TypeSpecifier_Resolved{
+												Resolved: &proto.ResolvedReference{
+													Reference: &proto.TypeReference{
+														ModuleUID: 2,
+														TypeUID:   idl.PROTOBUF_TYPE_UIDS["Proto3Optional"],
+													},
+												},
+											},
+										},
+										Value: &proto.Value{
+											Kind: &proto.Value_Bool{
+												Bool: &proto.ValueBool{
+													Value: false,
+												},
 											},
 										},
 									},
@@ -807,6 +1057,48 @@ func TestDescriptor(t *testing.T) {
 															},
 														},
 													},
+												},
+											},
+										},
+									},
+								},
+
+								AnnotationApplications: []*proto.AnnotationApplication{
+									&proto.AnnotationApplication{
+										Annotation: &proto.TypeSpecifier{
+											Reference: &proto.TypeSpecifier_Resolved{
+												Resolved: &proto.ResolvedReference{
+													Reference: &proto.TypeReference{
+														ModuleUID: 2,
+														TypeUID:   idl.PROTOBUF_TYPE_UIDS["JsonName"],
+													},
+												},
+											},
+										},
+										Value: &proto.Value{
+											Kind: &proto.Value_Text{
+												Text: &proto.ValueText{
+													Value:  "Bar",
+													Source: "",
+												},
+											},
+										},
+									},
+									&proto.AnnotationApplication{
+										Annotation: &proto.TypeSpecifier{
+											Reference: &proto.TypeSpecifier_Resolved{
+												Resolved: &proto.ResolvedReference{
+													Reference: &proto.TypeReference{
+														ModuleUID: 2,
+														TypeUID:   idl.PROTOBUF_TYPE_UIDS["Proto3Optional"],
+													},
+												},
+											},
+										},
+										Value: &proto.Value{
+											Kind: &proto.Value_Bool{
+												Bool: &proto.ValueBool{
+													Value: false,
 												},
 											},
 										},
