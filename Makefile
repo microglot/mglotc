@@ -50,6 +50,11 @@ lint: $(BINDIR)
 		--verbose
 
 test: $(BINDIR) $(COVERDIR)
+	@./descriptor_diff minimal
+	@./descriptor_diff message
+	@./descriptor_diff comment
+	@./descriptor_diff map
+	@./descriptor_diff descriptor
 	GO111MODULE=on \
 	GOFLAGS="$(GOFLAGS)" \
 	CGO_ENABLED=1 \

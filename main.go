@@ -214,7 +214,4 @@ func main() {
 			}
 		}
 	}
-
-	fmt.Println(out.Image)
-	fmt.Println(output)
 }
