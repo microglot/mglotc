@@ -59,6 +59,10 @@ type step interface {
 	step()
 }
 
+type astNode struct {
+	loc idl.Location
+}
+
 type astModule struct {
 	URI        string
 	comments   *astCommentBlock
@@ -77,22 +81,26 @@ func (self astModule) String() string {
 }
 
 type astStatementSyntax struct {
+	astNode
 	syntax astValueLiteralText
 }
 
 type astStatementModuleMeta struct {
+	astNode
 	uid                   astValueLiteralInt
 	annotationApplication *astAnnotationApplication
 	comments              *astCommentBlock
 }
 
 type astStatementImport struct {
+	astNode
 	uri      astValueLiteralText
 	name     idl.Token
 	comments *astCommentBlock
 }
 
 type astStatementAnnotation struct {
+	astNode
 	identifier       idl.Token
 	annotationScopes []astAnnotationScope
 	typeSpecifier    astTypeSpecifier
@@ -101,6 +109,7 @@ type astStatementAnnotation struct {
 }
 
 type astStatementConst struct {
+	astNode
 	identifier    idl.Token
 	typeSpecifier astTypeSpecifier
 	value         astValue
@@ -108,6 +117,7 @@ type astStatementConst struct {
 }
 
 type astStatementEnum struct {
+	astNode
 	identifier    idl.Token
 	innerComments *astCommentBlock
 	enumerants    []astEnumerant
@@ -115,6 +125,7 @@ type astStatementEnum struct {
 }
 
 type astStatementStruct struct {
+	astNode
 	typeName      astTypeName
 	innerComments *astCommentBlock
 	elements      []structelement
@@ -122,6 +133,7 @@ type astStatementStruct struct {
 }
 
 type astStatementAPI struct {
+	astNode
 	typeName      astTypeName
 	extends       *astExtension
 	innerComments *astCommentBlock
@@ -130,6 +142,7 @@ type astStatementAPI struct {
 }
 
 type astStatementSDK struct {
+	astNode
 	typeName      astTypeName
 	extends       *astExtension
 	innerComments *astCommentBlock
@@ -138,6 +151,7 @@ type astStatementSDK struct {
 }
 
 type astStatementImpl struct {
+	astNode
 	typeName      astTypeName
 	as            astImplAs
 	innerComments *astCommentBlock
@@ -147,11 +161,13 @@ type astStatementImpl struct {
 }
 
 type astImplBlock struct {
+	astNode
 	innerComments *astCommentBlock
 	steps         []step
 }
 
 type astImplSDKMethod struct {
+	astNode
 	identifier    idl.Token
 	methodInput   astSDKMethodInput
 	methodReturns *astSDKMethodReturns
@@ -161,6 +177,7 @@ type astImplSDKMethod struct {
 }
 
 type astImplAPIMethod struct {
+	astNode
 	identifier    idl.Token
 	methodInput   astAPIMethodInput
 	methodReturns astAPIMethodReturns
@@ -169,29 +186,35 @@ type astImplAPIMethod struct {
 }
 
 type astImplRequirement struct {
+	astNode
 	identifier    idl.Token
 	typeSpecifier astTypeSpecifier
 	comments      *astCommentBlock
 }
 
 type astImplRequires struct {
+	astNode
 	innerComments *astCommentBlock
 	requirements  []astImplRequirement
 }
 
 type astImplAs struct {
+	astNode
 	types []astTypeSpecifier
 }
 
 type astSDKMethodInput struct {
+	astNode
 	parameters []astSDKMethodParameter
 }
 
 type astSDKMethodReturns struct {
+	astNode
 	typeSpecifier astTypeSpecifier
 }
 
 type astSDKMethod struct {
+	astNode
 	identifier    idl.Token
 	methodInput   astSDKMethodInput
 	methodReturns *astSDKMethodReturns
@@ -200,23 +223,28 @@ type astSDKMethod struct {
 }
 
 type astSDKMethodParameter struct {
+	astNode
 	identifier    idl.Token
 	typeSpecifier astTypeSpecifier
 }
 
 type astExtension struct {
+	astNode
 	extensions []astTypeSpecifier
 }
 
 type astAPIMethodInput struct {
+	astNode
 	typeSpecifier astTypeSpecifier
 }
 
 type astAPIMethodReturns struct {
+	astNode
 	typeSpecifier astTypeSpecifier
 }
 
 type astAPIMethod struct {
+	astNode
 	identifier    idl.Token
 	methodInput   astAPIMethodInput
 	methodReturns astAPIMethodReturns
@@ -224,6 +252,7 @@ type astAPIMethod struct {
 }
 
 type astUnion struct {
+	astNode
 	identifier    *idl.Token
 	innerComments *astCommentBlock
 	fields        []astUnionField
@@ -231,12 +260,14 @@ type astUnion struct {
 }
 
 type astUnionField struct {
+	astNode
 	identifier    idl.Token
 	typeSpecifier astTypeSpecifier
 	meta          astMetadata
 }
 
 type astField struct {
+	astNode
 	identifier    idl.Token
 	typeSpecifier astTypeSpecifier
 	value         astValue
@@ -244,6 +275,7 @@ type astField struct {
 }
 
 type astEnumerant struct {
+	astNode
 	identifier idl.Token
 	meta       astMetadata
 }
@@ -255,80 +287,97 @@ type astMetadata struct {
 }
 
 type astAnnotationApplication struct {
+	astNode
 	annotationInstances []astAnnotationInstance
 }
 
 type astAnnotationInstance struct {
+	astNode
 	namespaceIdentifier *idl.Token
 	identifier          idl.Token
 	value               astValue
 }
 
 type astAnnotationScope struct {
+	astNode
 	scope idl.Token
 }
 
 type astTypeSpecifier struct {
+	astNode
 	qualifier *idl.Token
 	typeName  astTypeName
 }
 
 type astTypeName struct {
+	astNode
 	identifier idl.Token
 	parameters []astTypeSpecifier
 }
 
 type astCommentBlock struct {
+	astNode
 	comments []idl.Token
 }
 
 type astValueUnary struct {
+	astNode
 	operator idl.Token
 	operand  astValue
 }
 
 type astValueBinary struct {
+	astNode
 	leftOperand  astValue
 	operator     idl.Token
 	rightOperand astValue
 }
 
 type astValueLiteralBool struct {
+	astNode
 	val bool
 }
 
 type astValueLiteralInt struct {
+	astNode
 	token idl.Token
 	val   uint64
 }
 
 type astValueLiteralFloat struct {
+	astNode
 	token idl.Token
 	val   float64
 }
 
 type astValueLiteralText struct {
+	astNode
 	val idl.Token
 }
 
 type astValueLiteralData struct {
+	astNode
 	val idl.Token
 }
 
 type astValueLiteralList struct {
+	astNode
 	vals []astValue
 }
 
 type astValueLiteralStruct struct {
+	astNode
 	vals []astLiteralStructPair
 }
 
 type astLiteralStructPair struct {
+	astNode
 	identifier idl.Token
 	value      astValue
 }
 
 type astQualifiedIdentifier struct {
+	astNode
 	components []idl.Token
 }
 
@@ -341,73 +390,88 @@ type astValue struct {
 type astImplIdentifier astQualifiedIdentifier
 
 type astInvocationCatch struct {
+	astNode
 	identifier idl.Token
 	block      astImplBlock
 }
 
 type astInvocationAwait struct {
+	astNode
 	identifier idl.Token
 	catch      *astInvocationCatch
 }
 
 type astInvocationAsync struct {
+	astNode
 	implIdentifier astImplIdentifier
 	parameters     []astValue
 }
 
 type astInvocationDirect struct {
+	astNode
 	implIdentifier astImplIdentifier
 	parameters     []astValue
 	catch          *astInvocationCatch
 }
 
 type astInvocation struct {
+	astNode
 	invocation
 }
 
 type astStepProse struct {
+	astNode
 	prose idl.Token
 }
 
 type astStepVar struct {
+	astNode
 	identifier idl.Token
 	value      valueorinvocation
 }
 
 type astStepSet struct {
+	astNode
 	identifier astQualifiedIdentifier
 	value      valueorinvocation
 }
 
 type astConditionBlock struct {
+	astNode
 	condition astValueBinary
 	block     astImplBlock
 }
 
 type astStepIf struct {
+	astNode
 	conditions []astConditionBlock
 	elseBlock  *astImplBlock
 }
 
 type astSwitchCase struct {
+	astNode
 	values []astValue
 	block  astImplBlock
 }
 
 type astSwitchDefault struct {
+	astNode
 	block astImplBlock
 }
 
 type astStepSwitch struct {
+	astNode
 	innerComments *astCommentBlock
 	cases         []switchelement
 }
 
 type astStepWhile struct {
+	astNode
 	conditionBlock astConditionBlock
 }
 
 type astStepFor struct {
+	astNode
 	keyName   idl.Token
 	valueName idl.Token
 	value     astValue
@@ -415,14 +479,17 @@ type astStepFor struct {
 }
 
 type astStepReturn struct {
+	astNode
 	value *astValue
 }
 
 type astStepThrow struct {
+	astNode
 	value astValue
 }
 
 type astStepExec struct {
+	astNode
 	invocation astInvocation
 }
 

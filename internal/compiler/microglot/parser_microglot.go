@@ -342,7 +342,8 @@ func (p *parserMicroglotTokens) parseStatementSyntax() *astStatementSyntax {
 		return nil
 	}
 	return &astStatementSyntax{
-		syntax: *textNode,
+		astNode: astNode{p.loc},
+		syntax:  *textNode,
 	}
 }
 
@@ -380,6 +381,7 @@ func (p *parserMicroglotTokens) parseStatementModuleMeta() *astStatementModuleMe
 		this.comments = maybeCommentBlock
 	}
 
+	this.loc = p.loc
 	return &this
 }
 
@@ -416,6 +418,8 @@ func (p *parserMicroglotTokens) parseStatementImport() *astStatementImport {
 		}
 		this.comments = maybeCommentBlock
 	}
+
+	this.loc = p.loc
 	return &this
 }
 
@@ -464,6 +468,8 @@ func (p *parserMicroglotTokens) parseStatementAnnotation() *astStatementAnnotati
 		}
 		this.comments = maybeCommentBlock
 	}
+
+	this.loc = p.loc
 	return &this
 }
 
@@ -498,6 +504,7 @@ func (p *parserMicroglotTokens) parseStatementConst() *astStatementConst {
 	}
 
 	return &astStatementConst{
+		astNode:       astNode{p.loc},
 		identifier:    *maybeIdentifier,
 		typeSpecifier: *maybeTypeSpecifier,
 		value:         *maybeValue,
@@ -527,6 +534,7 @@ func (p *parserMicroglotTokens) parseStatementEnum() *astStatementEnum {
 	}
 
 	return &astStatementEnum{
+		astNode:       astNode{p.loc},
 		identifier:    *maybeIdentifier,
 		enumerants:    commentedBlock.values,
 		innerComments: commentedBlock.innerComments,
@@ -556,6 +564,7 @@ func (p *parserMicroglotTokens) parseStatementStruct() *astStatementStruct {
 	}
 
 	return &astStatementStruct{
+		astNode:       astNode{p.loc},
 		typeName:      *maybeTypeName,
 		innerComments: commentedBlock.innerComments,
 		elements:      commentedBlock.values,
@@ -600,6 +609,7 @@ func (p *parserMicroglotTokens) parseStatementAPI() *astStatementAPI {
 	}
 	this.meta = *maybeMeta
 
+	this.loc = p.loc
 	return &this
 }
 
@@ -640,6 +650,7 @@ func (p *parserMicroglotTokens) parseStatementSDK() *astStatementSDK {
 	}
 	this.meta = *maybeMeta
 
+	this.loc = p.loc
 	return &this
 }
 
@@ -678,6 +689,7 @@ func (p *parserMicroglotTokens) parseStatementImpl() *astStatementImpl {
 	}
 	this.meta = *maybeMeta
 
+	this.loc = p.loc
 	return &this
 }
 
@@ -688,7 +700,8 @@ func (p *parserMicroglotTokens) parseStepProse() *astStepProse {
 		return nil
 	}
 	return &astStepProse{
-		prose: *maybeProse,
+		astNode: astNode{p.loc},
+		prose:   *maybeProse,
 	}
 }
 
@@ -743,6 +756,7 @@ func (p *parserMicroglotTokens) parseStepVar() *astStepVar {
 		this.value = *maybeValue
 	}
 
+	this.loc = p.loc
 	return &this
 }
 
@@ -767,6 +781,7 @@ func (p *parserMicroglotTokens) parseStepSet() *astStepSet {
 	}
 
 	return &astStepSet{
+		astNode:    astNode{p.loc},
 		identifier: *maybeIdentifier,
 		value:      *maybeValue,
 	}
@@ -785,6 +800,7 @@ func (p *parserMicroglotTokens) parseConditionBlock() *astConditionBlock {
 	}
 
 	return &astConditionBlock{
+		astNode:   astNode{p.loc},
 		condition: *maybeCondition,
 		block:     *maybeBlock,
 	}
@@ -835,6 +851,7 @@ func (p *parserMicroglotTokens) parseStepIf() *astStepIf {
 		this.elseBlock = maybeElseBlock
 	}
 
+	this.loc = p.loc
 	return &this
 }
 
@@ -870,8 +887,9 @@ func (p *parserMicroglotTokens) parseSwitchCase() *astSwitchCase {
 	}
 
 	return &astSwitchCase{
-		values: values,
-		block:  *maybeBlock,
+		astNode: astNode{p.loc},
+		values:  values,
+		block:   *maybeBlock,
 	}
 }
 
@@ -887,7 +905,8 @@ func (p *parserMicroglotTokens) parseSwitchDefault() *astSwitchDefault {
 	}
 
 	return &astSwitchDefault{
-		block: *maybeBlock,
+		astNode: astNode{p.loc},
+		block:   *maybeBlock,
 	}
 }
 
@@ -927,6 +946,7 @@ func (p *parserMicroglotTokens) parseStepSwitch() *astStepSwitch {
 	}
 
 	return &astStepSwitch{
+		astNode:       astNode{p.loc},
 		innerComments: commentedBlock.innerComments,
 		cases:         commentedBlock.values,
 	}
@@ -944,6 +964,7 @@ func (p *parserMicroglotTokens) parseStepWhile() *astStepWhile {
 	}
 
 	return &astStepWhile{
+		astNode:        astNode{p.loc},
 		conditionBlock: *maybeConditionBlock,
 	}
 }
@@ -983,6 +1004,7 @@ func (p *parserMicroglotTokens) parseStepFor() *astStepFor {
 	}
 
 	return &astStepFor{
+		astNode:   astNode{p.loc},
 		keyName:   *maybeKeyName,
 		valueName: *maybeValueName,
 		value:     *maybeValue,
@@ -1025,6 +1047,7 @@ func (p *parserMicroglotTokens) parseStepReturn() *astStepReturn {
 		this.value = maybeValue
 	}
 
+	this.loc = p.loc
 	return &this
 }
 
@@ -1040,7 +1063,8 @@ func (p *parserMicroglotTokens) parseStepThrow() *astStepThrow {
 	}
 
 	return &astStepThrow{
-		value: *maybeValue,
+		astNode: astNode{p.loc},
+		value:   *maybeValue,
 	}
 }
 
@@ -1061,6 +1085,7 @@ func (p *parserMicroglotTokens) parseInvocationCatch() *astInvocationCatch {
 	}
 
 	return &astInvocationCatch{
+		astNode:    astNode{p.loc},
 		identifier: *maybeIdentifier,
 		block:      *maybeBlock,
 	}
@@ -1089,6 +1114,8 @@ func (p *parserMicroglotTokens) parseInvocationAwait() *astInvocationAwait {
 		}
 		this.catch = maybeCatch
 	}
+
+	this.loc = p.loc
 	return &this
 }
 
@@ -1125,6 +1152,7 @@ func (p *parserMicroglotTokens) parseInvocationAsync() *astInvocationAsync {
 	}
 
 	return &astInvocationAsync{
+		astNode:        astNode{p.loc},
 		implIdentifier: *maybeImplIdentifier,
 		parameters:     parameters,
 	}
@@ -1159,6 +1187,7 @@ func (p *parserMicroglotTokens) parseInvocationDirect() *astInvocationDirect {
 		this.catch = maybeCatch
 	}
 
+	this.loc = p.loc
 	return &this
 }
 
@@ -1193,6 +1222,7 @@ func (p *parserMicroglotTokens) parseInvocation() *astInvocation {
 		this.invocation = *maybeInvocation
 	}
 
+	this.loc = p.loc
 	return &this
 }
 
@@ -1208,6 +1238,7 @@ func (p *parserMicroglotTokens) parseStepExec() *astStepExec {
 	}
 
 	return &astStepExec{
+		astNode:    astNode{p.loc},
 		invocation: *maybeInvocation,
 	}
 }
@@ -1258,6 +1289,7 @@ func (p *parserMicroglotTokens) parseImplBlock() *astImplBlock {
 	}
 
 	return &astImplBlock{
+		astNode:       astNode{p.loc},
 		innerComments: commentedBlock.innerComments,
 		steps:         commentedBlock.values,
 	}
@@ -1291,6 +1323,7 @@ func (p *parserMicroglotTokens) parseImplAPIMethod() *astImplAPIMethod {
 	}
 
 	return &astImplAPIMethod{
+		astNode:       astNode{p.loc},
 		identifier:    *maybeIdentifier,
 		methodInput:   *maybeMethodInput,
 		methodReturns: *maybeMethodReturns,
@@ -1343,6 +1376,7 @@ func (p *parserMicroglotTokens) parseImplSDKMethod() *astImplSDKMethod {
 	}
 	this.meta = *maybeMeta
 
+	this.loc = p.loc
 	return &this
 }
 
@@ -1392,6 +1426,7 @@ func (p *parserMicroglotTokens) parseImplRequirement() *astImplRequirement {
 		this.comments = maybeCommentBlock
 	}
 
+	this.loc = p.loc
 	return &this
 }
 
@@ -1407,6 +1442,7 @@ func (p *parserMicroglotTokens) parseImplRequires() *astImplRequires {
 	}
 
 	return &astImplRequires{
+		astNode:       astNode{p.loc},
 		innerComments: commentedBlock.innerComments,
 		requirements:  commentedBlock.values,
 	}
@@ -1427,7 +1463,8 @@ func (p *parserMicroglotTokens) parseImplAs() *astImplAs {
 	}
 
 	return &astImplAs{
-		types,
+		astNode: astNode{p.loc},
+		types:   types,
 	}
 }
 
@@ -1442,7 +1479,8 @@ func (p *parserMicroglotTokens) parseSDKMethodInput() *astSDKMethodInput {
 	}
 
 	return &astSDKMethodInput{
-		parameters,
+		astNode:    astNode{p.loc},
+		parameters: parameters,
 	}
 }
 
@@ -1462,6 +1500,7 @@ func (p *parserMicroglotTokens) parseSDKMethodReturns() *astSDKMethodReturns {
 		return nil
 	}
 	return &astSDKMethodReturns{
+		astNode:       astNode{p.loc},
 		typeSpecifier: *maybeTypeSpecifier,
 	}
 }
@@ -1505,6 +1544,7 @@ func (p *parserMicroglotTokens) parseSDKMethod() *astSDKMethod {
 	}
 	this.meta = *maybeMeta
 
+	this.loc = p.loc
 	return &this
 }
 
@@ -1521,6 +1561,7 @@ func (p *parserMicroglotTokens) parseSDKMethodParameter() *astSDKMethodParameter
 	}
 
 	return &astSDKMethodParameter{
+		astNode:       astNode{p.loc},
 		identifier:    *maybeIdentifier,
 		typeSpecifier: *maybeTypeSpecifier,
 	}
@@ -1541,7 +1582,8 @@ func (p *parserMicroglotTokens) parseExtension() *astExtension {
 	}
 
 	return &astExtension{
-		extensions,
+		astNode:    astNode{p.loc},
+		extensions: extensions,
 	}
 }
 
@@ -1559,6 +1601,7 @@ func (p *parserMicroglotTokens) parseAPIMethodInput() *astAPIMethodInput {
 	}
 
 	return &astAPIMethodInput{
+		astNode:       astNode{p.loc},
 		typeSpecifier: *maybeTypeSpecifier,
 	}
 }
@@ -1579,6 +1622,7 @@ func (p *parserMicroglotTokens) parseAPIMethodReturns() *astAPIMethodReturns {
 		return nil
 	}
 	return &astAPIMethodReturns{
+		astNode:       astNode{p.loc},
 		typeSpecifier: *maybeTypeSpecifier,
 	}
 }
@@ -1606,6 +1650,7 @@ func (p *parserMicroglotTokens) parseAPIMethod() *astAPIMethod {
 	}
 
 	return &astAPIMethod{
+		astNode:       astNode{p.loc},
 		identifier:    *maybeIdentifier,
 		methodInput:   *maybeMethodInput,
 		methodReturns: *maybeMethodReturns,
@@ -1655,6 +1700,7 @@ func (p *parserMicroglotTokens) parseUnion() *astUnion {
 	}
 	this.meta = *maybeMeta
 
+	this.loc = p.loc
 	return &this
 }
 
@@ -1676,6 +1722,7 @@ func (p *parserMicroglotTokens) parseUnionField() *astUnionField {
 	}
 
 	return &astUnionField{
+		astNode:       astNode{p.loc},
 		identifier:    *maybeIdentifier,
 		typeSpecifier: *maybeTypeSpecifier,
 		meta:          *maybeMeta,
@@ -1716,6 +1763,7 @@ func (p *parserMicroglotTokens) parseField() *astField {
 	}
 	this.meta = *maybeMeta
 
+	this.loc = p.loc
 	return &this
 }
 
@@ -1776,7 +1824,8 @@ func (p *parserMicroglotTokens) parseAnnotationScope() *astAnnotationScope {
 		return nil
 	}
 	return &astAnnotationScope{
-		scope: *maybeToken,
+		astNode: astNode{p.loc},
+		scope:   *maybeToken,
 	}
 }
 
@@ -1807,6 +1856,7 @@ func (p *parserMicroglotTokens) parseTypeSpecifier() *astTypeSpecifier {
 		return nil
 	}
 	this.typeName = *maybeTypeName
+	this.loc = p.loc
 	return &this
 }
 
@@ -1834,6 +1884,7 @@ func (p *parserMicroglotTokens) parseTypeName() *astTypeName {
 		this.parameters = parameters
 	}
 
+	this.loc = p.loc
 	return &this
 }
 
@@ -1843,7 +1894,8 @@ func (p *parserMicroglotTokens) parseCommentBlock() *astCommentBlock {
 		return nil
 	}
 	return &astCommentBlock{
-		comments,
+		astNode:  astNode{p.loc},
+		comments: comments,
 	}
 }
 
@@ -1862,7 +1914,8 @@ func (p *parserMicroglotTokens) parseAnnotationApplication() *astAnnotationAppli
 	}
 
 	return &astAnnotationApplication{
-		annotationInstances,
+		astNode:             astNode{p.loc},
+		annotationInstances: annotationInstances,
 	}
 }
 
@@ -1907,6 +1960,7 @@ func (p *parserMicroglotTokens) parseAnnotationInstance() *astAnnotationInstance
 	}
 
 	return &astAnnotationInstance{
+		astNode:             astNode{p.loc},
 		namespaceIdentifier: namespaceIdentifier,
 		identifier:          *identifier,
 		value:               *value,
@@ -1943,6 +1997,7 @@ func (p *parserMicroglotTokens) parseEnumerant() *astEnumerant {
 	}
 
 	return &astEnumerant{
+		astNode:    astNode{p.loc},
 		identifier: *maybeIdentifier,
 		meta:       *maybeMeta,
 	}
@@ -2044,6 +2099,7 @@ func (p *parserMicroglotTokens) parseValueUnary() *astValueUnary {
 	}
 
 	return &astValueUnary{
+		astNode:  astNode{p.loc},
 		operator: *maybeOperator,
 		operand:  *maybeOperand,
 	}
@@ -2094,6 +2150,7 @@ func (p *parserMicroglotTokens) parseValueBinary() *astValueBinary {
 	}
 
 	return &astValueBinary{
+		astNode:      astNode{p.loc},
 		leftOperand:  *maybeLeftOperand,
 		operator:     *maybeOperator,
 		rightOperand: *maybeRightOperand,
@@ -2111,7 +2168,8 @@ func (p *parserMicroglotTokens) parseValueLiteralBool() *astValueLiteralBool {
 
 	value := maybeToken.Type == idl.TokenTypeKeywordTrue
 	return &astValueLiteralBool{
-		value,
+		astNode: astNode{p.loc},
+		val:     value,
 	}
 }
 
@@ -2134,8 +2192,9 @@ func (p *parserMicroglotTokens) parseValueLiteralInt() *astValueLiteralInt {
 	}
 
 	return &astValueLiteralInt{
-		token: *maybeToken,
-		val:   i,
+		astNode: astNode{p.loc},
+		token:   *maybeToken,
+		val:     i,
 	}
 }
 
@@ -2155,8 +2214,9 @@ func (p *parserMicroglotTokens) parseValueLiteralFloat() *astValueLiteralFloat {
 	}
 
 	return &astValueLiteralFloat{
-		token: *maybeToken,
-		val:   f,
+		astNode: astNode{p.loc},
+		token:   *maybeToken,
+		val:     f,
 	}
 }
 
@@ -2166,7 +2226,8 @@ func (p *parserMicroglotTokens) parseValueLiteralText() *astValueLiteralText {
 		return nil
 	}
 	return &astValueLiteralText{
-		val: *maybeToken,
+		astNode: astNode{p.loc},
+		val:     *maybeToken,
 	}
 }
 
@@ -2176,7 +2237,8 @@ func (p *parserMicroglotTokens) parseValueLiteralData() *astValueLiteralData {
 		return nil
 	}
 	return &astValueLiteralData{
-		val: *maybeToken,
+		astNode: astNode{p.loc},
+		val:     *maybeToken,
 	}
 }
 
@@ -2192,7 +2254,8 @@ func (p *parserMicroglotTokens) parseValueLiteralList() *astValueLiteralList {
 	}
 
 	return &astValueLiteralList{
-		values,
+		astNode: astNode{p.loc},
+		vals:    values,
 	}
 }
 
@@ -2207,7 +2270,8 @@ func (p *parserMicroglotTokens) parseValueLiteralStruct() *astValueLiteralStruct
 	}
 
 	return &astValueLiteralStruct{
-		values,
+		astNode: astNode{p.loc},
+		vals:    values,
 	}
 }
 
@@ -2228,6 +2292,7 @@ func (p *parserMicroglotTokens) parseLiteralStructPair() *astLiteralStructPair {
 	}
 
 	return &astLiteralStructPair{
+		astNode:    astNode{p.loc},
 		identifier: *maybeIdentifier,
 		value:      *maybeValue,
 	}
@@ -2262,6 +2327,7 @@ func (p *parserMicroglotTokens) parseQualifiedIdentifier() *astQualifiedIdentifi
 	}
 
 	return &astQualifiedIdentifier{
+		astNode:    astNode{p.loc},
 		components: components,
 	}
 }
