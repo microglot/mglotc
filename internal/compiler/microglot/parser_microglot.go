@@ -123,8 +123,7 @@ func (p *parserMicroglotTokens) expectOneOf(expectedTypes []idl.TokenType) *idl.
 			return maybeToken
 		}
 	}
-	// TODO 2023.08.21: replace CodeUnknownFatal with something meaningful
-	p.report(exc.CodeUnknownFatal, fmt.Sprintf("unexpected %s (expecting %v)", maybeToken.Value, expectedTypes))
+	p.report(exc.CodeUnexpectedToken, fmt.Sprintf("unexpected %s (expecting %v)", maybeToken.Value, expectedTypes))
 	return nil
 }
 
@@ -320,8 +319,7 @@ func (p *parserMicroglotTokens) ParseModule() *astModule {
 			}
 			maybeStatement = maybeStatementImpl
 		default:
-			// TODO 2023.08.21: replace CodeUnknownFatal with something meaningful
-			p.report(exc.CodeUnknownFatal, fmt.Sprintf("unexpected %s (expecting a statement)", maybeToken.Value))
+			p.report(exc.CodeUnexpectedToken, fmt.Sprintf("unexpected %s (expecting a statement)", maybeToken.Value))
 			return nil
 		}
 
@@ -1245,8 +1243,7 @@ func (p *parserMicroglotTokens) parseImplBlockStep() *step {
 	case idl.TokenTypeKeywordExec:
 		value = p.parseStepExec()
 	default:
-		// TODO 2023.08.21: replace CodeUnknownFatal with something meaningful
-		p.report(exc.CodeUnknownFatal, fmt.Sprintf("unexpected %s (expecting an implementation step)", maybeToken.Value))
+		p.report(exc.CodeUnexpectedToken, fmt.Sprintf("unexpected %s (expecting an implementation step)", maybeToken.Value))
 		return nil
 	}
 
@@ -2023,8 +2020,7 @@ func (p *parserMicroglotTokens) parseValue() *astValue {
 		}
 		this.value = *maybeValue
 	default:
-		// TODO 2023.08.21: replace CodeUnknownFatal with something meaningful
-		p.report(exc.CodeUnknownFatal, fmt.Sprintf("unexpected %s (expecting an value)", maybeToken.Value))
+		p.report(exc.CodeUnexpectedToken, fmt.Sprintf("unexpected %s (expecting a value)", maybeToken.Value))
 		return nil
 	}
 
@@ -2133,8 +2129,7 @@ func (p *parserMicroglotTokens) parseValueLiteralInt() *astValueLiteralInt {
 
 	i, err := strconv.ParseUint(maybeToken.Value, 0, 64)
 	if err != nil {
-		// TODO 2023.08.21: replace CodeUnknownFatal with something meaningful
-		p.report(exc.CodeUnknownFatal, fmt.Sprintf("invalid integer literal %s", maybeToken.Value))
+		p.report(exc.CodeInvalidLiteral, fmt.Sprintf("invalid integer literal %s", maybeToken.Value))
 		return nil
 	}
 
@@ -2155,8 +2150,7 @@ func (p *parserMicroglotTokens) parseValueLiteralFloat() *astValueLiteralFloat {
 
 	f, err := strconv.ParseFloat(maybeToken.Value, 64)
 	if err != nil {
-		// TODO 2023.08.21: replace CodeUnknownFatal with something meaningful
-		p.report(exc.CodeUnknownFatal, fmt.Sprintf("invalid floating-point literal %s", maybeToken.Value))
+		p.report(exc.CodeInvalidLiteral, fmt.Sprintf("invalid floating-point literal %s", maybeToken.Value))
 		return nil
 	}
 

@@ -28,7 +28,7 @@ func (c *imageChecker) lookup(tr *proto.TypeReference) (idl.TypeKind, interface{
 	if kind == idl.TypeKindError {
 		c.reporter.Report(exc.New(exc.Location{
 			// TODO 2023.11.26: location?
-		}, exc.CodeUnknownFatal, fmt.Sprintf("Resolved reference (ModuleUID=%d, TypeUID=%d) points to a type outside the current Image", tr.ModuleUID, tr.TypeUID)))
+		}, exc.CodeUnknownReference, fmt.Sprintf("Resolved reference (ModuleUID=%d, TypeUID=%d) points to a type outside the current Image", tr.ModuleUID, tr.TypeUID)))
 	}
 	return kind, declaration
 }
@@ -38,7 +38,7 @@ func (c *imageChecker) checkTypeSpecifier(ts *proto.TypeSpecifier, expectedKinds
 	if !ok {
 		c.reporter.Report(exc.New(exc.Location{
 			// TODO 2023.11.26: location?
-		}, exc.CodeUnknownFatal, fmt.Sprintf("Unexpected unresolved reference while type checking")))
+		}, exc.CodeUnresolvedReference, fmt.Sprintf("Unexpected unresolved reference while type checking")))
 	} else {
 		kind, declaration := c.lookup(resolved.Resolved.Reference)
 		for _, expectedKind := range expectedKinds {
@@ -57,10 +57,10 @@ func (c *imageChecker) checkTypeSpecifier(ts *proto.TypeSpecifier, expectedKinds
 
 				if len(resolved.Resolved.Parameters) > 0 {
 					if typeName == nil {
-						c.reporter.Report(exc.New(exc.Location{}, exc.CodeUnknownFatal, fmt.Sprintf("type can't be parameterized")))
+						c.reporter.Report(exc.New(exc.Location{}, exc.CodeTypeParameterError, fmt.Sprintf("type can't be parameterized")))
 					} else {
 						if len(typeName.Parameters) != len(resolved.Resolved.Parameters) {
-							c.reporter.Report(exc.New(exc.Location{}, exc.CodeUnknownFatal, fmt.Sprintf("wrong number of parameters")))
+							c.reporter.Report(exc.New(exc.Location{}, exc.CodeTypeParameterError, fmt.Sprintf("wrong number of parameters")))
 						} else {
 							for _, parameter := range resolved.Resolved.Parameters {
 								c.checkTypeSpecifier(parameter, []idl.TypeKind{idl.TypeKindPrimitive, idl.TypeKindData, idl.TypeKindVirtual, idl.TypeKindStruct, idl.TypeKindEnum, idl.TypeKindAPI, idl.TypeKindSDK})
@@ -74,7 +74,7 @@ func (c *imageChecker) checkTypeSpecifier(ts *proto.TypeSpecifier, expectedKinds
 		}
 		c.reporter.Report(exc.New(exc.Location{
 			// TODO 2023.11.26: location?
-		}, exc.CodeUnknownFatal, fmt.Sprintf("unexpected %d (expecting %v)", kind, expectedKinds)))
+		}, exc.CodeWrongTypeKind, fmt.Sprintf("unexpected %d (expecting %v)", kind, expectedKinds)))
 	}
 }
 
@@ -109,7 +109,7 @@ func (c *imageChecker) checkTypeSpecifierForAPI(ts *proto.TypeSpecifier) {
 		case idl.TypeKindAPI, idl.TypeKindSDK:
 			c.reporter.Report(exc.New(exc.Location{
 				// TODO 2023.11.26: location?
-			}, exc.CodeUnknownFatal, fmt.Sprintf("structs which transitively include API, SDK or Impl fields can't be passed as API method input or output")))
+			}, exc.CodeWrongTypeForAPI, fmt.Sprintf("structs which transitively include API, SDK or Impl fields can't be passed as API method input or output")))
 		}
 
 		for _, parameter := range current.Resolved.Parameters {
@@ -130,79 +130,79 @@ func (c *imageChecker) checkValuePrimitive(value *proto.Value, context *proto.St
 		if primitiveTypeName != "Bool" {
 			c.reporter.Report(exc.New(exc.Location{
 				// TODO 2023.12.12: location?
-			}, exc.CodeUnknownFatal, fmt.Sprintf("expecting %s, found boolean", primitiveTypeName)))
+			}, exc.CodeWrongTypeValue, fmt.Sprintf("expecting %s, found boolean", primitiveTypeName)))
 		}
 	case *proto.Value_Text:
 		if primitiveTypeName != "Text" {
 			c.reporter.Report(exc.New(exc.Location{
 				// TODO 2023.12.12: location?
-			}, exc.CodeUnknownFatal, fmt.Sprintf("expecting %s, found text", primitiveTypeName)))
+			}, exc.CodeWrongTypeValue, fmt.Sprintf("expecting %s, found text", primitiveTypeName)))
 		}
 	case *proto.Value_Int8:
 		if primitiveTypeName != "Int8" && primitiveTypeName != "Int16" && primitiveTypeName != "Int32" && primitiveTypeName != "Int64" {
 			c.reporter.Report(exc.New(exc.Location{
 				// TODO 2023.12.12: location?
-			}, exc.CodeUnknownFatal, fmt.Sprintf("expecting %s, found int8", primitiveTypeName)))
+			}, exc.CodeWrongTypeValue, fmt.Sprintf("expecting %s, found int8", primitiveTypeName)))
 		}
 	case *proto.Value_Int16:
 		if primitiveTypeName != "Int16" && primitiveTypeName != "Int32" && primitiveTypeName != "Int64" {
 			c.reporter.Report(exc.New(exc.Location{
 				// TODO 2023.12.12: location?
-			}, exc.CodeUnknownFatal, fmt.Sprintf("expecting %s, found int16", primitiveTypeName)))
+			}, exc.CodeWrongTypeValue, fmt.Sprintf("expecting %s, found int16", primitiveTypeName)))
 		}
 	case *proto.Value_Int32:
 		if primitiveTypeName != "Int32" && primitiveTypeName != "Int64" {
 			c.reporter.Report(exc.New(exc.Location{
 				// TODO 2023.12.12: location?
-			}, exc.CodeUnknownFatal, fmt.Sprintf("expecting %s, found int32", primitiveTypeName)))
+			}, exc.CodeWrongTypeValue, fmt.Sprintf("expecting %s, found int32", primitiveTypeName)))
 		}
 	case *proto.Value_Int64:
 		if primitiveTypeName != "Int64" {
 			c.reporter.Report(exc.New(exc.Location{
 				// TODO 2023.12.12: location?
-			}, exc.CodeUnknownFatal, fmt.Sprintf("expecting %s, found int64", primitiveTypeName)))
+			}, exc.CodeWrongTypeValue, fmt.Sprintf("expecting %s, found int64", primitiveTypeName)))
 		}
 	case *proto.Value_UInt8:
 		if primitiveTypeName != "UInt8" && primitiveTypeName != "UInt16" && primitiveTypeName != "UInt32" && primitiveTypeName != "UInt64" && primitiveTypeName != "Int16" && primitiveTypeName != "Int32" && primitiveTypeName != "Int64" {
 			c.reporter.Report(exc.New(exc.Location{
 				// TODO 2023.12.12: location?
-			}, exc.CodeUnknownFatal, fmt.Sprintf("expecting %s, found uint8", primitiveTypeName)))
+			}, exc.CodeWrongTypeValue, fmt.Sprintf("expecting %s, found uint8", primitiveTypeName)))
 		}
 	case *proto.Value_UInt16:
 		if primitiveTypeName != "UInt16" && primitiveTypeName != "UInt32" && primitiveTypeName != "UInt64" && primitiveTypeName != "Int32" && primitiveTypeName != "Int64" {
 			c.reporter.Report(exc.New(exc.Location{
 				// TODO 2023.12.12: location?
-			}, exc.CodeUnknownFatal, fmt.Sprintf("expecting %s, found uint16", primitiveTypeName)))
+			}, exc.CodeWrongTypeValue, fmt.Sprintf("expecting %s, found uint16", primitiveTypeName)))
 		}
 	case *proto.Value_UInt32:
 		if primitiveTypeName != "UInt32" && primitiveTypeName != "UInt64" && primitiveTypeName != "Int64" {
 			c.reporter.Report(exc.New(exc.Location{
 				// TODO 2023.12.12: location?
-			}, exc.CodeUnknownFatal, fmt.Sprintf("expecting %s, found uint32", primitiveTypeName)))
+			}, exc.CodeWrongTypeValue, fmt.Sprintf("expecting %s, found uint32", primitiveTypeName)))
 		}
 	case *proto.Value_UInt64:
 		if primitiveTypeName != "UInt64" {
 			c.reporter.Report(exc.New(exc.Location{
 				// TODO 2023.12.12: location?
-			}, exc.CodeUnknownFatal, fmt.Sprintf("expecting %s, found uint64", primitiveTypeName)))
+			}, exc.CodeWrongTypeValue, fmt.Sprintf("expecting %s, found uint64", primitiveTypeName)))
 		}
 	case *proto.Value_Float32:
 		if primitiveTypeName != "Float32" && primitiveTypeName != "Float64" {
 			c.reporter.Report(exc.New(exc.Location{
 				// TODO 2023.12.12: location?
-			}, exc.CodeUnknownFatal, fmt.Sprintf("expecting %s, found float32", primitiveTypeName)))
+			}, exc.CodeWrongTypeValue, fmt.Sprintf("expecting %s, found float32", primitiveTypeName)))
 		}
 	case *proto.Value_Float64:
 		if primitiveTypeName != "Float64" {
 			c.reporter.Report(exc.New(exc.Location{
 				// TODO 2023.12.12: location?
-			}, exc.CodeUnknownFatal, fmt.Sprintf("expecting %s, found float64", primitiveTypeName)))
+			}, exc.CodeWrongTypeValue, fmt.Sprintf("expecting %s, found float64", primitiveTypeName)))
 		}
 
 	default:
 		c.reporter.Report(exc.New(exc.Location{
 			// TODO 2023.12.12: location?
-		}, exc.CodeUnknownFatal, fmt.Sprintf("expecting %s, found %s", primitiveTypeName, value)))
+		}, exc.CodeWrongTypeValue, fmt.Sprintf("expecting %s, found %s", primitiveTypeName, value)))
 	}
 }
 
@@ -213,7 +213,7 @@ func (c *imageChecker) checkValueData(value *proto.Value) {
 	default:
 		c.reporter.Report(exc.New(exc.Location{
 			// TODO 2023.12.12: location?
-		}, exc.CodeUnknownFatal, fmt.Sprintf("expecting Data, found %s", value.Kind)))
+		}, exc.CodeWrongTypeValue, fmt.Sprintf("expecting Data, found %s", value.Kind)))
 	}
 }
 
@@ -227,7 +227,7 @@ func (c *imageChecker) checkValueList(value *proto.Value, expectedTypeSpecifier 
 	default:
 		c.reporter.Report(exc.New(exc.Location{
 			// TODO 2023.12.12: location?
-		}, exc.CodeUnknownFatal, fmt.Sprintf("expecting List, found %s", value.Kind)))
+		}, exc.CodeWrongTypeValue, fmt.Sprintf("expecting List, found %s", value.Kind)))
 	}
 }
 
@@ -241,7 +241,7 @@ func (c *imageChecker) checkValueStruct(value *proto.Value, context *proto.Struc
 	if parameters != nil {
 		c.reporter.Report(exc.New(exc.Location{
 			// TODO 2023.12.12: location?
-		}, exc.CodeUnknownFatal, fmt.Sprintf("parameterized struct literals aren't supported yet")))
+		}, exc.CodeUnimplemented, fmt.Sprintf("parameterized struct literals aren't supported yet")))
 		return
 	}
 
@@ -259,13 +259,13 @@ func (c *imageChecker) checkValueStruct(value *proto.Value, context *proto.Struc
 			if !found {
 				c.reporter.Report(exc.New(exc.Location{
 					// TODO 2023.12.12: location?
-				}, exc.CodeUnknownFatal, fmt.Sprintf("struct %s literal has unknown field: %s", context.Name.Name, valueStructField.Name)))
+				}, exc.CodeUnknownFieldInStructLiteral, fmt.Sprintf("struct %s literal has unknown field: %s", context.Name.Name, valueStructField.Name)))
 			}
 		}
 	default:
 		c.reporter.Report(exc.New(exc.Location{
 			// TODO 2023.12.12: location?
-		}, exc.CodeUnknownFatal, fmt.Sprintf("expecting Struct, found %s", value.Kind)))
+		}, exc.CodeWrongTypeValue, fmt.Sprintf("expecting Struct, found %s", value.Kind)))
 	}
 }
 
@@ -274,7 +274,7 @@ func (c *imageChecker) checkValue(value *proto.Value, expectedTypeSpecifier *pro
 	if !ok {
 		c.reporter.Report(exc.New(exc.Location{
 			// TODO 2023.12.12: location?
-		}, exc.CodeUnknownFatal, fmt.Sprintf("Unexpected unresolved reference while type checking")))
+		}, exc.CodeUnresolvedReference, fmt.Sprintf("Unexpected unresolved reference while type checking")))
 	} else {
 		expectedKind, expectedDeclaration := c.lookup(resolved.Resolved.Reference)
 
@@ -299,7 +299,7 @@ func (c *imageChecker) checkValue(value *proto.Value, expectedTypeSpecifier *pro
 		default:
 			c.reporter.Report(exc.New(exc.Location{
 				// TODO 2023.12.12: location?
-			}, exc.CodeUnknownFatal, fmt.Sprintf("expecting a %d, which isn't supported by the language", expectedKind)))
+			}, exc.CodeUnimplemented, fmt.Sprintf("expecting a %d, which isn't supported by the language", expectedKind)))
 		}
 	}
 }
@@ -376,13 +376,13 @@ func (c *imageChecker) checkAnnotationApplications(annotationApplications []*pro
 		if !ok {
 			c.reporter.Report(exc.New(exc.Location{
 				// TODO 2023.11.26: location?
-			}, exc.CodeUnknownFatal, fmt.Sprintf("Unexpected unresolved reference while type checking")))
+			}, exc.CodeUnresolvedReference, fmt.Sprintf("Unexpected unresolved reference while type checking")))
 		} else {
 			kind, declaration := c.lookup(resolved.Resolved.Reference)
 			if kind != idl.TypeKindAnnotation {
 				c.reporter.Report(exc.New(exc.Location{
 					// TODO 2023.11.26: location?
-				}, exc.CodeUnknownFatal, fmt.Sprintf("unexpected %d (expecting annotation)", kind)))
+				}, exc.CodeWrongTypeKind, fmt.Sprintf("unexpected %d (expecting annotation)", kind)))
 			} else {
 				annotation := declaration.(*proto.Annotation)
 				c.checkValue(annotationApplication.Value, annotation.Type)

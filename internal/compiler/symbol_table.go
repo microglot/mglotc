@@ -46,7 +46,6 @@ func (s *globalSymbolTable) collect(parsed proto.Module, r exc.Reporter) error {
 	if s.types[parsed.URI] == nil {
 		s.types[parsed.URI] = make(map[string]proto.TypeReference)
 	} else {
-		// TODO 2023.09.14: replace CodeUnknownFatal with something more meaningful
 		_ = r.Report(exc.New(exc.Location{
 			URI: parsed.URI,
 			// TODO 2023.09.14: getting Location here would be nice!
@@ -56,7 +55,6 @@ func (s *globalSymbolTable) collect(parsed proto.Module, r exc.Reporter) error {
 	if s.attributes[parsed.URI] == nil {
 		s.attributes[parsed.URI] = make(map[string]map[string]proto.AttributeReference)
 	} else {
-		// TODO 2023.09.14: replace CodeUnknownFatal with something more meaningful
 		_ = r.Report(exc.New(exc.Location{
 			URI: parsed.URI,
 			// TODO 2023.09.14: getting Location here would be nice!
@@ -66,7 +64,6 @@ func (s *globalSymbolTable) collect(parsed proto.Module, r exc.Reporter) error {
 	if s.inputs[parsed.URI] == nil {
 		s.inputs[parsed.URI] = make(map[string]map[string]map[string]proto.SDKInputReference)
 	} else {
-		// TODO 2023.09.14: replace CodeUnknownFatal with something more meaningful
 		_ = r.Report(exc.New(exc.Location{
 			URI: parsed.URI,
 			// TODO 2023.09.14: getting Location here would be nice!
@@ -76,11 +73,10 @@ func (s *globalSymbolTable) collect(parsed proto.Module, r exc.Reporter) error {
 
 	for moduleURI, moduleMeta := range s.modules {
 		if moduleMeta.uid == parsed.UID {
-			// TODO 2023.09.14: replace CodeUnknownFatal with something more meaningful
 			_ = r.Report(exc.New(exc.Location{
 				URI: parsed.URI,
 				// TODO 2023.09.14: getting Location here would be nice!
-			}, exc.CodeUnknownFatal, fmt.Sprintf("module UID '%d' is already in-use by '%s'", parsed.UID, moduleURI)))
+			}, exc.CodeUIDCollision, fmt.Sprintf("module UID '%d' is already in-use by '%s'", parsed.UID, moduleURI)))
 			return errors.New("collect error")
 		}
 	}
@@ -144,20 +140,18 @@ func (s *globalSymbolTable) addType(r exc.Reporter, moduleURI string, name strin
 	// Assumes we're already holding s.lock!
 
 	if _, ok := typeUIDs[typeReference.TypeUID]; ok {
-		// TODO 2023.09.14: replace CodeUnknownFatal with something more meaningful
 		_ = r.Report(exc.New(exc.Location{
 			URI: moduleURI,
 			// TODO 2023.09.14: getting Location here would be nice!
-		}, exc.CodeUnknownFatal, fmt.Sprintf("there is already a type with the uid '%d' in '%s'", typeReference.TypeUID, typeUIDs[typeReference.TypeUID])))
+		}, exc.CodeUIDCollision, fmt.Sprintf("there is already a type with the uid '%d' in '%s'", typeReference.TypeUID, typeUIDs[typeReference.TypeUID])))
 	}
 	typeUIDs[typeReference.TypeUID] = moduleURI
 
 	if _, ok := s.types[moduleURI][name]; ok {
-		// TODO 2023.09.12: replace CodeUnknownFatal with something more meaningful
 		_ = r.Report(exc.New(exc.Location{
 			URI: moduleURI,
 			// TODO 2023.09.12: getting Location here would be nice!
-		}, exc.CodeUnknownFatal, fmt.Sprintf("there is already a type named '%s' in '%s'", name, moduleURI)))
+		}, exc.CodeNameCollision, fmt.Sprintf("there is already a type named '%s' in '%s'", name, moduleURI)))
 	}
 
 	// We consider it an error to have the more than one declaration of the same typename in a given
@@ -168,11 +162,10 @@ func (s *globalSymbolTable) addType(r exc.Reporter, moduleURI string, name strin
 	for uri, meta := range s.modules {
 		if meta.protobufPackage == s.modules[moduleURI].protobufPackage {
 			if _, ok := s.types[uri][name]; ok {
-				// TODO 2023.11.01: replace CodeUnknownFatal with something more meaningful
 				_ = r.Report(exc.New(exc.Location{
 					URI: moduleURI,
 					// TODO 2023.11.01: getting Location here would be nice!
-				}, exc.CodeUnknownFatal, fmt.Sprintf("there is already a declaration of '%s.%s' in '%s'", meta.protobufPackage, name, uri)))
+				}, exc.CodeNameCollision, fmt.Sprintf("there is already a declaration of '%s.%s' in '%s'", meta.protobufPackage, name, uri)))
 			}
 		}
 	}
@@ -184,11 +177,10 @@ func (s *globalSymbolTable) addAttribute(r exc.Reporter, moduleURI string, typeN
 	// Assumes we're already holding s.lock!
 
 	if _, ok := attributeUIDs[attributeReference.AttributeUID]; ok {
-		// TODO 2023.09.14: replace CodeUnknownFatal with something more meaningful
 		_ = r.Report(exc.New(exc.Location{
 			URI: moduleURI,
 			// TODO 2023.09.14: getting Location here would be nice!
-		}, exc.CodeUnknownFatal, fmt.Sprintf("there is already an attribute with the uid '%d' in '%s'", attributeReference.AttributeUID, attributeUIDs[attributeReference.AttributeUID])))
+		}, exc.CodeUIDCollision, fmt.Sprintf("there is already an attribute with the uid '%d' in '%s'", attributeReference.AttributeUID, attributeUIDs[attributeReference.AttributeUID])))
 	}
 	attributeUIDs[attributeReference.AttributeUID] = typeName
 
@@ -197,11 +189,10 @@ func (s *globalSymbolTable) addAttribute(r exc.Reporter, moduleURI string, typeN
 	}
 
 	if _, ok := s.attributes[moduleURI][typeName][name]; ok {
-		// TODO 2023.09.12: replace CodeUnknownFatal with something more meaningful
 		_ = r.Report(exc.New(exc.Location{
 			URI: moduleURI,
 			// TODO 2023.09.12: getting Location here would be nice!
-		}, exc.CodeUnknownFatal, fmt.Sprintf("there is already an attribute named '%s' in '%s'", name, typeName)))
+		}, exc.CodeNameCollision, fmt.Sprintf("there is already an attribute named '%s' in '%s'", name, typeName)))
 	} else {
 		s.attributes[moduleURI][typeName][name] = *attributeReference
 	}
@@ -211,11 +202,10 @@ func (s *globalSymbolTable) addSDKMethodInput(r exc.Reporter, moduleURI string, 
 	// Assumes we're already holding s.lock!
 
 	if _, ok := sdkMethodInputUIDs[sdkInputReference.AttributeUID]; ok {
-		// TODO 2023.09.14: replace CodeUnknownFatal with something more meaningful
 		_ = r.Report(exc.New(exc.Location{
 			URI: moduleURI,
 			// TODO 2023.09.14: getting Location here would be nice!
-		}, exc.CodeUnknownFatal, fmt.Sprintf("there is already a method input with the uid '%d' in '%s'", sdkInputReference.AttributeUID, sdkMethodInputUIDs[sdkInputReference.AttributeUID])))
+		}, exc.CodeUIDCollision, fmt.Sprintf("there is already a method input with the uid '%d' in '%s'", sdkInputReference.AttributeUID, sdkMethodInputUIDs[sdkInputReference.AttributeUID])))
 	}
 	sdkMethodInputUIDs[sdkInputReference.InputUID] = typeName
 
@@ -227,11 +217,10 @@ func (s *globalSymbolTable) addSDKMethodInput(r exc.Reporter, moduleURI string, 
 	}
 
 	if _, ok := s.inputs[moduleURI][typeName][sdkMethodName][name]; ok {
-		// TODO 2023.09.12: replace CodeUnknownFatal with something more meaningful
 		_ = r.Report(exc.New(exc.Location{
 			URI: moduleURI,
 			// TODO 2023.09.12: getting Location here would be nice!
-		}, exc.CodeUnknownFatal, fmt.Sprintf("there is already a method input named '%s' in '%s'", name, typeName)))
+		}, exc.CodeNameCollision, fmt.Sprintf("there is already a method input named '%s' in '%s'", name, typeName)))
 	} else {
 		s.inputs[moduleURI][typeName][sdkMethodName][name] = *sdkInputReference
 	}
