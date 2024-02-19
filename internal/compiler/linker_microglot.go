@@ -21,11 +21,10 @@ func link(parsed proto.Module, gsymbols *globalSymbolTable, r exc.Reporter) (*pr
 	// alias all of the dependencies' symbols into the local symbol table
 	for _, import_ := range parsed.Imports {
 		if !symbols.alias(gsymbols, import_.ImportedURI, import_.Alias, import_.IsDot) {
-			// TODO 2023.09.12: replace CodeUnknownFatal with something more meaningful
 			_ = r.Report(exc.New(exc.Location{
 				URI: parsed.URI,
 				// TODO 2023.09.12: getting Location here would sure be nice!
-			}, exc.CodeUnknownFatal, fmt.Sprintf("unknown import %s", import_.ImportedURI)))
+			}, exc.CodeUnknownImport, fmt.Sprintf("unknown import %s", import_.ImportedURI)))
 		}
 	}
 
@@ -76,11 +75,10 @@ func link(parsed proto.Module, gsymbols *globalSymbolTable, r exc.Reporter) (*pr
 					}
 				}
 				if !ok {
-					// TODO 2023.11.01: replace CodeUnknownFatal with something more meaningful
 					_ = r.Report(exc.New(exc.Location{
 						URI: parsed.URI,
 						// TODO 2023.11.01: getting Location here would sure be nice!
-					}, exc.CodeUnknownFatal, fmt.Sprintf("unknown type %s", fullName)))
+					}, exc.CodeUnknownType, fmt.Sprintf("unknown type %s", fullName)))
 				} else {
 					n.Reference = &proto.TypeSpecifier_Resolved{
 						Resolved: &proto.ResolvedReference{
@@ -123,11 +121,10 @@ func link(parsed proto.Module, gsymbols *globalSymbolTable, r exc.Reporter) (*pr
 				}
 			}
 
-			// TODO 2023.09.23: replace CodeUnknownFatal with something more meaningful
 			_ = r.Report(exc.New(exc.Location{
 				URI: parsed.URI,
 				// TODO 2023.09.23: getting Location here would sure be nice!
-			}, exc.CodeUnknownFatal, fmt.Sprintf("unknown identifier: %s", strings.Join(n.Names, "."))))
+			}, exc.CodeUnknownIdentifier, fmt.Sprintf("unknown identifier: %s", strings.Join(n.Names, "."))))
 		}
 	})
 
