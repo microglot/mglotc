@@ -3,6 +3,7 @@ package idl
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"google.golang.org/protobuf/types/descriptorpb"
@@ -61,9 +62,71 @@ func (c *imageConverter) convert() (*descriptorpb.FileDescriptorSet, error) {
 		}
 		files = append(files, file)
 	}
+	files, err := c.topoSort(files)
 	return &descriptorpb.FileDescriptorSet{
 		File: files,
-	}, nil
+	}, err
+}
+
+func (c *imageConverter) topoSort(files []*descriptorpb.FileDescriptorProto) ([]*descriptorpb.FileDescriptorProto, error) {
+	// Sort the incoming list as a best-effort attempt to keep the resulting
+	// list consistently sorted when presented the same input.
+	sort.SliceStable(files, func(i, j int) bool { return files[i].GetName() < files[j].GetName() })
+
+	roots := make([]string, 0, len(files))
+	sorted := make([]*descriptorpb.FileDescriptorProto, 0, len(files))
+	completed := make(map[string]bool, len(files))
+	nodeMap := make(map[string]*descriptorpb.FileDescriptorProto, len(files))
+	dependsOn := make(map[string]map[string]bool)
+	dependedOn := make(map[string]map[string]bool)
+	for _, n := range files {
+		nodeMap[n.GetName()] = n
+		for _, dep := range n.Dependency {
+			if _, ok := dependsOn[n.GetName()]; !ok {
+				dependsOn[n.GetName()] = make(map[string]bool)
+			}
+			dependsOn[n.GetName()][dep] = true
+			if _, ok := dependedOn[dep]; !ok {
+				dependedOn[dep] = make(map[string]bool)
+			}
+			dependedOn[dep][n.GetName()] = true
+		}
+		if len(n.Dependency) < 1 {
+			roots = append(roots, n.GetName())
+		}
+	}
+	for len(roots) > 0 {
+		current := roots[len(roots)-1]
+		roots = roots[:len(roots)-1]
+		node := nodeMap[current]
+		if completed[node.GetName()] {
+			continue
+		}
+
+		sorted = append(sorted, node)
+		completed[node.GetName()] = true
+
+		// We also sort the list of incoming edges for each node as this order
+		// has an effect on the sorted output. For example, if multiple nodes
+		// would become roots when some other node is processed then this
+		// determines the order in which they are placed into the stack.
+		nodeEdges := make([]string, 0, len(dependedOn[node.GetName()]))
+		for k := range dependedOn[node.GetName()] {
+			nodeEdges = append(nodeEdges, k)
+		}
+		sort.Strings(nodeEdges)
+		for _, dep := range nodeEdges {
+			delete(dependsOn[dep], node.GetName())
+			if len(dependsOn[dep]) < 1 {
+				roots = append(roots, dep)
+			}
+		}
+	}
+	// TODO 2024-03-01: Is it worth it to check for cycles and return an error
+	// here? This seems like something that should happen outside of conversion
+	// to proto. At the same time, I'm certain that microglot will have the same
+	// guarantee of pre-sorted files.
+	return sorted, nil
 }
 
 func mapFrom[F any, T any](c *imageConverter, in []*F, f func(*F) (T, error)) ([]T, error) {
@@ -90,7 +153,7 @@ func GetProtobufAnnotation(as []*proto.AnnotationApplication, name string) *prot
 		if !ok {
 			continue
 		}
-		typeReference := *(resolvedReference.Resolved.Reference)
+		typeReference := resolvedReference.Resolved.Reference
 		if typeReference.ModuleUID == 2 && typeReference.TypeUID == PROTOBUF_TYPE_UIDS[name] {
 			return annotation.Value
 		}
