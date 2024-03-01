@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/spf13/pflag"
@@ -31,6 +32,7 @@ type opts struct {
 	DescriptorSetOut string
 	ProtobufPlugins  []string
 	Plugins          []string
+	PerPackageMode   bool
 }
 
 func main() {
@@ -46,6 +48,7 @@ func main() {
 	flags.StringVar(&op.DescriptorSetOut, "descriptor_set_out", "", "Writes a protobuf FileDescriptorSet containing all the input to FILE")
 	flags.StringSliceVar(&op.ProtobufPlugins, "pbplugin", []string{}, "Specifies a protobuf plugin executable to use.")
 	flags.StringSliceVar(&op.Plugins, "plugin", []string{}, "Specifies a plugin executable to use.")
+	flags.BoolVar(&op.PerPackageMode, "per-package-mode", false, "Enable per-package mode for legacy protoc plugins that don't support multi-package builds.")
 	_ = flags.Parse(os.Args[1:])
 	targets := flags.Args()
 	for x, t := range targets {
@@ -130,61 +133,92 @@ func main() {
 		for _, target := range targets {
 			protoTargets = append(protoTargets, idl.URIToProtoFile(target))
 		}
-		request := pluginpb.CodeGeneratorRequest{
-			ProtoFile:       fds.File,
-			FileToGenerate:  protoTargets,
-			CompilerVersion: &pluginpb.Version{},
-			Parameter:       &parameters,
+		packageTargets := [][]string{protoTargets}
+		if op.PerPackageMode {
+			packageTargets = make([][]string, 0, 8)
+			targetMap := make(map[string]bool)
+			for _, target := range protoTargets {
+				targetMap[target] = true
+			}
+			sort.Slice(fds.File, func(i, j int) bool {
+				return *fds.File[i].Package < *fds.File[j].Package
+			})
+			last := *fds.File[0].Package
+			currentTargets := make([]string, 0, 8)
+			for _, f := range fds.File {
+				if targetMap[*f.Name] {
+					if *f.Package == last {
+						currentTargets = append(currentTargets, *f.Name)
+					} else {
+						last = *f.Package
+						packageTargets = append(packageTargets, currentTargets)
+						currentTargets = make([]string, 0, 8)
+						currentTargets = append(currentTargets, *f.Name)
+					}
+				}
+			}
+			if len(currentTargets) > 0 {
+				packageTargets = append(packageTargets, currentTargets)
+			}
 		}
-		requestBytes, err := proto.Marshal(&request)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
-			os.Exit(1)
-		}
-
-		var pluginOut bytes.Buffer
-		var pluginErr bytes.Buffer
-
-		binary, err = exec.LookPath(binary)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
-			os.Exit(1)
-		}
-		cmd := exec.Command(binary)
-		cmd.Stdin = bytes.NewReader(requestBytes)
-		cmd.Stdout = &pluginOut
-		cmd.Stderr = &pluginErr
-
-		err = cmd.Run()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s", pluginErr.String())
-			fmt.Fprintln(os.Stderr, err.Error())
-			os.Exit(1)
-		}
-
-		response := pluginpb.CodeGeneratorResponse{}
-		err = proto.Unmarshal(pluginOut.Bytes(), &response)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
-			os.Exit(1)
-		}
-
-		if response.Error != nil {
-			fmt.Fprintln(os.Stderr, response.GetError())
-			os.Exit(1)
-		}
-
-		for _, responseFile := range response.File {
-			filename := path.Join(output, *responseFile.Name)
-			if err = os.MkdirAll(filepath.Dir(filename), 0770); err != nil {
+		for _, targets := range packageTargets {
+			request := pluginpb.CodeGeneratorRequest{
+				ProtoFile:       fds.File,
+				FileToGenerate:  targets,
+				CompilerVersion: &pluginpb.Version{},
+				Parameter:       &parameters,
+			}
+			requestBytes, err := proto.Marshal(&request)
+			if err != nil {
 				fmt.Fprintln(os.Stderr, err.Error())
 				os.Exit(1)
 			}
-			if err = os.WriteFile(path.Join(output, *responseFile.Name), []byte(*responseFile.Content), 0o644); err != nil {
+
+			var pluginOut bytes.Buffer
+			var pluginErr bytes.Buffer
+
+			binary, err = exec.LookPath(binary)
+			if err != nil {
 				fmt.Fprintln(os.Stderr, err.Error())
 				os.Exit(1)
 			}
+			cmd := exec.Command(binary)
+			cmd.Stdin = bytes.NewReader(requestBytes)
+			cmd.Stdout = &pluginOut
+			cmd.Stderr = &pluginErr
+
+			err = cmd.Run()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s", pluginErr.String())
+				fmt.Fprintln(os.Stderr, err.Error())
+				os.Exit(1)
+			}
+
+			response := pluginpb.CodeGeneratorResponse{}
+			err = proto.Unmarshal(pluginOut.Bytes(), &response)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err.Error())
+				os.Exit(1)
+			}
+
+			if response.Error != nil {
+				fmt.Fprintln(os.Stderr, response.GetError())
+				os.Exit(1)
+			}
+
+			for _, responseFile := range response.File {
+				filename := path.Join(output, *responseFile.Name)
+				if err = os.MkdirAll(filepath.Dir(filename), 0770); err != nil {
+					fmt.Fprintln(os.Stderr, err.Error())
+					os.Exit(1)
+				}
+				if err = os.WriteFile(path.Join(output, *responseFile.Name), []byte(*responseFile.Content), 0o644); err != nil {
+					fmt.Fprintln(os.Stderr, err.Error())
+					os.Exit(1)
+				}
+			}
 		}
+
 	}
 
 	for _, plugin := range op.Plugins {
