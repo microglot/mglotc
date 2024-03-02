@@ -225,12 +225,17 @@ func main() {
 		name, parameters, _ := strings.Cut(plugin, ":")
 
 		if name != "mgdl-gen-go" {
-			fmt.Fprintln(os.Stderr, "Only the mgdl-gen-go plugin is supported, for now")
+			fmt.Fprintf(os.Stderr, "Only the mgdl-gen-go plugin is supported, for now (%s)\n", name)
 			os.Exit(1)
 		}
 
 		// TODO 2023.12.30: an executable interface like the protobuf one, but passing an idl.Image
-		files, err := mgdl_gen_go.Embed(parameters, out.Image, targets)
+		g, err := mgdl_gen_go.NewGenerator(parameters, out.Image)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
+		files, err := g.Generate(targets)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)

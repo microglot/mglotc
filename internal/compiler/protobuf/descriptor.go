@@ -12,6 +12,7 @@ import (
 
 	"gopkg.microglot.org/compiler.go/internal/idl"
 	"gopkg.microglot.org/compiler.go/internal/proto"
+	"gopkg.microglot.org/compiler.go/internal/target"
 )
 
 func mapFrom[F any, T any](p *idl.PathState, in []*F, f func(*F) (T, error)) ([]T, error) {
@@ -217,7 +218,7 @@ func (c *fileDescriptorConverter) convert() (*proto.Module, error) {
 			// ImportedUID:
 			// IsDot:
 
-			ImportedURI: import_,
+			ImportedURI: target.Normalize(import_),
 			// Alias:
 
 			// CommentBlock:
