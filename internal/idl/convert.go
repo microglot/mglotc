@@ -271,7 +271,7 @@ func (c *imageConverter) fromModule(module *proto.Module) (*descriptorpb.FileDes
 
 	var dependencies []string
 	for _, import_ := range module.Imports {
-		dependencies = append(dependencies, import_.ImportedURI)
+		dependencies = append(dependencies, URIToProtoFile(import_.ImportedURI))
 	}
 
 	c.p.PushFieldNumber( /* MessageType */ 4)
