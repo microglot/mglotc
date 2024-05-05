@@ -9,6 +9,7 @@ import (
 	"gopkg.microglot.org/compiler.go/internal/exc"
 	"gopkg.microglot.org/compiler.go/internal/idl"
 	"gopkg.microglot.org/compiler.go/internal/iter"
+	"gopkg.microglot.org/compiler.go/internal/proto"
 )
 
 type ParserMicroglot struct {
@@ -53,14 +54,14 @@ type parserMicroglotTokens struct {
 	uri      string
 	// this is the .Span.End of the last successfully parsed token; we keep track of it
 	// so that we can give a meaningful location to "unexpected EOF" errors.
-	loc    idl.Location
+	loc    proto.SourceLocation
 	tokens idl.Lookahead[*idl.Token]
 }
 
 func (p *parserMicroglotTokens) report(code string, message string) {
 	_ = p.reporter.Report(exc.New(exc.Location{
-		URI:      p.uri,
-		Location: p.loc,
+		URI:            p.uri,
+		SourceLocation: p.loc,
 	}, code, message))
 }
 

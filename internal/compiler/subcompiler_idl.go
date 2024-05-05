@@ -37,11 +37,11 @@ READLOOP:
 		case idl.TokenTypeKeywordSyntax:
 			nt := tokenLookahead.Lookahead(ctx, 1)
 			if !nt.IsPresent() || nt.Value().Type != idl.TokenTypeEqual {
-				return nil, r.Report(exc.New(exc.Location{URI: file.Path(ctx), Location: *t.Span.Start}, exc.CodeUnsupportedFileFormat, "missing or invalid syntax statement"))
+				return nil, r.Report(exc.New(exc.Location{URI: file.Path(ctx), SourceLocation: *t.Span.Start}, exc.CodeUnsupportedFileFormat, "missing or invalid syntax statement"))
 			}
 			nt = tokenLookahead.Lookahead(ctx, 2)
 			if !nt.IsPresent() || nt.Value().Type != idl.TokenTypeText {
-				return nil, r.Report(exc.New(exc.Location{URI: file.Path(ctx), Location: *t.Span.Start}, exc.CodeUnsupportedFileFormat, "missing or invalid syntax statement"))
+				return nil, r.Report(exc.New(exc.Location{URI: file.Path(ctx), SourceLocation: *t.Span.Start}, exc.CodeUnsupportedFileFormat, "missing or invalid syntax statement"))
 			}
 			syntax = nt.Value().Value
 			break READLOOP
