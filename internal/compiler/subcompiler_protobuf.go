@@ -64,7 +64,7 @@ func (self *protoReporter) Error(e reporter.ErrorWithPos) error {
 	pos := e.GetPosition()
 	loc := exc.Location{
 		URI: pos.Filename,
-		Location: idl.Location{
+		SourceLocation: proto.SourceLocation{
 			Line:   int32(pos.Line),
 			Column: int32(pos.Col),
 			Offset: int64(pos.Offset),

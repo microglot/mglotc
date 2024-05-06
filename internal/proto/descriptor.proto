@@ -22,6 +22,7 @@ message Module {
    repeated Constant Constants = 10;
    repeated Annotation Annotations = 11;
    repeated DotImport DotImports = 12;
+   optional SourceCodeInfo source_code_info = 13;
 }
 
 message Import {
@@ -377,4 +378,51 @@ message CommentBlock {
 message TypeName {
    string Name = 1;
    repeated TypeSpecifier Parameters = 2;
+}
+
+message SourceLocation {
+   int32 Line = 1;
+   int32 Column = 2;
+   int64 Offset = 3;
+}
+
+message Span {
+   optional SourceLocation Start = 1;
+   optional SourceLocation End = 2;
+}
+
+message Location {
+   // This "path" works exactly the same way as the protobuf one (defined in protobuf's
+   // descriptor.proto.)
+
+   // Identifies which part of the Module was defined at this
+   // location.
+   //
+   // Each element is a field number or an index.  They form a path from
+   // the root Module to the place where the definition occurs.
+   // For example, this path:
+   //   [ 6, 3, 3, 7, 2 ]
+   // refers to:
+   //   file.Structs(3)  // 6, 3
+   //       .Fields(7)   // 3, 7
+   //       .Name()      // 2
+   // This is because Module.Structs has field number 6:
+   //   repeated Struct Structs = 6;
+   // and Struct.Fields has field number 3:
+   //   repeated Field Fields = 3;
+   // and Field.Name has field number 1:
+   //   string Name = 2;
+   //
+   // Thus, the above path gives the location of a field name.  If we removed
+   // the last element:
+   //   [ 4, 3, 2, 7 ]
+   // this path refers to the whole field declaration (from the beginning
+   // of the label to the terminating semicolon).
+   repeated int32 path = 1 [packed = true];
+
+   Span Span = 2;
+}
+
+message SourceCodeInfo {
+   repeated Location Locations = 1;
 }

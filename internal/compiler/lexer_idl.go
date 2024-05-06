@@ -9,6 +9,7 @@ import (
 	"gopkg.microglot.org/compiler.go/internal/idl"
 	"gopkg.microglot.org/compiler.go/internal/iter"
 	"gopkg.microglot.org/compiler.go/internal/optional"
+	"gopkg.microglot.org/compiler.go/internal/proto"
 )
 
 const (
@@ -178,7 +179,7 @@ func (self *lexerFileIDLTokens) next(ctx context.Context) optional.Optional[idl.
 }
 
 func (self *lexerFileIDLTokens) exc(code string, message string) exc.Exception {
-	return exc.New(exc.Location{URI: self.uri, Location: idl.Location{Line: self.line, Column: self.col, Offset: self.offset}}, code, message)
+	return exc.New(exc.Location{URI: self.uri, SourceLocation: proto.SourceLocation{Line: self.line, Column: self.col, Offset: self.offset}}, code, message)
 }
 
 func (self *lexerFileIDLTokens) newLine() {
@@ -204,13 +205,13 @@ func (self *lexerFileIDLTokens) Close(ctx context.Context) error {
 
 func newToken(startLine int32, startCol int32, startOffset int64, endLine int32, endCol int32, endOffset int64, kind idl.TokenType, value string) *idl.Token {
 	return &idl.Token{
-		Span: &idl.Span{
-			Start: &idl.Location{
+		Span: &proto.Span{
+			Start: &proto.SourceLocation{
 				Line:   startLine,
 				Column: startCol,
 				Offset: startOffset,
 			},
-			End: &idl.Location{
+			End: &proto.SourceLocation{
 				Line:   endLine,
 				Column: endCol,
 				Offset: endOffset,

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"gopkg.microglot.org/compiler.go/internal/idl"
+	"gopkg.microglot.org/compiler.go/internal/proto"
 )
 
 // interface for all AST nodes
@@ -60,7 +61,7 @@ type step interface {
 }
 
 type astNode struct {
-	loc idl.Location
+	loc proto.SourceLocation
 }
 
 type astModule struct {

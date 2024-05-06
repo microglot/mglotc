@@ -123,7 +123,7 @@ type Parser interface {
 }
 
 type Token struct {
-	Span  *Span
+	Span  *proto.Span
 	Type  TokenType
 	Value string
 }
@@ -228,14 +228,3 @@ const (
 	TokenTypeNewline           TokenType = 93
 	TokenTypeEOF               TokenType = 94
 )
-
-type Span struct {
-	Start *Location
-	End   *Location
-}
-
-type Location struct {
-	Line   int32
-	Column int32
-	Offset int64
-}

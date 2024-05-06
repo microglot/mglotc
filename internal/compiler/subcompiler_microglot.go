@@ -48,7 +48,7 @@ func (self *SubCompilerMicroglot) CompileFile(ctx context.Context, r exc.Reporte
 		fmt.Println(ast)
 	}
 
-	module, err := microglot.FromModule(ast)
+	module, err := ast.ToModule()
 	if err != nil {
 		return nil, err
 	}

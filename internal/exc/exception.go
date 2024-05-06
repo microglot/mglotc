@@ -3,7 +3,7 @@ package exc
 import (
 	"fmt"
 
-	"gopkg.microglot.org/compiler.go/internal/idl"
+	"gopkg.microglot.org/compiler.go/internal/proto"
 )
 
 type Exception interface {
@@ -14,7 +14,7 @@ type Exception interface {
 }
 
 type Location struct {
-	idl.Location
+	proto.SourceLocation
 	URI string
 }
 

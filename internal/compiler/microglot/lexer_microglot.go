@@ -9,6 +9,7 @@ import (
 	"gopkg.microglot.org/compiler.go/internal/idl"
 	"gopkg.microglot.org/compiler.go/internal/iter"
 	"gopkg.microglot.org/compiler.go/internal/optional"
+	"gopkg.microglot.org/compiler.go/internal/proto"
 )
 
 const (
@@ -1030,7 +1031,7 @@ func (self *lexerFileMicroglotTokens) next(ctx context.Context) optional.Optiona
 }
 
 func (self *lexerFileMicroglotTokens) exc(code string, message string) exc.Exception {
-	return exc.New(exc.Location{URI: self.uri, Location: idl.Location{Line: self.line, Column: self.col, Offset: self.offset}}, code, message)
+	return exc.New(exc.Location{URI: self.uri, SourceLocation: proto.SourceLocation{Line: self.line, Column: self.col, Offset: self.offset}}, code, message)
 }
 
 func (self *lexerFileMicroglotTokens) newLine() {
@@ -1056,13 +1057,13 @@ func (self *lexerFileMicroglotTokens) Close(ctx context.Context) error {
 
 func newTokenLineSpan(line int32, col int32, offset int64, size int, kind idl.TokenType, value string) *idl.Token {
 	return &idl.Token{
-		Span: &idl.Span{
-			Start: &idl.Location{
+		Span: &proto.Span{
+			Start: &proto.SourceLocation{
 				Line:   line,
 				Column: col - int32(size),
 				Offset: offset - int64(size),
 			},
-			End: &idl.Location{
+			End: &proto.SourceLocation{
 				Line:   line,
 				Column: col,
 				Offset: offset,
@@ -1075,13 +1076,13 @@ func newTokenLineSpan(line int32, col int32, offset int64, size int, kind idl.To
 
 func newToken(startLine int32, startCol int32, startOffset int64, endLine int32, endCol int32, endOffset int64, kind idl.TokenType, value string) *idl.Token {
 	return &idl.Token{
-		Span: &idl.Span{
-			Start: &idl.Location{
+		Span: &proto.Span{
+			Start: &proto.SourceLocation{
 				Line:   startLine,
 				Column: startCol,
 				Offset: startOffset,
 			},
-			End: &idl.Location{
+			End: &proto.SourceLocation{
 				Line:   endLine,
 				Column: endCol,
 				Offset: endOffset,
