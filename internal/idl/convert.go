@@ -413,10 +413,20 @@ func (c *imageConverter) addMapEntryQualification(module *proto.Module, struct_ 
 	synth := make(map[string]bool, len(synthetics))
 	for _, synthetic := range synthetics {
 		synth[*synthetic.Name] = true
+		synth[struct_.Name.Name+"."+*synthetic.Name] = true
+		synth["."+struct_.Name.Name+"."+*synthetic.Name] = true
+		synth[prefix+"."+*synthetic.Name] = true
 	}
+
 	for _, f := range fields {
 		if f.TypeName != nil && synth[*f.TypeName] {
-			*f.TypeName = prefix + "." + *f.TypeName
+			tname := f.GetTypeName()
+			tname = strings.TrimPrefix(tname, "."+module.ProtobufPackage)
+			tname = strings.TrimPrefix(tname, module.ProtobufPackage)
+			tname = strings.TrimPrefix(tname, "."+struct_.GetName().GetName()+".")
+			tname = strings.TrimPrefix(tname, struct_.GetName().GetName()+".")
+			tname = strings.TrimPrefix(tname, ".")
+			*f.TypeName = prefix + "." + tname
 		}
 	}
 }
@@ -435,7 +445,6 @@ func (c *imageConverter) fromStruct(module *proto.Module, struct_ *proto.Struct)
 	}
 	c.p.PopIndex()
 	c.p.PopFieldNumber()
-	c.addMapEntryQualification(module, struct_, nestedType, fields)
 
 	oneofs, err := mapFrom(c, struct_.Unions, c.fromUnion)
 	if err != nil {
@@ -485,6 +494,7 @@ func (c *imageConverter) fromStruct(module *proto.Module, struct_ *proto.Struct)
 	}
 
 	c.maybeEmitLocation(struct_.CommentBlock)
+	c.addMapEntryQualification(module, struct_, nestedType, fields)
 
 	name := new(string)
 	*name = struct_.Name.Name
