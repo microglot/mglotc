@@ -692,18 +692,30 @@ func (c *imageConverter) fromResolvedReference(resolvedReference *proto.Resolved
 }
 
 func (c *imageConverter) fromEnum(enum *proto.Enum) (*descriptorpb.EnumDescriptorProto, error) {
-	values, err := mapFrom(c, enum.Enumerants, c.fromEnumerant)
-	if err != nil {
-		return nil, err
-	}
-
-	return &descriptorpb.EnumDescriptorProto{
-		Name:  &enum.Name,
-		Value: values,
+	result := &descriptorpb.EnumDescriptorProto{
+		Name: &enum.Name,
 		// Options
 		// ReservedRange
 		// ReservedName
-	}, nil
+	}
+	fromProto := getProtobufAnnotationBool(enum.AnnotationApplications, "EnumFromProto")
+	if fromProto != nil && *fromProto {
+		values, err := mapFrom(c, enum.Enumerants, c.fromEnumerant)
+		if err != nil {
+			return nil, err
+		}
+		result.Value = values
+	} else {
+		values, err := mapFrom[proto.Enumerant, *descriptorpb.EnumValueDescriptorProto](c, enum.Enumerants, func(e *proto.Enumerant) (*descriptorpb.EnumValueDescriptorProto, error) {
+			return c.fromMicroglotEnumerant(enum, e)
+		})
+		if err != nil {
+			return nil, err
+		}
+		result.Value = values
+	}
+
+	return result, nil
 }
 
 func (c *imageConverter) fromEnumerant(enumerant *proto.Enumerant) (*descriptorpb.EnumValueDescriptorProto, error) {
@@ -712,6 +724,25 @@ func (c *imageConverter) fromEnumerant(enumerant *proto.Enumerant) (*descriptorp
 		Name:   &enumerant.Name,
 		Number: &number,
 		// Options
+	}, nil
+}
+
+func (c *imageConverter) fromMicroglotEnumerant(enum *proto.Enum, enumerant *proto.Enumerant) (*descriptorpb.EnumValueDescriptorProto, error) {
+	number := (int32)(enumerant.Reference.AttributeUID)
+	name := enum.Name + "_" + enumerant.Name
+	microglotName := enumerant.Name
+	optMicroglotName := "MicroglotName"
+	f := false
+	return &descriptorpb.EnumValueDescriptorProto{
+		Name:   &name,
+		Number: &number,
+		// Options
+		Options: &descriptorpb.EnumValueOptions{UninterpretedOption: []*descriptorpb.UninterpretedOption{
+			&descriptorpb.UninterpretedOption{
+				Name:        []*descriptorpb.UninterpretedOption_NamePart{&descriptorpb.UninterpretedOption_NamePart{NamePart: &optMicroglotName, IsExtension: &f}},
+				StringValue: []byte(microglotName),
+			},
+		}},
 	}, nil
 }
 

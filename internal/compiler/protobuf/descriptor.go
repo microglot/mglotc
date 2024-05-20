@@ -612,15 +612,40 @@ func (c *fileDescriptorConverter) fromFieldDescriptorProto(fieldDescriptor *desc
 	}, nil
 }
 
+func getUnregisteredOption(name string, options []*descriptorpb.UninterpretedOption) (string, bool) {
+	for _, option := range options {
+		if option.Name[0].NamePart != nil && *option.Name[0].NamePart == name {
+			if option.AggregateValue != nil {
+				return *option.AggregateValue, true
+			}
+			if option.StringValue != nil {
+				return string(option.StringValue), true
+			}
+			if option.DoubleValue != nil {
+				return strconv.FormatFloat(*option.DoubleValue, 'f', -1, 64), true
+			}
+			if option.PositiveIntValue != nil {
+				return strconv.FormatUint(*option.PositiveIntValue, 10), true
+			}
+			if option.NegativeIntValue != nil {
+				return strconv.FormatInt(*option.NegativeIntValue, 10), true
+			}
+			if option.IdentifierValue != nil {
+				return *option.IdentifierValue, true
+			}
+			return "", false
+		}
+	}
+	return "", false
+}
+
 func (c *fileDescriptorConverter) fromEnumDescriptorProto(enumDescriptor *descriptorpb.EnumDescriptorProto) (*proto.Enum, error) {
 	enumerants, err := mapFrom(c.p, enumDescriptor.Value, c.fromEnumValueDescriptorProto)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO 2023.10.10: convert Options
-
-	return &proto.Enum{
+	result := &proto.Enum{
 		Reference: &proto.TypeReference{
 			ModuleUID: idl.Incomplete,
 			TypeUID:   idl.Incomplete,
@@ -631,19 +656,26 @@ func (c *fileDescriptorConverter) fromEnumDescriptorProto(enumDescriptor *descri
 		// ReservedNames:
 		// CommentBlock:
 		// AnnotationApplications:
-	}, nil
+	}
+	// TODO 2023.10.10: convert official Options
+	result.AnnotationApplications = appendProtobufAnnotationBoolean(result.AnnotationApplications, "EnumFromProto", true)
+	return result, nil
 }
 
 func (c *fileDescriptorConverter) fromEnumValueDescriptorProto(enumValueDescriptor *descriptorpb.EnumValueDescriptorProto) (*proto.Enumerant, error) {
 	// TODO 2023.10.10: convert Options
-
+	name := *enumValueDescriptor.Name
+	trueName, ok := getUnregisteredOption("MicroglotName", enumValueDescriptor.Options.UninterpretedOption)
+	if ok {
+		name = trueName
+	}
 	return &proto.Enumerant{
 		Reference: &proto.AttributeReference{
 			ModuleUID:    idl.Incomplete,
 			TypeUID:      idl.Incomplete,
 			AttributeUID: uint64(*enumValueDescriptor.Number),
 		},
-		Name: *enumValueDescriptor.Name,
+		Name: name,
 		// CommentBlock:
 		// AnnotationApplications:
 	}, nil
