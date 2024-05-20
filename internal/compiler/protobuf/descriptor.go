@@ -665,7 +665,7 @@ func (c *fileDescriptorConverter) fromEnumDescriptorProto(enumDescriptor *descri
 func (c *fileDescriptorConverter) fromEnumValueDescriptorProto(enumValueDescriptor *descriptorpb.EnumValueDescriptorProto) (*proto.Enumerant, error) {
 	// TODO 2023.10.10: convert Options
 	name := *enumValueDescriptor.Name
-	trueName, ok := getUnregisteredOption("MicroglotName", enumValueDescriptor.Options.UninterpretedOption)
+	trueName, ok := getUnregisteredOption("MicroglotName", enumValueDescriptor.GetOptions().GetUninterpretedOption())
 	if ok {
 		name = trueName
 	}
