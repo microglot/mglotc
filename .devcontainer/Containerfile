@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install --yes \
     shellcheck shfmt \
     jq \
     curl wget gpg \
-    make git vim \
+    make git vim less \
     sudo \
     bash-completion man \
     locales locales-all \
