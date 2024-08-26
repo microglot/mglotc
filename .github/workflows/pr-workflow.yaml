@@ -1,0 +1,33 @@
+name: Pull Request Checks
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - "**"
+  workflow_dispatch: {}
+
+jobs:
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+      - uses: actions/cache@v4
+        id: tools
+        with:
+          path: |
+            .bin
+          key: ${{ runner.os }}-${{ hashFiles('internal/tools/go.sum') }}
+      - name: Install build/test tools
+        if: steps.tools.outputs.cache-hit != 'true'
+        run: make tools
+      - name: Unit Tests
+        run: make test/unit
+      - name: Descriptor Diff Tests
+        run: make test/descriptor-diff

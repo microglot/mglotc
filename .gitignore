@@ -233,3 +233,5 @@ flycheck_*.el
 # project generated files
 .bin/
 .coverage/
+.build/
+dist/

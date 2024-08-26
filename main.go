@@ -35,6 +35,12 @@ type opts struct {
 	PerPackageMode   bool
 }
 
+var (
+	version string
+	commit  string
+	date    string
+)
+
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
