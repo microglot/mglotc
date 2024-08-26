@@ -1,0 +1,42 @@
+{
+  "name": "Microglot Compiler",
+  "build": {
+    "dockerfile": "Containerfile"
+  },
+  "remoteUser": "microglot",
+  "updateRemoteUserUID": true,
+  "containerEnv": {
+    "TZ": "Etc/UTC"
+  },
+  "mounts": [],
+  "settings": {
+    "terminal.integrated.profiles.linux": {
+      "bash": {
+        "path": "/usr/bin/bash"
+      }
+    },
+    "terminal.integrated.defaultProfile.linux": "bash"
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "telemetry.telemetryLevel": "off",
+        "telemetry.enableTelemetry": false,
+        "files.insertFinalNewline": true,
+        "files.trimTrailingWhitespace": true,
+        "rewrap.wrappingColumn": 80,
+        "go.formatTool": "goimports",
+        "go.lintTool": "golangci-lint
+      },
+      "extensions": [
+        "golang.go",
+        "streetsidesoftware.code-spell-checker",
+        "stkb.rewrap",
+        "ms-vscode.makefile-tools",
+        "timonwong.shellcheck",
+        "mkhl.shfmt",
+        "redhat.vscode-yaml"
+      ]
+    }
+  }
+}
