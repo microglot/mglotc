@@ -599,6 +599,21 @@ func TestDescriptor(t *testing.T) {
 								Name: "X",
 							},
 						},
+						AnnotationApplications: []*proto.AnnotationApplication{
+							&proto.AnnotationApplication{
+								Annotation: &proto.TypeSpecifier{
+									Reference: &proto.TypeSpecifier_Resolved{
+										Resolved: &proto.ResolvedReference{
+											Reference: &proto.TypeReference{
+												ModuleUID: 2,
+												TypeUID:   idl.PROTOBUF_TYPE_UIDS["EnumFromProto"],
+											},
+										},
+									},
+								},
+								Value: &proto.Value{Kind: &proto.Value_Bool{Bool: &proto.ValueBool{Value: true}}},
+							},
+						},
 					},
 				},
 			},
@@ -769,6 +784,21 @@ func TestDescriptor(t *testing.T) {
 									AttributeUID: 0,
 								},
 								Name: "X",
+							},
+						},
+						AnnotationApplications: []*proto.AnnotationApplication{
+							&proto.AnnotationApplication{
+								Annotation: &proto.TypeSpecifier{
+									Reference: &proto.TypeSpecifier_Resolved{
+										Resolved: &proto.ResolvedReference{
+											Reference: &proto.TypeReference{
+												ModuleUID: 2,
+												TypeUID:   idl.PROTOBUF_TYPE_UIDS["EnumFromProto"],
+											},
+										},
+									},
+								},
+								Value: &proto.Value{Kind: &proto.Value_Bool{Bool: &proto.ValueBool{Value: true}}},
 							},
 						},
 					},
@@ -1129,7 +1159,6 @@ func TestDescriptor(t *testing.T) {
 
 			module, err := FromFileDescriptorProto(result.FileDescriptorProto())
 			require.Nil(t, err)
-
 			require.Equal(t, testCase.expected, module)
 		})
 	}
