@@ -7,7 +7,7 @@ import (
 )
 
 func getDefaultRoots(lookup func(string) (string, bool)) []string {
-	serprofile, _ := lookup("USERPROFILE")
+	userprofile, _ := lookup("USERPROFILE")
 	systemdrive, _ := lookup("SystemDrive")
 
 	dataDirs := []string{
