@@ -7,13 +7,12 @@ NAME=${1:-descriptor}
 echo "comparing protoc vs. main.go compilation of test/$NAME.proto"
 
 IN=$(mktemp -d)
-DS=$(mktemp)
 OUT_BASELINE=$(mktemp -d)
 OUT_ROUNDTRIP=$(mktemp -d)
 
-cp test/* $IN
+cp test/* "${IN}"
 
-protoc --proto_path=$IN/ $NAME.proto --go_out=paths=source_relative:$OUT_BASELINE --fatal_warnings
+protoc --proto_path="${IN}"/ "${NAME}.proto" --go_out=paths=source_relative:"${OUT_BASELINE}" --fatal_warnings
 # This test compares both the descriptor and the generated Go code. The Go code
 # includes the protoc version so we remove that because because microglot
 # generated code doesn't produce the same version value. Also, the Go code
@@ -22,12 +21,12 @@ protoc --proto_path=$IN/ $NAME.proto --go_out=paths=source_relative:$OUT_BASELIN
 # erased with something like file___foo_mgdl_rawDesc = nil which then makes it
 # inaccessible. We remove the nil assignment so that the injected test code
 # can access that content.
-sed -I -e "s/^\/\/ \tprotoc .*//" $OUT_BASELINE/$NAME.pb.go 
-sed -I -e "s/.*rawDesc = nil//" $OUT_BASELINE/$NAME.pb.go
+sed --in-place --expression "s/^\/\/ \tprotoc .*//" "${OUT_BASELINE}/${NAME}.pb.go"
+sed --in-place --expression "s/.*rawDesc = nil//" "${OUT_BASELINE}/${NAME}.pb.go"
 
 ## This code unmarshals the "rawDesc" descriptor and partially outputs it in string form, to make
 ## tracking down subtle differences between the baseline and round-trip descriptor easier.
-cat > $OUT_BASELINE/main.go <<EOF
+cat >"${OUT_BASELINE}/main.go" <<EOF
 package main
 
 import (
@@ -67,14 +66,32 @@ func main() {
         fmt.Printf("EnumType: %v\n", d.EnumType)
 }
 EOF
-(cd $OUT_BASELINE; go mod init $NAME && go get google.golang.org/grpc && go run .) > $OUT_BASELINE/descriptor 2>/dev/null
+(
+        cd "${OUT_BASELINE}"
+        go mod init "${NAME}" && go get google.golang.org/grpc && go run .
+) >"${OUT_BASELINE}/descriptor" 2>/dev/null
 
-go run main.go --root=$IN/ $NAME.proto --output=$OUT_ROUNDTRIP --pbplugin=protoc-gen-go:paths=source_relative
-sed -I -e "s/^\/\/ \tprotoc .*//" $OUT_ROUNDTRIP/$NAME.pb.go 
-sed -I -e "s/.*rawDesc = nil//" $OUT_ROUNDTRIP/$NAME.pb.go
+go run main.go --root="${IN}/" "${NAME}.proto" --output="${OUT_ROUNDTRIP}" --pbplugin=protoc-gen-go:paths=source_relative
+sed --in-place --expression "s/^\/\/ \tprotoc .*//" "${OUT_ROUNDTRIP}/${NAME}.pb.go"
+sed --in-place --expression "s/.*rawDesc = nil//" "${OUT_ROUNDTRIP}/${NAME}.pb.go"
 
-cp $OUT_BASELINE/main.go $OUT_ROUNDTRIP/main.go
-(cd $OUT_ROUNDTRIP; go mod init $NAME && go get google.golang.org/grpc && go run .) > $OUT_ROUNDTRIP/descriptor 2>/dev/null
+cp "${OUT_BASELINE}/main.go" "${OUT_ROUNDTRIP}/main.go"
+(
+        cd "${OUT_ROUNDTRIP}"
+        go mod init "${NAME}" && go get google.golang.org/grpc && go run .
+) >"${OUT_ROUNDTRIP}/descriptor" 2>/dev/null
 
-git diff --no-index $OUT_BASELINE/descriptor $OUT_ROUNDTRIP/descriptor
-git diff --no-index $OUT_BASELINE/$NAME.pb.go $OUT_ROUNDTRIP/$NAME.pb.go
+DESC_DIFF="$(git --no-pager diff --no-index "${OUT_BASELINE}"/descriptor "${OUT_ROUNDTRIP}/descriptor")"
+GO_DIFF="$(git --no-pager diff --no-index "${OUT_BASELINE}/${NAME}.pb.go" "${OUT_ROUNDTRIP}/${NAME}.pb.go")"
+
+if [[ "${DESC_DIFF}" != "" ]]; then
+        echo "Found a descriptor diff"
+        echo "${DESC_DIFF}"
+        exit 1
+fi
+
+if [[ "${GO_DIFF}" != "" ]]; then
+        echo "Found a protoc-gen-go diff"
+        echo "${GO_DIFF}"
+        exit 1
+fi
