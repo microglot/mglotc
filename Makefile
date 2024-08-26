@@ -1,129 +1,131 @@
 .PHONY : update bin
-.PHONY : lint test integration coverage 
+.PHONY : lint test integration coverage
 .PHONY : clean clean/coverage clean/bin
 
 PROJECT_PATH = $(shell pwd -L)
-BINDIR = $(PROJECT_PATH)/.bin
 GOFLAGS ::= ${GOFLAGS}
-COVERDIR = $(PROJECT_PATH)/.coverage
-COVEROUT = $(wildcard $(COVERDIR)/*.out)
-COVERINTERCHANGE = $(COVEROUT:.out=.interchange)
-COVERHTML = $(COVEROUT:.out=.html)
-COVERXML = $(COVEROUT:.out=.xml)
-COVERCOMBINED ::= $(COVERDIR)/combined.out
-GOIMPORT_LOCAL = gopkg.microglot.org/compiler.go/
+BUILD_DIR = $(PROJECT_PATH)/.build
+TOOLS_DIR = $(PROJECT_PATH)/internal/tools
+TOOLS_FILE = $(TOOLS_DIR)/tools.go
+TOOLS_MOD = $(TOOLS_DIR)/go.mod
+TOOLS_SUM = $(TOOLS_DIR)/go.sum
+GOTOOLS = $(shell grep '_' $(TOOLS_DIR)/tools.go | sed 's/[[:space:]]*_//g' | sed 's/\"//g')
+BIN_DIR = $(PROJECT_PATH)/.bin
+COVER_DIR = $(BUILD_DIR)/.coverage
+COVERAGE_UNIT = $(COVER_DIR)/unit.out
+COVERAGE_UNIT_INTERCHANGE = $(COVERAGE_UNIT:.out=.interchange)
+COVERATE_UNIT_HTML = $(COVERAGE_UNIT:.out=.html)
+COVERAGE_UNIT_XML = $(COVERAGE_UNIT:.out=.xml)
+COVERAGE_COMBINED = $(COVER_DIR)/combined.out
+COVERAGE_COMBINED_INTERCHANGE = $(COVERAGE_COMBINED:.out=.interchange)
+COVERAGE_COMBINED_HTML = $(COVERAGE_COMBINED:.out=.html)
+COVERAGE_COMBINED_XML = $(COVERAGE_COMBINED:.out=.xml)
+GOIMPORT_LOCAL = github.com/microglot
 GOLANGCILINT_CONFIG = $(PROJECT_PATH)/.golangci.yaml
+GOCMD = GOFLAGS=$(GOFLAGS) go
+BUILD_MODE = local
+BUILD_FLAGS = --clean
+ifneq ($(BUILD_MODE),tag)
+	BUILD_FLAGS = --clean --snapshot
+endif
 
-update:
-	GO111MODULE=on go get -u
 
-bin: $(BINDIR)
 
-$(BINDIR):
-	mkdir -p $(BINDIR)
-	GOBIN=$(BINDIR) go install github.com/golang/mock/mockgen@v1.6.0
-	GOBIN=$(BINDIR) go install golang.org/x/tools/cmd/goimports@latest
-	GOBIN=$(BINDIR) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.52.2
-	GOBIN=$(BINDIR) go install github.com/axw/gocov/gocov@v1.1.0 
-	GOBIN=$(BINDIR) go install github.com/matm/gocov-html/cmd/gocov-html@v1.4.0
-	GOBIN=$(BINDIR) go install github.com/AlekSi/gocov-xml@v1.1.0
-	GOBIN=$(BINDIR) go install github.com/wadey/gocovmerge@latest
-	GOBIN=$(BINDIR) go install golang.org/x/tools/cmd/stringer@latest
-	GOBIN=$(BINDIR) go install github.com/bufbuild/buf/cmd/buf@v1.26.1
-	GOBIN=$(BINDIR) go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0
+#######
+# https://stackoverflow.com/a/10858332
+check_defined = \
+    $(strip $(foreach 1,$1, \
+        $(call __check_defined,$1,$(strip $(value 2)))))
+__check_defined = \
+    $(if $(value $1),, \
+      $(error Undefined $1$(if $2, ($2))))
+#######
 
-fmt: $(BINDIR)
-	# Apply goimports to all code files. Here we intentionally
-	# ignore everything in /vendor if it is present.
-	GO111MODULE=on \
-	GOFLAGS="$(GOFLAGS)" \
-	$(BINDIR)/goimports -w -v \
-	-local $(GOIMPORT_LOCAL) \
-	$(shell find . -type f -name '*.go' -not -path "./vendor/*")
+build: | $(BUILD_DIR) $(BIN_DIR)
+	@ $(BIN_DIR)/goreleaser build $(BUILD_FLAGS)
 
-lint: $(BINDIR)
-	GO111MODULE=on \
-	GOFLAGS="$(GOFLAGS)" \
-	$(BINDIR)/golangci-lint run \
-		--config $(GOLANGCILINT_CONFIG) \
-		--print-resources-usage \
-		--verbose
+release: | $(BUILD_DIR) $(BIN_DIR)
+	@ $(BIN_DIR)/goreleaser release --clean
 
-test: $(BINDIR) $(COVERDIR)
-	@./descriptor_diff minimal
-	@./descriptor_diff message
-	@./descriptor_diff comment
-	@./descriptor_diff map
-	@./descriptor_diff descriptor
-	GO111MODULE=on \
-	GOFLAGS="$(GOFLAGS)" \
-	CGO_ENABLED=1 \
-	go test \
-		-v \
-		-cover \
-		-race \
-		-coverprofile="$(COVERDIR)/unit.out" \
-		./...
+test: test/unit test/descriptor-diff
 
-generate: $(BINDIR)
+test/lint: | $(BIN_DIR)
+	@ GOFLAGS="$(GOFLAGS)" \
+	$(BIN_DIR)/golangci-lint run \
+		--config $(GOLANGCILINT_CONFIG)
+
+test/unit: $(COVERAGE_UNIT) | $(BIN_DIR)
+
+test/descriptor-diff:
+	@ PATH="${PATH}:$(BIN_DIR)" ./descriptor_diff minimal
+	@ PATH="${PATH}:$(BIN_DIR)" ./descriptor_diff message
+	@ PATH="${PATH}:$(BIN_DIR)" ./descriptor_diff comment
+	@ PATH="${PATH}:$(BIN_DIR)" ./descriptor_diff map
+	@ PATH="${PATH}:$(BIN_DIR)" ./descriptor_diff descriptor
+
+test/coverage: $(COVER_DIR) $(COVERAGE_UNIT) $(COVERAGE_UNIT_INTERCHANGE) $(COVERATE_UNIT_HTML) $(COVERAGE_UNIT_XML) $(COVERAGE_COMBINED) $(COVERAGE_COMBINED_INTERCHANGE) $(COVERAGE_COMBINED_HTML) $(COVERAGE_COMBINED_XML) | $(BIN_DIR)
+	@ $(GOCMD) tool cover -func $(COVERAGE_COMBINED)
+
+tools: $(TOOLS_FILE) $(TOOLS_MOD) $(TOOLS_SUM) | $(BIN_DIR)
+	@ cd $(TOOLS_DIR) && GOBIN=$(BIN_DIR) $(GOCMD) install $(GOTOOLS)
+tools/update:
+	@ cd $(TOOLS_DIR) && GOBIN=$(BIN_DIR) $(GOCMD) get -u
+	@ cd $(TOOLS_DIR) && GOBIN=$(BIN_DIR) $(GOCMD) mod tidy
+
+$(BIN_DIR):
+	mkdir -p $(BIN_DIR)
+
+generate: | $(BIN_DIR)
 	# Run any code generation steps.
 	GO111MODULE=on \
 	GOFLAGS="$(GOFLAGS)" \
-	PATH="${PATH}:$(BINDIR)" \
+	PATH="${PATH}:$(BIN_DIR)" \
 	go generate ./...
 	$(MAKE) fmt
 
-coverage: $(BINDIR) $(COVERDIR) $(COVERCOMBINED) $(COVERINTERCHANGE) $(COVERHTML) $(COVERXML)
-	# The cover rule is an alias for a number of other rules that each
-	# generate part of the full coverage report. First, any coverage reports
-	# are combined so that there is a report both for an individual test run
-	# and a report that covers all test runs together. Then all coverage
-	# files are converted to an interchange format. From there we generate
-	# an HTML and XML report. XML reports may be used with jUnit style parsers,
-	# the HTML report is for human consumption in order to help identify
-	# the location of coverage gaps, and the original reports are available
-	# for any purpose.
-	GO111MODULE=on \
+fmt: | $(BIN_DIR)
+	@ GOFLAGS="$(GOFLAGS)" \
+	$(BIN_DIR)/goimports -w -v \
+		-local $(GOIMPORT_LOCAL) \
+		$(shell find . -type f -name '*.go' -not -path "./vendor/*")
+
+clean: clean/test clean/tools
+	@:$(call check_defined,BUILD_DIR)
+	@ rm -rf "$(BUILD_DIR)"
+clean/test:
+	@:$(call check_defined,COVER_DIR)
+	@ rm -rf "$(COVER_DIR)"
+clean/tools:
+	@:$(call check_defined,BIN_DIR)
+	@ rm -rf "$(BIN_DIR)"
+
+
+$(COVERAGE_UNIT): $(shell find . -type f -name '*.go' -not -path "./vendor/*") | $(COVER_DIR)
+	$(GOCMD) test \
+		-v \
+		-cover \
+		-race \
+		-coverprofile="$(COVERAGE_UNIT)" \
+		./...
+
+$(COVER_DIR)/%.interchange: $(COVER_DIR)/%.out
+	@ GOFLAGS="$(GOFLAGS)" \
+	$(BIN_DIR)/gocov convert $< > $@
+
+$(COVER_DIR)/%.xml: $(COVER_DIR)/%.interchange
+	@ cat $< | \
 	GOFLAGS="$(GOFLAGS)" \
-	go tool cover -func $(COVERCOMBINED)
+	$(BIN_DIR)/gocov-xml > $@
 
-$(COVERCOMBINED):
-	GO111MODULE=on \
+$(COVER_DIR)/%.html: $(COVER_DIR)/%.interchange
+	@ cat $< | \
 	GOFLAGS="$(GOFLAGS)" \
- 	$(BINDIR)/gocovmerge $(COVERDIR)/*.out > $(COVERCOMBINED)
+	$(BIN_DIR)/gocov-html > $@
 
-	# NOTE: I couldn't figure out how to automatically include
-	# the combined files with the list of other .out files that
-	# are processed in bulk. For now, this needs to have specific
-	# calls to make for combined coverage.
-	$(MAKE) $(COVERCOMBINED:.out=.interchange)
-	$(MAKE) $(COVERCOMBINED:.out=.xml)
-	$(MAKE) $(COVERCOMBINED:.out=.html)
+$(COVERAGE_COMBINED):
+	@ GOFLAGS="$(GOFLAGS)" \
+ 	$(BIN_DIR)/gocovmerge $(COVER_DIR)/*.out > $(COVERAGE_COMBINED)
 
-$(COVERDIR)/%.interchange: $(COVERDIR)/%.out
-	GO111MODULE=on \
-	GOFLAGS="$(GOFLAGS)" \
-	$(BINDIR)/gocov convert $< > $@
+$(COVER_DIR):
+	@ mkdir -p $(COVER_DIR)
 
-$(COVERDIR)/%.xml: $(COVERDIR)/%.interchange
-	cat $< | \
-	GO111MODULE=on \
-	GOFLAGS="$(GOFLAGS)" \
-	$(BINDIR)/gocov-xml > $@
-
-$(COVERDIR)/%.html: $(COVERDIR)/%.interchange
-	cat $< | \
-	GO111MODULE=on \
-	GOFLAGS="$(GOFLAGS)" \
-	$(BINDIR)/gocov-html > $@
-
-$(COVERDIR): 
-	mkdir -p $(COVERDIR)
-
-clean: clean/coverage clean/bin ;
-
-clean/bin:
-	rm -rf $(BINDIR)
-
-clean/coverage:
-	rm -rf $(COVERDIR)

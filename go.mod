@@ -1,6 +1,6 @@
 module gopkg.microglot.org/compiler.go
 
-go 1.21
+go 1.23
 
 require (
 	github.com/bufbuild/protocompile v0.6.0
