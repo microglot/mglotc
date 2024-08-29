@@ -1,3 +1,7 @@
+// © 2023 Microglot LLC
+//
+// SPDX-License-Identifier: Apache-2.0
+
 //go:build aix || darwin || dragonfly || freebsd || (js && wasm) || linux || netbsd || openbsd || solaris
 
 package compiler

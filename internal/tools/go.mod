@@ -1,3 +1,7 @@
+// © 2024 Microglot LLC
+//
+// SPDX-License-Identifier: Apache-2.0
+
 module gopkg.microglot.org/compiler.go/internal/tools
 
 go 1.23

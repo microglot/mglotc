@@ -1,3 +1,7 @@
+# © 2024 Microglot LLC
+#
+# SPDX-License-Identifier: Apache-2.0
+
 name: Pull Request Checks
 
 on:
@@ -31,3 +35,5 @@ jobs:
         run: make test/unit
       - name: Descriptor Diff Tests
         run: make test/descriptor-diff
+      - name: Ensure files are annotated correctly for licensing
+        run: make test/license

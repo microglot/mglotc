@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# © 2023 Microglot LLC
+#
+# SPDX-License-Identifier: Apache-2.0
+
 set -e
 
 NAME=${1:-descriptor}
@@ -23,6 +27,10 @@ protoc --proto_path="${IN}"/ "${NAME}.proto" --go_out=paths=source_relative:"${O
 # can access that content.
 sed --in-place --expression "s/^\/\/ \tprotoc .*//" "${OUT_BASELINE}/${NAME}.pb.go"
 sed --in-place --expression "s/.*rawDesc = nil//" "${OUT_BASELINE}/${NAME}.pb.go"
+# TODO 2024-08-28: Add support for comment headers in IDL files
+# The following removes the first 4 lines of the baseline file that represent
+# the license header. The compiler doesn't yet handle IDL file headers.
+tail -n +5 "${OUT_BASELINE}/${NAME}.pb.go" > "${OUT_BASELINE}/${NAME}.pb.go.trunc" && mv "${OUT_BASELINE}/${NAME}.pb.go.trunc" "${OUT_BASELINE}/${NAME}.pb.go"
 
 ## This code unmarshals the "rawDesc" descriptor and partially outputs it in string form, to make
 ## tracking down subtle differences between the baseline and round-trip descriptor easier.
@@ -75,14 +83,15 @@ go run main.go --root="${IN}/" "${NAME}.proto" --output="${OUT_ROUNDTRIP}" --pbp
 sed --in-place --expression "s/^\/\/ \tprotoc .*//" "${OUT_ROUNDTRIP}/${NAME}.pb.go"
 sed --in-place --expression "s/.*rawDesc = nil//" "${OUT_ROUNDTRIP}/${NAME}.pb.go"
 
+
 cp "${OUT_BASELINE}/main.go" "${OUT_ROUNDTRIP}/main.go"
 (
         cd "${OUT_ROUNDTRIP}"
         go mod init "${NAME}" && go get google.golang.org/grpc && go run .
 ) >"${OUT_ROUNDTRIP}/descriptor" 2>/dev/null
 
-DESC_DIFF="$(git --no-pager diff --no-index "${OUT_BASELINE}"/descriptor "${OUT_ROUNDTRIP}/descriptor")"
-GO_DIFF="$(git --no-pager diff --no-index "${OUT_BASELINE}/${NAME}.pb.go" "${OUT_ROUNDTRIP}/${NAME}.pb.go")"
+DESC_DIFF="$(git --no-pager diff --no-index "${OUT_BASELINE}/descriptor" "${OUT_ROUNDTRIP}/descriptor" || true)"
+GO_DIFF="$(git --no-pager diff --no-index "${OUT_BASELINE}/${NAME}.pb.go" "${OUT_ROUNDTRIP}/${NAME}.pb.go" || true)"
 
 if [[ "${DESC_DIFF}" != "" ]]; then
         echo "Found a descriptor diff"

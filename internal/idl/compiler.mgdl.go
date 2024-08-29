@@ -1,3 +1,7 @@
+// © 2023 Microglot LLC
+//
+// SPDX-License-Identifier: Apache-2.0
+
 package idl
 
 import (

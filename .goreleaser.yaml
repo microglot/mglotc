@@ -1,9 +1,13 @@
+# © 2024 Microglot LLC
+#
+# SPDX-License-Identifier: Apache-2.0
+
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
 
 version: 2
 
 builds:
-  - binary: microglotc
+  - binary: mglotc
     env:
       - CGO_ENABLED=0
     goos:

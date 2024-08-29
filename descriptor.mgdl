@@ -1,3 +1,7 @@
+// © 2023 Microglot LLC
+//
+// SPDX-License-Identifier: Apache-2.0
+
 syntax = "microglot1"
 
 module = @0x01
@@ -144,27 +148,27 @@ struct SDKInputReference {
     InputUID :UInt64 @4
 }
 
-struct Annotation { 
+struct Annotation {
   Reference :TypeReference @1
-  Name         :Text                             @2  
-  Scopes       :List<:AnnotationScope> @3  
-  Type         :TypeSpecifier                   @4  
+  Name         :Text                             @2
+  Scopes       :List<:AnnotationScope> @3
+  Type         :TypeSpecifier                   @4
   CommentBlock :CommentBlock           @5
 }
 
-enum AnnotationScope { 
-  Module    @1  
-  Union     @2  
-  Struct    @3  
-  Field     @4  
-  Enumerant @5  
-  Enum      @6  
-  API       @7  
-  APIMethod @8  
+enum AnnotationScope {
+  Module    @1
+  Union     @2
+  Struct    @3
+  Field     @4
+  Enumerant @5
+  Enum      @6
+  API       @7
+  APIMethod @8
   SDK       @9
-  SDKMethod @10  
+  SDKMethod @10
   Const     @11
-  Import    @12 
+  Import    @12
   Star      @13
 }
 
@@ -185,109 +189,109 @@ struct AnnotationApplication {
 }
 
 struct Value {
-    union Kind { 
-        Bool       :ValueBool           @2  
-        Text       :ValueText           @3  
-        Data       :ValueData           @4  
-        Int8       :ValueInt8           @5  
-        Int16      :ValueInt16          @6  
-        Int32      :ValueInt32          @7  
-        Int64      :ValueInt64          @8  
-        UInt8      :ValueUInt8          @9  
-        UInt16     :ValueUInt16         @10 
-        UInt32     :ValueUInt32         @11 
-        UInt64     :ValueUInt64         @12 
-        Float32    :ValueFloat32        @13 
-        Float64    :ValueFloat64        @14 
-        List       :ValueList           @15 
+    union Kind {
+        Bool       :ValueBool           @2
+        Text       :ValueText           @3
+        Data       :ValueData           @4
+        Int8       :ValueInt8           @5
+        Int16      :ValueInt16          @6
+        Int32      :ValueInt32          @7
+        Int64      :ValueInt64          @8
+        UInt8      :ValueUInt8          @9
+        UInt16     :ValueUInt16         @10
+        UInt32     :ValueUInt32         @11
+        UInt64     :ValueUInt64         @12
+        Float32    :ValueFloat32        @13
+        Float64    :ValueFloat64        @14
+        List       :ValueList           @15
         Struct     :ValueStruct         @17
-        Enumerant  :AttributeReference  @18 
-        Identifier :ValueIdentifier     @19 
+        Enumerant  :AttributeReference  @18
+        Identifier :ValueIdentifier     @19
         Unary :ValueUnary               @20
         Binary :ValueBinary             @21
     } @1
 }
 
-struct ValueBool { 
-  Value  :Bool @1 
-  Source :Text @2 
+struct ValueBool {
+  Value  :Bool @1
+  Source :Text @2
 }
 
-struct ValueText { 
-  Value  :Text @1 
-  Source :Text @2 
-} 
-
-struct ValueData { 
-  Value  :Data @1 
-  Source :Text @2 
-} 
-
-struct ValueInt8 { 
-  Value  :Int8 @1 
-  Source :Text @2 
-} 
-
-struct ValueInt16 { 
-  Value  :Int16 @1 
-  Source :Text  @2 
-} 
-
-struct ValueInt32 { 
-  Value  :Int32 @1 
-  Source :Text  @2 
-} 
-
-struct ValueInt64 { 
-  Value  :Int64 @1 
-  Source :Text  @2 
-} 
-
-struct ValueUInt8 { 
-  Value  :UInt8 @1 
-  Source :Text  @2 
-} 
-
-struct ValueUInt16 { 
-  Value  :UInt16 @1 
-  Source :Text   @2 
-} 
-
-struct ValueUInt32 { 
-  Value  :UInt32 @1 
-  Source :Text   @2 
-} 
-
-struct ValueUInt64 { 
-  Value  :UInt64 @1 
-  Source :Text   @2 
-} 
-
-struct ValueFloat32 { 
-  Value  :Float32 @1 
-  Source :Text    @2 
-} 
-
-struct ValueFloat64 { 
-  Value  :Float64 @1 
-  Source :Text    @2 
-} 
-
-struct ValueIdentifier { 
-  Names  :List<:Text> @2 
-} 
-
-struct ValueList { 
-  Elements :List<:Value> @1 
+struct ValueText {
+  Value  :Text @1
+  Source :Text @2
 }
 
-struct ValueStruct { 
-  Fields :List<:ValueStructField> @1 
+struct ValueData {
+  Value  :Data @1
+  Source :Text @2
 }
 
-struct ValueStructField { 
-  Name  :Text @1 
-  Value :Value @2 
+struct ValueInt8 {
+  Value  :Int8 @1
+  Source :Text @2
+}
+
+struct ValueInt16 {
+  Value  :Int16 @1
+  Source :Text  @2
+}
+
+struct ValueInt32 {
+  Value  :Int32 @1
+  Source :Text  @2
+}
+
+struct ValueInt64 {
+  Value  :Int64 @1
+  Source :Text  @2
+}
+
+struct ValueUInt8 {
+  Value  :UInt8 @1
+  Source :Text  @2
+}
+
+struct ValueUInt16 {
+  Value  :UInt16 @1
+  Source :Text   @2
+}
+
+struct ValueUInt32 {
+  Value  :UInt32 @1
+  Source :Text   @2
+}
+
+struct ValueUInt64 {
+  Value  :UInt64 @1
+  Source :Text   @2
+}
+
+struct ValueFloat32 {
+  Value  :Float32 @1
+  Source :Text    @2
+}
+
+struct ValueFloat64 {
+  Value  :Float64 @1
+  Source :Text    @2
+}
+
+struct ValueIdentifier {
+  Names  :List<:Text> @2
+}
+
+struct ValueList {
+  Elements :List<:Value> @1
+}
+
+struct ValueStruct {
+  Fields :List<:ValueStructField> @1
+}
+
+struct ValueStructField {
+  Name  :Text @1
+  Value :Value @2
 }
 
 struct ValueUnary {
@@ -361,6 +365,6 @@ struct AttributeReference {
     AttributeUID :UInt64 @3
 }
 
-struct CommentBlock { 
-  Lines :List<:Text> @1 
+struct CommentBlock {
+  Lines :List<:Text> @1
 }
