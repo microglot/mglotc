@@ -10,9 +10,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"gopkg.microglot.org/compiler.go/internal/exc"
-	"gopkg.microglot.org/compiler.go/internal/fs"
-	"gopkg.microglot.org/compiler.go/internal/idl"
+	"gopkg.microglot.org/mglotc/internal/exc"
+	"gopkg.microglot.org/mglotc/internal/fs"
+	"gopkg.microglot.org/mglotc/internal/idl"
 )
 
 func TestParser(t *testing.T) {

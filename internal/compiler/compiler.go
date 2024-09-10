@@ -17,11 +17,11 @@ import (
 	"strings"
 	"sync"
 
-	"gopkg.microglot.org/compiler.go/internal/exc"
-	"gopkg.microglot.org/compiler.go/internal/fs"
-	"gopkg.microglot.org/compiler.go/internal/idl"
-	"gopkg.microglot.org/compiler.go/internal/proto"
-	"gopkg.microglot.org/compiler.go/internal/target"
+	"gopkg.microglot.org/mglotc/internal/exc"
+	"gopkg.microglot.org/mglotc/internal/fs"
+	"gopkg.microglot.org/mglotc/internal/idl"
+	"gopkg.microglot.org/mglotc/internal/proto"
+	"gopkg.microglot.org/mglotc/internal/target"
 )
 
 type Option func(c *compiler) error

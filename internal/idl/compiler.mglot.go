@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"math"
 
-	"gopkg.microglot.org/compiler.go/internal/optional"
-	"gopkg.microglot.org/compiler.go/internal/proto"
+	"gopkg.microglot.org/mglotc/internal/optional"
+	"gopkg.microglot.org/mglotc/internal/proto"
 )
 
 type Closer interface {

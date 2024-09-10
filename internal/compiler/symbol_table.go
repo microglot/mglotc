@@ -11,8 +11,8 @@ import (
 	"strings"
 	"sync"
 
-	"gopkg.microglot.org/compiler.go/internal/exc"
-	"gopkg.microglot.org/compiler.go/internal/proto"
+	"gopkg.microglot.org/mglotc/internal/exc"
+	"gopkg.microglot.org/mglotc/internal/proto"
 )
 
 type moduleMeta struct {

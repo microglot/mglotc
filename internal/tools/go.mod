@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-module gopkg.microglot.org/compiler.go/internal/tools
+module gopkg.microglot.org/mglotc/internal/tools
 
 go 1.23
 

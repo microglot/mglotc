@@ -10,7 +10,7 @@ import (
 	"io"
 	"strings"
 
-	"gopkg.microglot.org/compiler.go/internal/idl"
+	"gopkg.microglot.org/mglotc/internal/idl"
 )
 
 // NewFileString wraps static string content in idl.File.

@@ -7,8 +7,8 @@ package iter
 import (
 	"context"
 
-	"gopkg.microglot.org/compiler.go/internal/idl"
-	"gopkg.microglot.org/compiler.go/internal/optional"
+	"gopkg.microglot.org/mglotc/internal/idl"
+	"gopkg.microglot.org/mglotc/internal/optional"
 )
 
 // NewSlice converts a slice of values into an Iterator implementation.

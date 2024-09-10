@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package mglot_gen_go
+package mglotc_gen_go
 
 import (
 	"bytes"
@@ -15,9 +15,9 @@ import (
 
 	"google.golang.org/protobuf/types/pluginpb"
 
-	"gopkg.microglot.org/compiler.go/internal/idl"
-	"gopkg.microglot.org/compiler.go/internal/proto"
-	"gopkg.microglot.org/compiler.go/internal/target"
+	"gopkg.microglot.org/mglotc/internal/idl"
+	"gopkg.microglot.org/mglotc/internal/proto"
+	"gopkg.microglot.org/mglotc/internal/target"
 )
 
 // the generatedFile struct and its interface are very closely derived from protobuf/compiler/protogen;

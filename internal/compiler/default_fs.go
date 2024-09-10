@@ -7,8 +7,8 @@ package compiler
 import (
 	"path/filepath"
 
-	"gopkg.microglot.org/compiler.go/internal/fs"
-	"gopkg.microglot.org/compiler.go/internal/idl"
+	"gopkg.microglot.org/mglotc/internal/fs"
+	"gopkg.microglot.org/mglotc/internal/idl"
 )
 
 func NewDefaultFS(lookup func(string) (string, bool)) (idl.FileSystem, error) {

@@ -5,7 +5,7 @@
 package compiler
 
 import (
-	"gopkg.microglot.org/compiler.go/internal/proto"
+	"gopkg.microglot.org/mglotc/internal/proto"
 )
 
 func walkModule(module *proto.Module, f func(interface{})) {

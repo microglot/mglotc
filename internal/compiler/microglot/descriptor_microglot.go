@@ -11,8 +11,8 @@ import (
 	"sort"
 	"strings"
 
-	"gopkg.microglot.org/compiler.go/internal/idl"
-	"gopkg.microglot.org/compiler.go/internal/proto"
+	"gopkg.microglot.org/mglotc/internal/idl"
+	"gopkg.microglot.org/mglotc/internal/proto"
 )
 
 func mapFrom[F any, T any](in []F, f func(*F) T) []T {

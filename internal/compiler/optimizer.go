@@ -8,8 +8,8 @@ import (
 	"math"
 	"math/big"
 
-	"gopkg.microglot.org/compiler.go/internal/idl"
-	"gopkg.microglot.org/compiler.go/internal/proto"
+	"gopkg.microglot.org/mglotc/internal/idl"
+	"gopkg.microglot.org/mglotc/internal/proto"
 )
 
 // optimize() applies optimizations to an Image of linked Module descriptors.
