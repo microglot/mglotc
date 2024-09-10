@@ -161,7 +161,7 @@ func (s *globalSymbolTable) addType(r exc.Reporter, moduleURI string, name strin
 	// We consider it an error to have the more than one declaration of the same typename in a given
 	// *protobuf* package.
 	//  * this is *required* for .proto compilation and linking
-	//  * it is *assumed* by protobuf plugins (even if we're passing them descriptors compiled from mgdl!)
+	//  * it is *assumed* by protobuf plugins (even if we're passing them descriptors compiled from mglot!)
 	//  * it is hopefully rare to trigger accidentally, given how we assign default protobuf package names
 	for uri, meta := range s.modules {
 		if meta.protobufPackage == s.modules[moduleURI].protobufPackage {

@@ -1242,7 +1242,7 @@ func BenchmarkLexer(b *testing.B) {
 	tokenTypeEscape = tt
 }
 
-var desc = `syntax = "microglot0"
+var desc = `syntax = "mglot0"
 module = @0x1
 
 struct Exception {

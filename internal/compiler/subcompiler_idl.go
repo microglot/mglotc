@@ -56,7 +56,7 @@ READLOOP:
 	switch syntax {
 	case "proto2", "proto3":
 		return self.Protobuf.CompileFile(ctx, r, file, dumpTokens, dumpTree)
-	case "microglot0", "microglot1":
+	case "mglot0", "mglot1":
 		return self.Microglot.CompileFile(ctx, r, file, dumpTokens, dumpTree)
 	default:
 		return nil, r.Report(exc.New(exc.Location{URI: file.Path(ctx)}, exc.CodeUnsupportedFileFormat, "missing or invalid syntax statement"))

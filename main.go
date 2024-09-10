@@ -24,7 +24,7 @@ import (
 	"gopkg.microglot.org/compiler.go/internal/compiler"
 	"gopkg.microglot.org/compiler.go/internal/fs"
 	"gopkg.microglot.org/compiler.go/internal/idl"
-	"gopkg.microglot.org/compiler.go/internal/mgdl_gen_go"
+	"gopkg.microglot.org/compiler.go/internal/mglot_gen_go"
 	"gopkg.microglot.org/compiler.go/internal/target"
 )
 
@@ -234,13 +234,13 @@ func main() {
 	for _, plugin := range op.Plugins {
 		name, parameters, _ := strings.Cut(plugin, ":")
 
-		if name != "mgdl-gen-go" {
-			fmt.Fprintf(os.Stderr, "Only the mgdl-gen-go plugin is supported, for now (%s)\n", name)
+		if name != "mglot-gen-go" {
+			fmt.Fprintf(os.Stderr, "Only the mglot-gen-go plugin is supported, for now (%s)\n", name)
 			os.Exit(1)
 		}
 
 		// TODO 2023.12.30: an executable interface like the protobuf one, but passing an idl.Image
-		g, err := mgdl_gen_go.NewGenerator(parameters, out.Image)
+		g, err := mglot_gen_go.NewGenerator(parameters, out.Image)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)

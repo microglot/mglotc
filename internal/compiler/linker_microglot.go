@@ -169,7 +169,7 @@ func newLocalSymbols(gsymbols *globalSymbolTable, URI string) *localSymbolTable 
 		}
 	}
 
-	ok := symbols.alias(gsymbols, "/protobuf.mgdl", "Protobuf", false)
+	ok := symbols.alias(gsymbols, "/protobuf.mglot", "Protobuf", false)
 	if !ok {
 		return nil
 	}

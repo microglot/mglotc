@@ -118,7 +118,7 @@ func (self *compiler) Compile(ctx context.Context, req *idl.CompileRequest) (*id
 	symbols := globalSymbolTable{}
 
 	go func() {
-		image, err := self.compileFile(ctx, fs.NewFileString("/protobuf.mgdl", idl.PROTOBUF_IDL, idl.FileKindMicroglot), loaded, &symbols, req.DumpTokens, req.DumpTree)
+		image, err := self.compileFile(ctx, fs.NewFileString("/protobuf.mglot", idl.PROTOBUF_IDL, idl.FileKindMicroglot), loaded, &symbols, req.DumpTokens, req.DumpTree)
 		results <- fileResult{image, err}
 	}()
 

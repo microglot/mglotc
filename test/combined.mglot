@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-syntax = "microglot0"
+syntax = "mglot0"
 
 module = @0x1FF $(
   Protobuf.Package("microglot.framework.v1"),
