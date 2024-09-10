@@ -1,3 +1,7 @@
+# © 2024 Microglot LLC
+#
+# SPDX-License-Identifier: Apache-2.0
+
 .PHONY : update bin
 .PHONY : lint test integration coverage
 .PHONY : clean clean/coverage clean/bin
@@ -54,14 +58,17 @@ test/lint: | $(BIN_DIR)
 	$(BIN_DIR)/golangci-lint run \
 		--config $(GOLANGCILINT_CONFIG)
 
+test/license:
+	@ pipx run reuse lint
+
 test/unit: $(COVERAGE_UNIT) | $(BIN_DIR)
 
 test/descriptor-diff:
-	@ PATH="${PATH}:$(BIN_DIR)" ./descriptor_diff minimal
-	@ PATH="${PATH}:$(BIN_DIR)" ./descriptor_diff message
-	@ PATH="${PATH}:$(BIN_DIR)" ./descriptor_diff comment
-	@ PATH="${PATH}:$(BIN_DIR)" ./descriptor_diff map
-	@ PATH="${PATH}:$(BIN_DIR)" ./descriptor_diff descriptor
+	@ PATH="${PATH}:$(BIN_DIR)" ./descriptor_diff.bash minimal
+	@ PATH="${PATH}:$(BIN_DIR)" ./descriptor_diff.bash message
+	@ PATH="${PATH}:$(BIN_DIR)" ./descriptor_diff.bash comment
+	@ PATH="${PATH}:$(BIN_DIR)" ./descriptor_diff.bash map
+	@ PATH="${PATH}:$(BIN_DIR)" ./descriptor_diff.bash descriptor
 
 test/coverage: $(COVER_DIR) $(COVERAGE_UNIT) $(COVERAGE_UNIT_INTERCHANGE) $(COVERATE_UNIT_HTML) $(COVERAGE_UNIT_XML) $(COVERAGE_COMBINED) $(COVERAGE_COMBINED_INTERCHANGE) $(COVERAGE_COMBINED_HTML) $(COVERAGE_COMBINED_XML) | $(BIN_DIR)
 	@ $(GOCMD) tool cover -func $(COVERAGE_COMBINED)

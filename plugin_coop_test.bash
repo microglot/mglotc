@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# © 2023 Microglot LLC
+#
+# SPDX-License-Identifier: Apache-2.0
+
 set -e -x
 
 FILE=${1:-test.mgdl}

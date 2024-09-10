@@ -1,3 +1,7 @@
+// © 2023 Microglot LLC
+//
+// SPDX-License-Identifier: Apache-2.0
+
 syntax = "proto3";
 
 option go_package = "gopkg.microglot.org/compiler.go/internal/main";
@@ -146,7 +150,7 @@ message SDKInputReference {
    uint64 InputUID = 4;
 }
 
-message Annotation { 
+message Annotation {
    TypeReference Reference = 1;
    string Name                                     = 2;
    repeated AnnotationScope Scopes = 3;
@@ -154,7 +158,7 @@ message Annotation {
    CommentBlock DescriptorCommentBlock = 5;
 }
 
-enum AnnotationScope { 
+enum AnnotationScope {
    AnnotationScopeZero      = 0;
    AnnotationScopeModule    = 1;
    AnnotationScopeUnion     = 2;
@@ -209,88 +213,88 @@ message Value {
    }
 }
 
-message ValueBool { 
+message ValueBool {
    bool Value  = 1;
    string Source = 2;
 }
 
-message ValueText { 
+message ValueText {
    string Value  = 1;
    string Source = 2;
-} 
+}
 
-message ValueData { 
+message ValueData {
    bytes Value  = 1;
    string Source = 2;
-} 
+}
 
-message ValueInt8 { 
+message ValueInt8 {
    int32 Value  = 1;
    string Source = 2;
-} 
+}
 
-message ValueInt16 { 
+message ValueInt16 {
    int32 Value  = 1;
    string Source = 2;
-} 
+}
 
-message ValueInt32 { 
+message ValueInt32 {
    int32 Value  = 1;
    string Source = 2;
-} 
+}
 
-message ValueInt64 { 
+message ValueInt64 {
    int64 Value  = 1;
    string Source = 2;
-} 
+}
 
-message ValueUInt8 { 
+message ValueUInt8 {
    uint32 Value  = 1;
    string Source = 2;
-} 
+}
 
-message ValueUInt16 { 
+message ValueUInt16 {
    uint32 Value  = 1;
    string Source = 2;
-} 
+}
 
-message ValueUInt32 { 
+message ValueUInt32 {
    uint32 Value  = 1;
    string Source  = 2;
-} 
+}
 
-message ValueUInt64 { 
+message ValueUInt64 {
    uint64 Value = 1;
    string Source  = 2;
-} 
+}
 
-message ValueFloat32 { 
+message ValueFloat32 {
    float Value = 1;
    string  Source  = 2;
-} 
+}
 
-message ValueFloat64 { 
+message ValueFloat64 {
    double Value = 1;
    string Source   = 2;
-} 
+}
 
-message ValueIdentifier { 
+message ValueIdentifier {
    repeated string Names = 2;
    oneof Reference {
       TypeReference Type = 3;
       AttributeReference Attribute = 4;
    }
-} 
+}
 
-message ValueList { 
+message ValueList {
    repeated Value Elements = 1;
 }
 
-message ValueStruct { 
+message ValueStruct {
    repeated ValueStructField Fields = 1;
 }
 
-message ValueStructField { 
+message ValueStructField {
    string Name  = 1;
    Value Value = 2;
 }
@@ -370,7 +374,7 @@ message AttributeReference {
    uint64 AttributeUID = 3;
 }
 
-message CommentBlock { 
+message CommentBlock {
    repeated string Lines = 1;
 }
 

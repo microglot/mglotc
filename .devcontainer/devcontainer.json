@@ -1,9 +1,9 @@
 {
-  "name": "Microglot Compiler",
+  "name": "mglot-compiler-go",
   "build": {
     "dockerfile": "Containerfile"
   },
-  "remoteUser": "microglot",
+  "remoteUser": "mglot",
   "updateRemoteUserUID": true,
   "containerEnv": {
     "TZ": "Etc/UTC"

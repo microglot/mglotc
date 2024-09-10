@@ -1,3 +1,7 @@
+// © 2023 Microglot LLC
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // The idl package contains the general design of the compiler project.
 // Interfaces in this package adhere to the constraints of the actual IDL being
 // compiled. For example, Reader interface inverts the calling convention of
