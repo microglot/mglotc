@@ -18,7 +18,7 @@ var PROTOBUF_TYPE_UIDS = map[string]uint64{
 }
 
 var PROTOBUF_IDL = fmt.Sprintf(`
-syntax = "microglot0"
+syntax = "mglot0"
 
 module = @2 $(Protobuf.FileOptionsGoPackage("not.importable"))
 

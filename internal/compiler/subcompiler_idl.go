@@ -7,10 +7,10 @@ package compiler
 import (
 	"context"
 
-	"gopkg.microglot.org/compiler.go/internal/exc"
-	"gopkg.microglot.org/compiler.go/internal/idl"
-	"gopkg.microglot.org/compiler.go/internal/iter"
-	"gopkg.microglot.org/compiler.go/internal/proto"
+	"gopkg.microglot.org/mglotc/internal/exc"
+	"gopkg.microglot.org/mglotc/internal/idl"
+	"gopkg.microglot.org/mglotc/internal/iter"
+	"gopkg.microglot.org/mglotc/internal/proto"
 )
 
 // SubCompilerIDL is an adaptive sub-compiler for all IDL formats that switches
@@ -56,7 +56,7 @@ READLOOP:
 	switch syntax {
 	case "proto2", "proto3":
 		return self.Protobuf.CompileFile(ctx, r, file, dumpTokens, dumpTree)
-	case "microglot0", "microglot1":
+	case "mglot0", "mglot1":
 		return self.Microglot.CompileFile(ctx, r, file, dumpTokens, dumpTree)
 	default:
 		return nil, r.Report(exc.New(exc.Location{URI: file.Path(ctx)}, exc.CodeUnsupportedFileFormat, "missing or invalid syntax statement"))

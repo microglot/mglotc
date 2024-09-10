@@ -10,9 +10,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"gopkg.microglot.org/compiler.go/internal/exc"
-	"gopkg.microglot.org/compiler.go/internal/fs"
-	"gopkg.microglot.org/compiler.go/internal/idl"
+	"gopkg.microglot.org/mglotc/internal/exc"
+	"gopkg.microglot.org/mglotc/internal/fs"
+	"gopkg.microglot.org/mglotc/internal/idl"
 )
 
 func TestParser(t *testing.T) {
@@ -25,13 +25,13 @@ func TestParser(t *testing.T) {
 	}{
 		{
 			name:   "valid syntax statement",
-			input:  "syntax = \"microglot0\"",
+			input:  "syntax = \"mglot0\"",
 			parser: func(p *parserMicroglotTokens) node { return p.parseStatementSyntax() },
 			expected: &astStatementSyntax{
-				astNode: astNode{idl.Location{Line: 1, Column: 21, Offset: 20}},
+				astNode: astNode{idl.Location{Line: 1, Column: 17, Offset: 16}},
 				syntax: astValueLiteralText{
-					astNode: astNode{idl.Location{Line: 1, Column: 21, Offset: 20}},
-					val:     *newTokenLineSpan(1, 21, 20, 10, idl.TokenTypeText, "microglot0"),
+					astNode: astNode{idl.Location{Line: 1, Column: 17, Offset: 16}},
+					val:     *newTokenLineSpan(1, 17, 16, 6, idl.TokenTypeText, "mglot0"),
 				},
 			},
 		},

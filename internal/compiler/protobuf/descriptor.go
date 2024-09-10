@@ -14,9 +14,9 @@ import (
 
 	"google.golang.org/protobuf/types/descriptorpb"
 
-	"gopkg.microglot.org/compiler.go/internal/idl"
-	"gopkg.microglot.org/compiler.go/internal/proto"
-	"gopkg.microglot.org/compiler.go/internal/target"
+	"gopkg.microglot.org/mglotc/internal/idl"
+	"gopkg.microglot.org/mglotc/internal/proto"
+	"gopkg.microglot.org/mglotc/internal/target"
 )
 
 func mapFrom[F any, T any](p *idl.PathState, in []*F, f func(*F) (T, error)) ([]T, error) {

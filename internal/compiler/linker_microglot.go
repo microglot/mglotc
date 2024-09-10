@@ -9,9 +9,9 @@ import (
 	"fmt"
 	"strings"
 
-	"gopkg.microglot.org/compiler.go/internal/exc"
-	"gopkg.microglot.org/compiler.go/internal/idl"
-	"gopkg.microglot.org/compiler.go/internal/proto"
+	"gopkg.microglot.org/mglotc/internal/exc"
+	"gopkg.microglot.org/mglotc/internal/idl"
+	"gopkg.microglot.org/mglotc/internal/proto"
 )
 
 // link() takes a parsed Module descriptor + global symbol table, and outputs a linked Module descriptor.
@@ -169,7 +169,7 @@ func newLocalSymbols(gsymbols *globalSymbolTable, URI string) *localSymbolTable 
 		}
 	}
 
-	ok := symbols.alias(gsymbols, "/protobuf.mgdl", "Protobuf", false)
+	ok := symbols.alias(gsymbols, "/protobuf.mglot", "Protobuf", false)
 	if !ok {
 		return nil
 	}

@@ -12,8 +12,8 @@ import (
 	"github.com/bufbuild/protocompile/reporter"
 	"github.com/stretchr/testify/require"
 
-	"gopkg.microglot.org/compiler.go/internal/idl"
-	"gopkg.microglot.org/compiler.go/internal/proto"
+	"gopkg.microglot.org/mglotc/internal/idl"
+	"gopkg.microglot.org/mglotc/internal/proto"
 )
 
 var zero uint64 = 0

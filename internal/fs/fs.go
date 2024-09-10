@@ -14,17 +14,17 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gopkg.microglot.org/compiler.go/internal/exc"
-	"gopkg.microglot.org/compiler.go/internal/idl"
+	"gopkg.microglot.org/mglotc/internal/exc"
+	"gopkg.microglot.org/mglotc/internal/idl"
 )
 
 const (
-	fileExt          = ".mgdl"      // Typical microglot IDL content
-	fileDescExt      = ".mgdlbin"   // An IDL image in microglot binary format
-	fileDescJSONExt  = ".mgdljson"  // An IDL image in microglot JSON format
-	fileDescProtoExt = ".mgdlproto" // An IDL image in protobuf format
-	protoExt         = ".proto"     // Typical protobuf IDL content
-	protoDescExt     = ".protoset"  // A protobuf descriptor set in protobuf format
+	fileExt          = ".mglot"      // Typical microglot IDL content
+	fileDescExt      = ".mglotbin"   // An IDL image in microglot binary format
+	fileDescJSONExt  = ".mglotjson"  // An IDL image in microglot JSON format
+	fileDescProtoExt = ".mglotproto" // An IDL image in protobuf format
+	protoExt         = ".proto"      // Typical protobuf IDL content
+	protoDescExt     = ".protoset"   // A protobuf descriptor set in protobuf format
 )
 
 var knownExts = map[string]idl.FileKind{

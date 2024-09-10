@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"math"
 
-	"gopkg.microglot.org/compiler.go/internal/optional"
-	"gopkg.microglot.org/compiler.go/internal/proto"
+	"gopkg.microglot.org/mglotc/internal/optional"
+	"gopkg.microglot.org/mglotc/internal/proto"
 )
 
 type Closer interface {
@@ -44,7 +44,7 @@ type FileBody interface {
 
 type FileKind uint32
 
-// TODO 2023.11.09: this should be derived from the .mgdl descriptor. Right now we're still using the
+// TODO 2023.11.09: this should be derived from the .mglot descriptor. Right now we're still using the
 // .proto descriptor, which doesn't support consts.
 const Incomplete uint64 = math.MaxUint64
 

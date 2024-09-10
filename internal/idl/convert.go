@@ -12,7 +12,7 @@ import (
 
 	"google.golang.org/protobuf/types/descriptorpb"
 
-	"gopkg.microglot.org/compiler.go/internal/proto"
+	"gopkg.microglot.org/mglotc/internal/proto"
 )
 
 func URIToProtoFile(URI string) string {

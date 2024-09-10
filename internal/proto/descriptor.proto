@@ -4,7 +4,7 @@
 
 syntax = "proto3";
 
-option go_package = "gopkg.microglot.org/compiler.go/internal/proto";
+option go_package = "gopkg.microglot.org/mglotc/internal/proto";
 
 message Image {
    repeated Module Modules = 1;

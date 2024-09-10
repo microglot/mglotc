@@ -10,10 +10,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"gopkg.microglot.org/compiler.go/internal/exc"
-	"gopkg.microglot.org/compiler.go/internal/fs"
-	"gopkg.microglot.org/compiler.go/internal/idl"
-	"gopkg.microglot.org/compiler.go/internal/proto"
+	"gopkg.microglot.org/mglotc/internal/exc"
+	"gopkg.microglot.org/mglotc/internal/fs"
+	"gopkg.microglot.org/mglotc/internal/idl"
+	"gopkg.microglot.org/mglotc/internal/proto"
 )
 
 type CheckerTestFile struct {
@@ -34,8 +34,8 @@ func TestChecker(t *testing.T) {
 			files: []CheckerTestFile{
 				{
 					kind:     idl.FileKindMicroglot,
-					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nmodule = @13",
+					uri:      "/test.mglot",
+					contents: "syntax = \"mglot0\"\nmodule = @13",
 				},
 			},
 			expectCheckError: false,
@@ -45,8 +45,8 @@ func TestChecker(t *testing.T) {
 			files: []CheckerTestFile{
 				{
 					kind:     idl.FileKindMicroglot,
-					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nmodule = @13\nstruct Foo { bar :Protobuf.Package }\n",
+					uri:      "/test.mglot",
+					contents: "syntax = \"mglot0\"\nmodule = @13\nstruct Foo { bar :Protobuf.Package }\n",
 				},
 			},
 			expectCheckError: true,
@@ -56,8 +56,8 @@ func TestChecker(t *testing.T) {
 			files: []CheckerTestFile{
 				{
 					kind:     idl.FileKindMicroglot,
-					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nmodule = @13\nconst Foo :Protobuf.Package = 1\n",
+					uri:      "/test.mglot",
+					contents: "syntax = \"mglot0\"\nmodule = @13\nconst Foo :Protobuf.Package = 1\n",
 				},
 			},
 			expectCheckError: true,
@@ -68,8 +68,8 @@ func TestChecker(t *testing.T) {
 			files: []CheckerTestFile{
 				{
 					kind:     idl.FileKindMicroglot,
-					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nmodule = @13\nconst Foo :Int32 = 32\nconst Bar :Int32 = Foo\nconst Baz :Int32 = -Bar\nconst Barney :Int32 = (Foo + Bar)\n",
+					uri:      "/test.mglot",
+					contents: "syntax = \"mglot0\"\nmodule = @13\nconst Foo :Int32 = 32\nconst Bar :Int32 = Foo\nconst Baz :Int32 = -Bar\nconst Barney :Int32 = (Foo + Bar)\n",
 				},
 			},
 			expectCheckError: false,
@@ -79,8 +79,8 @@ func TestChecker(t *testing.T) {
 			files: []CheckerTestFile{
 				{
 					kind:     idl.FileKindMicroglot,
-					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nmodule = @13\nstruct Foo { bar :Int32 = [] }\n",
+					uri:      "/test.mglot",
+					contents: "syntax = \"mglot0\"\nmodule = @13\nstruct Foo { bar :Int32 = [] }\n",
 				},
 			},
 			expectCheckError: true,
@@ -90,8 +90,8 @@ func TestChecker(t *testing.T) {
 			files: []CheckerTestFile{
 				{
 					kind:     idl.FileKindMicroglot,
-					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nmodule = @13\nannotation Foo(struct) :Text\nstruct Bar {} $(Foo([]))\n",
+					uri:      "/test.mglot",
+					contents: "syntax = \"mglot0\"\nmodule = @13\nannotation Foo(struct) :Text\nstruct Bar {} $(Foo([]))\n",
 				},
 			},
 			expectCheckError: true,
@@ -102,8 +102,8 @@ func TestChecker(t *testing.T) {
 			files: []CheckerTestFile{
 				{
 					kind:     idl.FileKindMicroglot,
-					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nmodule = @13\nstruct FooArgument { l :List<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({l: []}))\n",
+					uri:      "/test.mglot",
+					contents: "syntax = \"mglot0\"\nmodule = @13\nstruct FooArgument { l :List<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({l: []}))\n",
 				},
 			},
 			expectCheckError: false,
@@ -113,8 +113,8 @@ func TestChecker(t *testing.T) {
 			files: []CheckerTestFile{
 				{
 					kind:     idl.FileKindMicroglot,
-					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nmodule = @13\nstruct FooArgument { l :List<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({l: 32}))\n",
+					uri:      "/test.mglot",
+					contents: "syntax = \"mglot0\"\nmodule = @13\nstruct FooArgument { l :List<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({l: 32}))\n",
 				},
 			},
 			expectCheckError: true,
@@ -124,8 +124,8 @@ func TestChecker(t *testing.T) {
 			files: []CheckerTestFile{
 				{
 					kind:     idl.FileKindMicroglot,
-					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nmodule = @13\nstruct FooArgument { l :List<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({l: [32]}))\n",
+					uri:      "/test.mglot",
+					contents: "syntax = \"mglot0\"\nmodule = @13\nstruct FooArgument { l :List<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({l: [32]}))\n",
 				},
 			},
 			expectCheckError: true,
@@ -136,8 +136,8 @@ func TestChecker(t *testing.T) {
 			files: []CheckerTestFile{
 				{
 					kind:     idl.FileKindMicroglot,
-					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nmodule = @13\nstruct FooArgument { p :Presence<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({p: \"present\"}))\n",
+					uri:      "/test.mglot",
+					contents: "syntax = \"mglot0\"\nmodule = @13\nstruct FooArgument { p :Presence<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({p: \"present\"}))\n",
 				},
 			},
 			expectCheckError: false,
@@ -147,8 +147,8 @@ func TestChecker(t *testing.T) {
 			files: []CheckerTestFile{
 				{
 					kind:     idl.FileKindMicroglot,
-					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nmodule = @13\nstruct FooArgument { p :Presence<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({}))\n",
+					uri:      "/test.mglot",
+					contents: "syntax = \"mglot0\"\nmodule = @13\nstruct FooArgument { p :Presence<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({}))\n",
 				},
 			},
 			expectCheckError: false,
@@ -158,8 +158,8 @@ func TestChecker(t *testing.T) {
 			files: []CheckerTestFile{
 				{
 					kind:     idl.FileKindMicroglot,
-					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nmodule = @13\nstruct FooArgument { p :Presence<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({p: 32}))\n",
+					uri:      "/test.mglot",
+					contents: "syntax = \"mglot0\"\nmodule = @13\nstruct FooArgument { p :Presence<:Text> }\nannotation Foo(struct) :FooArgument\nstruct Bar {} $(Foo({p: 32}))\n",
 				},
 			},
 			expectCheckError: true,
@@ -170,8 +170,8 @@ func TestChecker(t *testing.T) {
 			files: []CheckerTestFile{
 				{
 					kind:     idl.FileKindMicroglot,
-					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nmodule = @13\nstruct Foo { bar :Text }\nannotation Bar(struct) :Foo\nstruct Baz {} $(Bar({ bar: \"ASDF\" }))\n",
+					uri:      "/test.mglot",
+					contents: "syntax = \"mglot0\"\nmodule = @13\nstruct Foo { bar :Text }\nannotation Bar(struct) :Foo\nstruct Baz {} $(Bar({ bar: \"ASDF\" }))\n",
 				},
 			},
 			expectCheckError: false,
@@ -181,8 +181,8 @@ func TestChecker(t *testing.T) {
 			files: []CheckerTestFile{
 				{
 					kind:     idl.FileKindMicroglot,
-					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nmodule = @13\nstruct Foo { bar :Text }\nannotation Bar(struct) :Foo\nstruct Baz {} $(Bar({ }))\n",
+					uri:      "/test.mglot",
+					contents: "syntax = \"mglot0\"\nmodule = @13\nstruct Foo { bar :Text }\nannotation Bar(struct) :Foo\nstruct Baz {} $(Bar({ }))\n",
 				},
 			},
 			expectCheckError: false,
@@ -192,8 +192,8 @@ func TestChecker(t *testing.T) {
 			files: []CheckerTestFile{
 				{
 					kind:     idl.FileKindMicroglot,
-					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nmodule = @13\nstruct Foo { bar :Text }\nannotation Bar(struct) :Foo\nstruct Baz {} $(Bar({ barney: \"ASDF\", bar: \"ASDF\" }))\n",
+					uri:      "/test.mglot",
+					contents: "syntax = \"mglot0\"\nmodule = @13\nstruct Foo { bar :Text }\nannotation Bar(struct) :Foo\nstruct Baz {} $(Bar({ barney: \"ASDF\", bar: \"ASDF\" }))\n",
 				},
 			},
 			expectCheckError: true,
@@ -203,8 +203,8 @@ func TestChecker(t *testing.T) {
 			files: []CheckerTestFile{
 				{
 					kind:     idl.FileKindMicroglot,
-					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nmodule = @13\nstruct Foo { bar :Text }\nannotation Bar(struct) :Foo\nstruct Baz {} $(Bar({ bar: 99 }))\n",
+					uri:      "/test.mglot",
+					contents: "syntax = \"mglot0\"\nmodule = @13\nstruct Foo { bar :Text }\nannotation Bar(struct) :Foo\nstruct Baz {} $(Bar({ bar: 99 }))\n",
 				},
 			},
 			expectCheckError: true,
@@ -214,8 +214,8 @@ func TestChecker(t *testing.T) {
 			files: []CheckerTestFile{
 				{
 					kind:     idl.FileKindMicroglot,
-					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nmodule = @13\nstruct In {}\nstruct Out {}\napi Foo { Method(:In) returns (:Out) }",
+					uri:      "/test.mglot",
+					contents: "syntax = \"mglot0\"\nmodule = @13\nstruct In {}\nstruct Out {}\napi Foo { Method(:In) returns (:Out) }",
 				},
 			},
 			expectCheckError: false,
@@ -225,8 +225,8 @@ func TestChecker(t *testing.T) {
 			files: []CheckerTestFile{
 				{
 					kind:     idl.FileKindMicroglot,
-					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nmodule = @13\nsdk Nope {}\nstruct In { X :List<:Nope> }\nstruct Out {}\napi Foo { Method(:In) returns (:Out) }",
+					uri:      "/test.mglot",
+					contents: "syntax = \"mglot0\"\nmodule = @13\nsdk Nope {}\nstruct In { X :List<:Nope> }\nstruct Out {}\napi Foo { Method(:In) returns (:Out) }",
 				},
 			},
 			expectCheckError: true,
@@ -236,8 +236,8 @@ func TestChecker(t *testing.T) {
 			files: []CheckerTestFile{
 				{
 					kind:     idl.FileKindMicroglot,
-					uri:      "/test.mgdl",
-					contents: "syntax = \"microglot0\"\nmodule = @13\napi Nope {}\nstruct In {}\nstruct Out { X :List<:Nope> }\napi Foo { Method(:In) returns (:Out) }",
+					uri:      "/test.mglot",
+					contents: "syntax = \"mglot0\"\nmodule = @13\napi Nope {}\nstruct In {}\nstruct Out { X :List<:Nope> }\napi Foo { Method(:In) returns (:Out) }",
 				},
 			},
 			expectCheckError: true,
@@ -255,8 +255,8 @@ func TestChecker(t *testing.T) {
 				files = append(files, fs.NewFileString(f.uri, f.contents, f.kind))
 			}
 
-			protobufDescriptor, err := subcompilers[idl.FileKindMicroglot].CompileFile(ctx, r, fs.NewFileString("/protobuf.mgdl", idl.PROTOBUF_IDL, idl.FileKindMicroglot), false, false)
-			require.NoError(t, err, "/protobuf.mgdl", r.Reported())
+			protobufDescriptor, err := subcompilers[idl.FileKindMicroglot].CompileFile(ctx, r, fs.NewFileString("/protobuf.mglot", idl.PROTOBUF_IDL, idl.FileKindMicroglot), false, false)
+			require.NoError(t, err, "/protobuf.mglot", r.Reported())
 
 			parsedDescriptors := make([]*proto.Module, 0, len(testCase.files))
 			for i, f := range files {
@@ -268,9 +268,9 @@ func TestChecker(t *testing.T) {
 			symbols := globalSymbolTable{}
 			protobufDescriptor = completeUIDs(*protobufDescriptor)
 			err = symbols.collect(*protobufDescriptor, r)
-			require.NoError(t, err, "/protobuf.mgdl", r.Reported())
+			require.NoError(t, err, "/protobuf.mglot", r.Reported())
 			protobufDescriptor, err = link(*protobufDescriptor, &symbols, r)
-			require.NoError(t, err, "/protobuf.mgdl", r.Reported())
+			require.NoError(t, err, "/protobuf.mglot", r.Reported())
 
 			completedDescriptors := make([]*proto.Module, 0, len(parsedDescriptors))
 			for i, parsedDescriptor := range parsedDescriptors {

@@ -8,8 +8,8 @@ import (
 	"context"
 	"io"
 
-	"gopkg.microglot.org/compiler.go/internal/exc"
-	"gopkg.microglot.org/compiler.go/internal/idl"
+	"gopkg.microglot.org/mglotc/internal/exc"
+	"gopkg.microglot.org/mglotc/internal/idl"
 )
 
 func bodyFromIO(v io.ReadCloser) idl.FileBody {

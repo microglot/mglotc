@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-syntax = "microglot1"
+syntax = "mglot0"
 
 module = @0x01
 

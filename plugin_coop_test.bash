@@ -6,13 +6,13 @@
 
 set -e -x
 
-FILE=${1:-test.mgdl}
+FILE=${1:-test.mglot}
 
 IN=$(mktemp -d)
 OUT=$(mktemp -d)
 
 cp test/* $IN
 
-go run main.go --root=$IN/ $FILE --output=$OUT --pbplugin=protoc-gen-go:paths=source_relative --pbplugin=protoc-gen-go-grpc:paths=source_relative --plugin=mgdl-gen-go
+go run main.go --root=$IN/ $FILE --output=$OUT --pbplugin=protoc-gen-go:paths=source_relative --pbplugin=protoc-gen-go-grpc:paths=source_relative --plugin=mglot-gen-go
 
 (cd $OUT; go mod init asdf_asdf && go get google.golang.org/grpc && go build)

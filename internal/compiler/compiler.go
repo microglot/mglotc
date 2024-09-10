@@ -17,11 +17,11 @@ import (
 	"strings"
 	"sync"
 
-	"gopkg.microglot.org/compiler.go/internal/exc"
-	"gopkg.microglot.org/compiler.go/internal/fs"
-	"gopkg.microglot.org/compiler.go/internal/idl"
-	"gopkg.microglot.org/compiler.go/internal/proto"
-	"gopkg.microglot.org/compiler.go/internal/target"
+	"gopkg.microglot.org/mglotc/internal/exc"
+	"gopkg.microglot.org/mglotc/internal/fs"
+	"gopkg.microglot.org/mglotc/internal/idl"
+	"gopkg.microglot.org/mglotc/internal/proto"
+	"gopkg.microglot.org/mglotc/internal/target"
 )
 
 type Option func(c *compiler) error
@@ -118,7 +118,7 @@ func (self *compiler) Compile(ctx context.Context, req *idl.CompileRequest) (*id
 	symbols := globalSymbolTable{}
 
 	go func() {
-		image, err := self.compileFile(ctx, fs.NewFileString("/protobuf.mgdl", idl.PROTOBUF_IDL, idl.FileKindMicroglot), loaded, &symbols, req.DumpTokens, req.DumpTree)
+		image, err := self.compileFile(ctx, fs.NewFileString("/protobuf.mglot", idl.PROTOBUF_IDL, idl.FileKindMicroglot), loaded, &symbols, req.DumpTokens, req.DumpTree)
 		results <- fileResult{image, err}
 	}()
 

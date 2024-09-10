@@ -5,7 +5,7 @@
 package idl
 
 import (
-	"gopkg.microglot.org/compiler.go/internal/proto"
+	"gopkg.microglot.org/mglotc/internal/proto"
 )
 
 var BUILTIN_UID_TYPENAMES = map[uint64]proto.TypeName{

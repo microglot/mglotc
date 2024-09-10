@@ -7,7 +7,7 @@ package exc
 import (
 	"fmt"
 
-	"gopkg.microglot.org/compiler.go/internal/idl"
+	"gopkg.microglot.org/mglotc/internal/idl"
 )
 
 type Exception interface {

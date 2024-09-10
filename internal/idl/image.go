@@ -5,7 +5,7 @@
 package idl
 
 import (
-	"gopkg.microglot.org/compiler.go/internal/proto"
+	"gopkg.microglot.org/mglotc/internal/proto"
 )
 
 type TypeKind uint16

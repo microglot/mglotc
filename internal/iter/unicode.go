@@ -11,8 +11,8 @@ import (
 	"io"
 	"unicode/utf8"
 
-	"gopkg.microglot.org/compiler.go/internal/idl"
-	"gopkg.microglot.org/compiler.go/internal/optional"
+	"gopkg.microglot.org/mglotc/internal/idl"
+	"gopkg.microglot.org/mglotc/internal/optional"
 )
 
 // NewUnicodeFileBody converts a FileBody into an iterator of code points.

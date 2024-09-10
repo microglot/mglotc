@@ -22,7 +22,7 @@ protoc --proto_path="${IN}"/ "${NAME}.proto" --go_out=paths=source_relative:"${O
 # generated code doesn't produce the same version value. Also, the Go code
 # usually only contains the raw descriptor long enough to use it at init time.
 # So, while the bytes are embedded in the Go source the contents are eventually
-# erased with something like file___foo_mgdl_rawDesc = nil which then makes it
+# erased with something like file___foo_mglot_rawDesc = nil which then makes it
 # inaccessible. We remove the nil assignment so that the injected test code
 # can access that content.
 sed --in-place --expression "s/^\/\/ \tprotoc .*//" "${OUT_BASELINE}/${NAME}.pb.go"
