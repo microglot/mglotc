@@ -153,8 +153,8 @@ syntaxes, range of values, and example literal syntax.
 | Type | proto2/3 | Value Range | Example Literal |
 |------|----------|-------|---------|
 | Bool | bool | true/false | true, false |
-| Text | string | <=2^32 UTF-8 bytes | "example", "☃" |
-| Data | bytes | <=2^32 bytes | 0x"F0123456789ABCDEF", 0x"DEAD BEEF" |
+| Text | string | \<=2^32 UTF-8 bytes | "example", "☃" |
+| Data | bytes | \<=2^32 bytes | 0x"F0123456789ABCDEF", 0x"DEAD BEEF" |
 | Int8 | int32 | -2^7 to (2^7)-1 | 1, -100 |
 | Int16 | int32 | -2^15 to (2^15)-1 | 1, -100, 1000, -1_000 |
 | Int32 | int32 | -2^31 to (2^31)-1 | 1, -100, 1000, -1_000 |
@@ -171,9 +171,9 @@ virtual types:
 
 | Type | proto2/3 | Constraints | Example Usage |
 |------|----------|-------|-----------|
-| List<T> | repeated | Value type cannot be List or Map types | :List<:Text> |
-| Map<K,V> | map | Keys cannot be Data or Floats, Values cannot be List or Map types | :Map<:Text, :MyStruct> |
-| Presence<T> | optional | Limited to scalar types | :Presence<:Bool> |
+| List\<T> | repeated | Value type cannot be List or Map types | :List\<:Text> |
+| Map\<K,V> | map | Keys cannot be Data or Floats, Values cannot be List or Map types | :Map\<:Text, :MyStruct> |
+| Presence\<T> | optional | Limited to scalar types | :Presence\<:Bool> |
 
 ### Modules
 
@@ -307,8 +307,8 @@ SDKs.
 
 ### Language Specification
 
-The current language specification and more extensive documentation will be
-linked here when available.
+The complete language and compiler specification is available at
+https://microglot.org/docs/idl/specification.
 
 ## Roadmap
 
@@ -337,15 +337,12 @@ lacking in the current generation of IDLs? What aspects of system or API design
 do you wish you could express? These are the sorts of questions we're asking
 ourselves and would appreciate your thoughts.
 
-For now, use <https://github.com/microglot/mglotc/discussions> to pitch
-ideas or ask questions. We'll put an update there when we have other ways to
-engage.
+For now, use https://github.com/microglot/mglotc/discussions to pitch ideas or
+ask questions. We'll put an update there when we have other ways to engage.
 
 ## License
 
 > © 2023 Microglot LLC
-
-> "Microglot" is a registered trademark of Microglot LLC.
 
 All content in this repository is licensed under Apache 2.0 except for the
 dev container configuration which is under CC0-1.0. See the `LICENSES` directory
