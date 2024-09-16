@@ -22,6 +22,10 @@ ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US:en
 ENV LC_ALL en_US.UTF-8
 
+# Create a non-root user so linux users can run the container as the current
+# OS user. See https://code.visualstudio.com/remote/advancedcontainers/add-nonroot-user
+# and https://github.com/devcontainers/spec/blob/main/docs/specs/devcontainer-reference.md#container-creation
+# for more information.
 ARG USERNAME=mglot
 ARG USER_UID=1010
 ARG USER_GID=1010
