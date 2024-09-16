@@ -38,3 +38,5 @@ jobs:
         run: make BUILD_MODE=tag build
       - name: Publish release
         run: make release
+        env:
+          GITHUB_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
